@@ -456,57 +456,6 @@ def divide_pd_series(col1, col2, index, dec=2):
 # Time processing
 
 
-# date time range tool , by spenly
-
-
-DATE_DELTA_TYPE = Enum("week", "day", "hour", "min", "sec", "ms", "mcs")
-
-FMAP = {
-    DATE_DELTA_TYPE.week: "weeks",
-    DATE_DELTA_TYPE.day: "days",
-    DATE_DELTA_TYPE.hour: "hours",
-    DATE_DELTA_TYPE.min: "minutes",
-    DATE_DELTA_TYPE.sec: "seconds",
-    DATE_DELTA_TYPE.ms: "milliseconds",
-    DATE_DELTA_TYPE.mcs: "microseconds",
-}
-
-
-def get_delta(ddtype):
-    """
-    return a datetime delta function
-    :param ddtype: datetime delta type , default DATE_DELTA_TYPE
-    :return: function object
-    """
-    return eval('lambda x: timedelta(%s=x)' % FMAP[ddtype])
-
-
-def get_date_range(length, start=datetime.today(), out_format="%Y%m%d", by=DATE_DELTA_TYPE.day, step=1):
-    """
-    get a iter of date range
-    :param length: element num
-    :param start: start datetime, datetime object, default is today
-    :param out_format: element format default "%Y%M%d" => "20160501"
-    :param by: element delta type(day or hour etc.) ,default by day
-    :param step: element delta value, default is 1
-    :return:  a iter of date range object
-    """
-    return ((start + get_delta(by)(i)).strftime(out_format) for i in range(0, length, step))
-
-
-def get_date_range_list(length, start=datetime.today(), out_format="%Y%m%d", by=DATE_DELTA_TYPE.day, step=1):
-    """
-    get a list of date range
-    :param length: element num
-    :param start: start datetime, datetime object, default is today
-    :param out_format: element format default "%Y%M%d" => "20160501"
-    :param by: element delta type(day or hour etc.) ,default by day
-    :param step: element delta value, default is 1
-    :return:  a list of date range object
-    """
-    return [(start + get_delta(by)(i)).strftime(out_format) for i in range(0, length, step)]
-
-
 def get_time(ori_time, time_format="%Y-%m-%d %H:%M:%S.%f"):
     """
     :param ori_time: a time string
