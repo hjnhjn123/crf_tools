@@ -9,7 +9,6 @@ from operator import itemgetter
 
 import numpy as np
 import pandas as pd
-from enum import Enum
 from pandas import ExcelWriter
 from functools import reduce
 from configparser import ConfigParser
