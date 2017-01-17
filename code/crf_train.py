@@ -18,25 +18,6 @@ FACTSET_LABEL = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
 NLP = spacy.load('en')
 
 
-def read_faceset(in_file, column_names):
-    """
-    param: in_file: csv file
-    """
-    data = csv2pd(column_constant=get_header(in_file), column_names=column_names, engine='c',
-                  in_file=in_file, quote=0, sep=',')
-    return data
-
-
-def read_techcrunch(in_file):
-    """
-    param: in_file: csv file
-    """
-    data = csv2pd(column_constant=get_header(in_file), column_names=HEADER_TC, engine='c',
-                  in_file=in_file, quote=1, sep=',')
-    data = data.dropna()
-    return data
-
-
 def spacy_ner(sent):
     """
     param: sent csv file
@@ -49,23 +30,38 @@ def spacy_ner(sent):
 
 
 def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
+    """
+    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
+    :param df: a df containing entity names and entity types
+    :param entity_col: entity names
+    :param tag_col: entity types
+    :return: (string containing entities, [(start, end, type)])
+    """
     length = pd.Series((df[entity_col].str.len())).astype(str)
     zeros, tag = pd.Series(['0' for i in range(len(df))]), df[tag_col]
     len_series = pd.Series(list(zip(df[entity_col], zeros, length, df.entity_type)))
-    # len_series = len_series.apply(list)
-    # result = pd.DataFrame({'Gold_parser_format': tuple(zip(df[entity_col], len_series))})
     result = pd.DataFrame({'Gold_parser_format': len_series})
-
     return result
 
 
-def read_gold_train(in_file, col):
-    data = read_faceset(in_file, col)
+def read_spacy_ner_train_data(in_file, col):
+    """
+    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
+    :param in_file:
+    :param col:
+    :return: list of (string containing entities, [(start, end, type)])
+    """
+    data = quickest_read_csv(in_file, col)
     train_data = [(i[0], list((tuple((int(i[1]), int(i[2]), i[3])),))) for i in data[col].tolist()]
     return train_data
 
 
 def train_gold_parser(train_data, label=FACTSET_LABEL):
+    """
+    https://spacy.io/docs/usage/entity-recognition#updating
+    :param train_data: list of (string containing entities, [(start, end, type)])
+    :param label: a list of entity types
+    """
     ner = EntityRecognizer(NLP.vocab, entity_types=label)
     for itn in range(5):
         random.shuffle(train_data)
@@ -81,12 +77,13 @@ def train_gold_parser(train_data, label=FACTSET_LABEL):
 
 
 def batch_processing(in_file, col='CONTENT'):
-    data = read_techcrunch(in_file)
+    data = quickest_read_csv(in_file, HEADER_TC)
+    data = data.dropna()
     return data[col].apply(spacy_ner)
 
 
 def get_factset_sn_type(type_file, sn_file):
-    sn = read_faceset(sn_file, HEADER_SN)
-    ty = read_faceset(type_file, HEADER_FS)
+    sn = quickest_read_csv(sn_file, HEADER_SN)
+    ty = quickest_read_csv(type_file, HEADER_FS)
     result = pd.merge(ty, sn, on='factset_entity_id', how='inner')
     return result.dropna()
