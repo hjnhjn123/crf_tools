@@ -54,14 +54,15 @@ def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
     return result
 
 
-def read_spacy_ner_train_data(in_file, col):
+def read_spacy_ner_train_data(input, col, file=True):
     """
     ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
-    :param in_file:
+    :param input:
     :param col:
+    :param file: True for csv file, else dataframe
     :return: list of (string containing entities, [(start, end, type)])
     """
-    data = quickest_read_csv(in_file, col)
+    data = quickest_read_csv(input, col) if file is True else input
     train_data = [(i[0], list((tuple((int(i[1]), int(i[2]), i[3])),))) for i in data[col].tolist()]
     return train_data
 
@@ -91,10 +92,11 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 ##############################################################################################
 
 
-def batch_processing(in_file, col='CONTENT'):
+def batch_processing(in_file, out_file, col='CONTENT'):
     data = quickest_read_csv(in_file, HEADER_TC)
     data = data.dropna()
-    return data[col].apply(spacy_ner_recogniser)
+    data[col].apply(spacy_ner_recogniser)
+    data.to_csv(out_file, index=False)
 
 
 def output_factset_sn_type(type_file, sn_file, out_file):
@@ -112,6 +114,6 @@ def remap_factset_sn_type(in_file, out_file):
     result.to_csv(out_file, index=False)
 
 
-def train_gold_parser(in_file, label=LABEL_REMAPPED):
-    data = read_spacy_ner_train_data(in_file)
+def train_gold_parser(in_file, col, label=LABEL_REMAPPED):
+    data = read_spacy_ner_train_data(in_file, col)
     gold_parser(data, label)
