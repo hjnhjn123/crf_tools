@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .arsenal_stats import *
+import numpy as np
 import spacy
 import random
 from spacy.gold import GoldParse
@@ -10,22 +11,31 @@ HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
-NER_LABEL = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
-FACTSET_LABEL = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
+
+LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
+
+LABEL_FACTSET = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'NPO', 'HED', 'UIT', 'MUE', 'COL', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
                  'IDX', 'BAS', 'PRT', 'SHP']
+
+LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
+                 'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
+                 'IDX', 'BAS', 'PRT', 'SHP']
+
+LABEL_COLLEGE = ['COL']
+
+LABEL_REMAPPED = ['ORG', 'MISC']
 
 NLP = spacy.load('en')
 
 
-def spacy_ner(sent):
+def spacy_ner_recogniser(sent):
     """
     param: sent csv file
     return: {ner: ner type}
     """
     entity = NLP(sent).ents
-    extracted = {i.text: (i.start, i.end, i.label_) for i in entity if i.label_ in NER_LABEL}
-    # sentence = {k: i for k, i in enumerate(sent.split(' '))}
+    extracted = {i.text: (i.start, i.end, i.label_) for i in entity if i.label_ in LABEL_NER}
     return extracted
 
 
@@ -56,7 +66,12 @@ def read_spacy_ner_train_data(in_file, col):
     return train_data
 
 
-def train_gold_parser(train_data, label=FACTSET_LABEL):
+def remap_series(df, col, new_col, label_set, new_lebel):
+    df[new_col] = np.where(df[col].isin(label_set), new_lebel, 'MISC')
+    return df
+
+
+def gold_parser(train_data, label=LABEL_FACTSET):
     """
     https://spacy.io/docs/usage/entity-recognition#updating
     :param train_data: list of (string containing entities, [(start, end, type)])
@@ -79,11 +94,24 @@ def train_gold_parser(train_data, label=FACTSET_LABEL):
 def batch_processing(in_file, col='CONTENT'):
     data = quickest_read_csv(in_file, HEADER_TC)
     data = data.dropna()
-    return data[col].apply(spacy_ner)
+    return data[col].apply(spacy_ner_recogniser)
 
 
-def get_factset_sn_type(type_file, sn_file):
+def output_factset_sn_type(type_file, sn_file, out_file):
     sn = quickest_read_csv(sn_file, HEADER_SN)
     ty = quickest_read_csv(type_file, HEADER_FS)
     result = pd.merge(ty, sn, on='factset_entity_id', how='inner')
-    return result.dropna()
+    result = result.dropna()
+    result.tocsv(out_file, index=False)
+
+
+def remap_factset_sn_type(in_file, out_file):
+    data = quickest_read_csv(in_file, HEADER_SN_TYPE)
+    result = remap_series(data, 'entity_type', 'new_entity_type', LABEL_COMPANY, 'ORG')
+    result = result.drop(['entity_type'], axis=1)
+    result.to_csv(out_file, index=False)
+
+
+def train_gold_parser(in_file, label=LABEL_REMAPPED):
+    data = read_spacy_ner_train_data(in_file)
+    gold_parser(data, label)
