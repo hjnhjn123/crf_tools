@@ -69,6 +69,15 @@ def get_last_files(base, time_range):
     return [''.join((base, ''.join(i.split('-')), '.csv')) for i in time_range]
 
 
+def quickest_read_csv(in_file, column_names):
+    """
+    param: in_file: csv file
+    """
+    data = csv2pd(column_constant=get_header(in_file), column_names=column_names, engine='c',
+                  in_file=in_file, quote=0, sep=',')
+    return data
+
+
 def choose_file(in_file, time_format, day, header, sep, engine):
     """
     :param in_file: the file DIR
