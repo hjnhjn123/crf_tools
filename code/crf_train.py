@@ -54,7 +54,7 @@ def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
     return result
 
 
-def read_spacy_ner_train_data(input, col, file=True):
+def read_gold_parser_train_data(input, col, file=True):
     """
     ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
     :param input:
@@ -95,8 +95,8 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 def batch_processing(in_file, out_file, col='CONTENT'):
     data = quickest_read_csv(in_file, HEADER_TC)
     data = data.dropna()
-    data[col].apply(spacy_ner_recogniser)
-    data.to_csv(out_file, index=False)
+    result = data[col].apply(spacy_ner_recogniser)
+    result.to_csv(out_file, index=False)
 
 
 def output_factset_sn_type(type_file, sn_file, out_file):
@@ -114,6 +114,8 @@ def remap_factset_sn_type(in_file, out_file):
     result.to_csv(out_file, index=False)
 
 
-def train_gold_parser(in_file, col, label=LABEL_REMAPPED):
-    data = read_spacy_ner_train_data(in_file, col)
+def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label=LABEL_REMAPPED):
+    data = quickest_read_csv(in_file, HEADER_SN_TYPE)
+    data = df2gold_parser(data, entity_col, tag_col)
+    data = read_gold_parser_train_data(data, gold_parser_col, False)
     gold_parser(data, label)
