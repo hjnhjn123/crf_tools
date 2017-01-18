@@ -69,7 +69,7 @@ def read_gold_parser_train_data(input, col, file=True):
     return train_data
 
 
-def read_ans_dataset(in_file, col_list=LABEL_ANS):
+def prepare_ans_dataset(in_file, out_file, col_list=LABEL_ANS):
     """
     It read ANS dataset
     :param in_file: an ANS json file
@@ -78,7 +78,9 @@ def read_ans_dataset(in_file, col_list=LABEL_ANS):
     """
     data = json2pd(in_file, col_list)
     data = rename_series(data, 'category', 'entity_types')
-    return data
+    data = rename_series(data, 'nname_en', 'entity_names')
+    data['entity_names'] = data['entity_names'].str.title()
+    data.to_csv(out_file, index=False)
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
@@ -96,7 +98,6 @@ def gold_parser(train_data, label=LABEL_FACTSET):
             NLP.tagger(doc)
             ner.update(doc, gold)
     ner.model.end_training()
-
 
 ##############################################################################################
 
