@@ -11,6 +11,8 @@ HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
+HEADER_SCHWEB = ['Language', 'Title', 'Type']
+
 
 LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
 
@@ -28,32 +30,12 @@ LABEL_REMAPPED = ['ORG', 'MISC']
 
 LABEL_ANS = ['category', 'nname_en']
 
+
 NLP = spacy.load('en')
 
+##############################################################################
 
-def spacy_ner_recogniser(sent):
-    """
-    param: sent csv file
-    return: {ner: ner type}
-    """
-    entity = NLP(sent).ents
-    extracted = {i.text: (i.start, i.end, i.label_) for i in entity if i.label_ in LABEL_NER}
-    return extracted
-
-
-def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
-    """
-    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
-    :param df: a df containing entity names and entity types
-    :param entity_col: entity names
-    :param tag_col: entity types
-    :return: (string containing entities, [(start, end, type)])
-    """
-    length = pd.Series((df[entity_col].str.len())).astype(str)
-    zeros, tag = pd.Series(['0' for i in range(len(df))]), df[tag_col]
-    len_series = pd.Series(list(zip(df[entity_col], zeros, length, df.entity_type)))
-    result = pd.DataFrame({'Gold_parser_format': len_series})
-    return result
+# Data preparation
 
 
 def read_gold_parser_train_data(input, col, file=True):
@@ -81,6 +63,42 @@ def prepare_ans_dataset(in_file, out_file, col_list=LABEL_ANS):
     data = rename_series(data, 'nname_en', 'entity_names')
     data['entity_names'] = data['entity_names'].str.title()
     data.to_csv(out_file, index=False)
+
+
+def prepare_schweb_dataset(in_file):
+    data = csv2pd(in_file, HEADER_SCHWEB, HEADER_SCHWEB, sep='\t')
+
+
+
+
+def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
+    """
+    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
+    :param df: a df containing entity names and entity types
+    :param entity_col: entity names
+    :param tag_col: entity types
+    :return: (string containing entities, [(start, end, type)])
+    """
+    length = pd.Series((df[entity_col].str.len())).astype(str)
+    zeros, tag = pd.Series(['0' for i in range(len(df))]), df[tag_col]
+    len_series = pd.Series(list(zip(df[entity_col], zeros, length, df.entity_type)))
+    result = pd.DataFrame({'Gold_parser_format': len_series})
+    return result
+
+
+##############################################################################
+
+# spaCy
+
+
+def spacy_ner_recogniser(sent):
+    """
+    param: sent csv file
+    return: {ner: ner type}
+    """
+    entity = NLP(sent).ents
+    extracted = {i.text: (i.start, i.end, i.label_) for i in entity if i.label_ in LABEL_NER}
+    return extracted
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
