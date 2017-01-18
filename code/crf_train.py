@@ -67,9 +67,7 @@ def read_gold_parser_train_data(input, col, file=True):
     return train_data
 
 
-def remap_series(df, col, new_col, label_set, new_lebel):
-    df[new_col] = np.where(df[col].isin(label_set), new_lebel, 'MISC')
-    return df
+
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
@@ -96,7 +94,7 @@ def batch_processing(in_file, out_file, col='CONTENT'):
     data = quickest_read_csv(in_file, HEADER_TC)
     data = data.dropna()
     result = data[col].apply(spacy_ner_recogniser)
-    result.to_csv(out_file, index=False)
+    result.to_csv(out_file)
 
 
 def output_factset_sn_type(type_file, sn_file, out_file):
