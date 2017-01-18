@@ -453,6 +453,20 @@ def json2pd(in_file, col_list, lines=True):
     return result
 
 
+def remap_series(df, col, new_col, label_set, new_label, misc='MISC'):
+    """
+    :param df:
+    :param col: the column to be changed
+    :param new_col: the new column
+    :param label_set: labels to be changed
+    :param new_label: new label
+    :param misc: set the misc label
+    :return: the original df with new_col
+    """
+    df[new_col] = np.where(df[col].isin(label_set), new_label, misc)
+    return df
+
+
 ########################################################################################################################
 
 
