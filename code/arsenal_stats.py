@@ -441,6 +441,18 @@ def json2list(corpus):
     return (loads(line) for line in corpus)
 
 
+def json2pd(in_file, col_list, lines=True):
+    """
+    :param in_file: a json file
+    :param col_list: set the extracted columns
+    :param lines: True if the file is line-based
+    :return: a pd df
+    """
+    data = pd.read_json(in_file, lines=lines)
+    result = data[col_list]
+    return result
+
+
 ########################################################################################################################
 
 
