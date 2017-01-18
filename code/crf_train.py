@@ -26,6 +26,8 @@ LABEL_COLLEGE = ['COL']
 
 LABEL_REMAPPED = ['ORG', 'MISC']
 
+LABEL_ANS = ['category', 'nname_en']
+
 NLP = spacy.load('en')
 
 
@@ -67,7 +69,16 @@ def read_gold_parser_train_data(input, col, file=True):
     return train_data
 
 
-
+def read_ans_dataset(in_file, col_list=LABEL_ANS):
+    """
+    It read ANS dataset
+    :param in_file: an ANS json file
+    :param col_list:
+    :return: a df for gold parser to train
+    """
+    data = json2pd(in_file, col_list)
+    data = rename_series(data, 'category', 'entity_types')
+    return data
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
