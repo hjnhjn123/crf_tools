@@ -112,6 +112,17 @@ def df2single_excel(df, excel_file, length=60000):
             writer.close()
 
 
+def rename_series(df, old_col, new_col):
+    """
+    The rename in pandas is not easy to remember
+    :param df: a pd df
+    :param old_col: old column name
+    :param new_col: new column name
+    :return: a pd with new column name
+    """
+    return df.rename(columns={old_col: new_col})
+
+
 def prepare_keywords(keywords, in_file):
     """
     :param keywords:  set the keyword items here
