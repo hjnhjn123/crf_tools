@@ -65,10 +65,16 @@ def prepare_ans_dataset(in_file, out_file, col_list=LABEL_ANS):
     data.to_csv(out_file, index=False)
 
 
-def prepare_schweb_dataset(in_file):
+def prepare_schweb_dataset(in_file, out_file):
+    """
+    :param in_file: schweb raw csv
+    :param out_file: schweb csv
+    """
     data = csv2pd(in_file, HEADER_SCHWEB, HEADER_SCHWEB, sep='\t')
-
-
+    en_data = data[data.Language == 'en']
+    result = en_data[en_data.Type.str.contains('Location|Personal|Organisation')]
+    result = result.drop('Language', axis=1)
+    result.to_csv(out_file, index=False)
 
 
 def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
