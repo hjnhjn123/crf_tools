@@ -13,7 +13,6 @@ HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
 
-
 LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
 
 LABEL_FACTSET = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
@@ -30,8 +29,8 @@ LABEL_REMAPPED = ['ORG', 'MISC']
 
 LABEL_ANS = ['category', 'nname_en']
 
-
 NLP = spacy.load('en')
+
 
 ##############################################################################
 
@@ -73,13 +72,17 @@ def prepare_schweb_dataset(in_file, out_file):
     data = csv2pd(in_file, HEADER_SCHWEB, HEADER_SCHWEB, sep='\t')
     en_data = data[data.Language == 'en']
     result = en_data[en_data.Type.str.contains('Location|Personal|Organisation')]
-    result = result.drop('Language', axis=1)
+    result['entity_type'] = np.where(result.Type.str.contains('Personal'), 'PERSON',
+                                     np.where(result.Type.str.contains('Location'), 'GPE',
+                                              np.where(result.Type.str.contains('Organisation'), 'ORG', 'MISC')))
+    result = rename_series(result, 'Title', 'entity_name')
+    result = result.drop(['Language', 'Type'], axis=1)
     result.to_csv(out_file, index=False)
 
 
 def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
     """
-    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
+    ('Who  is Chaka Khan?', [(7, 17, 'PERSON')]),
     :param df: a df containing entity names and entity types
     :param entity_col: entity names
     :param tag_col: entity types
@@ -122,6 +125,7 @@ def gold_parser(train_data, label=LABEL_FACTSET):
             NLP.tagger(doc)
             ner.update(doc, gold)
     ner.model.end_training()
+
 
 ##############################################################################################
 
