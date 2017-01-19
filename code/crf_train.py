@@ -9,8 +9,6 @@ HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
 
-LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
-
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
                  'IDX', 'BAS', 'PRT', 'SHP']
