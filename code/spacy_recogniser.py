@@ -3,6 +3,7 @@
 from .arsenal_stats import *
 import random
 import spacy
+from collections import OrderedDict
 
 NLP = spacy.load('en')
 
@@ -10,6 +11,8 @@ NLP = spacy.load('en')
 LABEL_FACTSET = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'NPO', 'HED', 'UIT', 'MUE', 'COL', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
                  'IDX', 'BAS', 'PRT', 'SHP']
+LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
+
 
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
@@ -46,13 +49,23 @@ def read_gold_parser_train_data(input, col, file=True):
     return train_data
 
 
-def spacy_ner_recogniser(sent):
+def spacy_ner(sent):
     """
     param: sent csv file
     return: {ner: ner type}
     """
     entity = NLP(sent).ents
-    extracted = {i.text: (i.start, i.end, i.label_) for i in entity if i.label_ in LABEL_NER}
+    extracted = OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in entity if i.label_ in LABEL_NER])
+    return extracted
+
+
+def spacy_pos(sent):
+    """
+    param: sent csv file
+    return: {ner: ner type}
+    """
+    doc = NLP(sent)
+    extracted = OrderedDict([(i.text, i.pos_) for i in doc])
     return extracted
 
 
@@ -76,10 +89,14 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 ##############################################################################################
 
 
-def batch_processing(in_file, out_file, col='CONTENT'):
-    data = quickest_read_csv(in_file, HEADER_TC)
+DIC_SPACY = {'ner': spacy_ner,
+             'pos': spacy_pos}
+
+
+def spacy_batch_processing(in_file, out_file, switch, col='CONTENT', header=HEADER_TC):
+    data = quickest_read_csv(in_file, header)
     data = data.dropna()
-    result = data[col].apply(spacy_ner_recogniser)
+    result = data[col].apply(DIC_SPACY[switch])
     result.to_csv(out_file)
 
 
