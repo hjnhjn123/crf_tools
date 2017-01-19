@@ -62,7 +62,7 @@ def spacy_ner(sent):
 def spacy_pos(sent):
     """
     param: sent csv file
-    return: {ner: ner type}
+    return: {word: pos}
     """
     doc = NLP(sent)
     extracted = OrderedDict([(i.text, i.pos_) for i in doc])
