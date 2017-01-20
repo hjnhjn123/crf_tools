@@ -17,10 +17,10 @@ from configparser import ConfigParser
 ########################################################################################################################
 
 
-# File Reading and Writing
+# CSV processing
 
 
-def pd2file(pandas_df, out_file):
+def pd2csv(pandas_df, out_file):
     """
     write a pandas DataFrame to a file
     """
@@ -38,18 +38,18 @@ def get_column_index(column, col_list):
     return [int(col_index_dic[col]) for col in col_list]
 
 
-def csv2pd(in_file, column_constant, column_names, sep=",", quote=3, engine='python'):
+def csv2pd(in_file, original_columns, needed_columns, sep=",", quote=3, engine='c'):
     """
     user Function get_column_index to get a list of column indices
     :param in_file: a csv_file
-    :param column_names: the full column names of the csv
-    :param column_constant: a predefined column header
+    :param needed_columns: the full column names of the csv
+    :param original_columns: a predefined column header
     :param sep: ',' by default
-    :param quote: exlcude quotation marks
+    :param quote: exclude quotation marks
     :param engine: choose engine for reading data
     :return: a trimmed pandas table
     """
-    column_indices = get_column_index(column=column_constant, col_list=column_names)
+    column_indices = get_column_index(column=original_columns, col_list=needed_columns)
     return pd.read_csv(in_file, usecols=column_indices, sep=sep, quoting=quote, engine=engine)
 
 
@@ -64,7 +64,7 @@ def quickest_read_csv(in_file, column_names):
     """
     param: in_file: csv file
     """
-    data = csv2pd(column_constant=get_header(in_file), column_names=column_names, engine='c',
+    data = csv2pd(original_columns=get_header(in_file), needed_columns=column_names, engine='c',
                   in_file=in_file, quote=0, sep=',')
     return data
 
@@ -78,7 +78,7 @@ def get_last_files(base, time_range):
     return [''.join((base, ''.join(i.split('-')), '.csv')) for i in time_range]
 
 
-def choose_file(in_file, time_format, day, header, sep, engine):
+def choose_csv(in_file, time_format, day, header, sep, engine):
     """
     :param in_file: the file DIR
     :param time_format: set time category
@@ -98,6 +98,12 @@ def choose_file(in_file, time_format, day, header, sep, engine):
                           get_last_files(in_file, get_past_month(day))])
 
 
+########################################################################################################################
+
+
+# Excel processing
+
+
 def df2single_excel(df, excel_file, length=60000):
     writer = ExcelWriter(excel_file)
     if len(df) < length:
@@ -112,28 +118,14 @@ def df2single_excel(df, excel_file, length=60000):
             writer.close()
 
 
-def rename_series(df, old_col, new_col):
+def df2excel(df, path, name):
     """
-    The rename in pandas is not easy to remember
-    :param df: a pd df
-    :param old_col: old column name
-    :param new_col: new column name
-    :return: a pd with new column name
+    :param df: a pd.DataFrame
+    :param path: path to excel file
+    :param name: name of the file
+    :return: an excel file
     """
-    return df.rename(columns={old_col: new_col})
-
-
-def prepare_keywords(keywords, in_file):
-    """
-    :param keywords:  set the keyword items here
-    :param in_file: a keyword CONF file
-    :return: [{keywords}]
-    """
-    config = ConfigParser()
-    config.read(in_file)
-    # keyword_lists = [{to_uni(i) for i in config.get('CONF', keyword).split(',')} for keyword in keywords]
-    keyword_dic = {keyword: {i for i in config.get('CONF', keyword).split(',')} for keyword in keywords}
-    return keyword_dic
+    return df.to_excel(path, sheet_name=name)
 
 
 ########################################################################################################################
@@ -259,6 +251,29 @@ def batch_startswith(df, col, patterns):
     return df
 
 
+def rename_series(df, old_col, new_col):
+    """
+    The rename in pandas is not easy to remember
+    :param df: a pd df
+    :param old_col: old column name
+    :param new_col: new column name
+    :return: a pd with new column name
+    """
+    return df.rename(columns={old_col: new_col})
+
+
+def prepare_keywords(keywords, in_file):
+    """
+    :param keywords:  set the keyword items here
+    :param in_file: a keyword CONF file
+    :return: [{keywords}]
+    """
+    config = ConfigParser()
+    config.read(in_file)
+    # keyword_lists = [{to_uni(i) for i in config.get('CONF', keyword).split(',')} for keyword in keywords]
+    keyword_dic = {keyword: {i for i in config.get('CONF', keyword).split(',')} for keyword in keywords}
+    return keyword_dic
+
 ########################################################################################################################
 
 
@@ -290,7 +305,7 @@ def cut_top_dic(dic, sort_key=1, rev=True, cut=0.1):
     return {k: v for (k, v) in top_list}
 
 
-def list2pandas_df(lst, column_names):
+def list2df(lst, column_names):
     """
     :param lst: a matrix-like list
     :param column_names: [col1, col2...]
@@ -328,7 +343,7 @@ def get_lists(list1, list2):
     return {k: v for (k, v) in zip(list1, list2)}
 
 
-def dicts2pandas_df(dics, column_names):
+def dicts2df(dics, column_names):
     """
     Combine dics to a DataFrame by keys
     :param dics: [dic1, dic2...]
@@ -336,24 +351,6 @@ def dicts2pandas_df(dics, column_names):
     :return: pd.DataFrame
     """
     return pd.DataFrame(dics, columns=column_names).T
-
-
-def pandas_df2excel(df, path, name):
-    """
-    :param df: a pd.DataFrame
-    :param path: path to excel file
-    :param name: name of the file
-    :return: an excel file
-    """
-    return df.to_excel(path, sheet_name=name)
-
-
-def get_pandas_header(df):
-    """
-    :param df: a pandas DataFrame
-    :return: [column names]
-    """
-    return list(df.head())
 
 
 def split_evenly(obj, rev=True, pieces=5):
@@ -368,7 +365,7 @@ def split_evenly(obj, rev=True, pieces=5):
     return np.array_split(sort_obj, pieces)
 
 
-def check_pandas_df(df, column, value):
+def check_df(df, column, value):
     """
     :param df: a pandas DataFrame
     :param column: define column
@@ -378,17 +375,8 @@ def check_pandas_df(df, column, value):
     return df.loc[column == value]
 
 
-def unique_multi_col_pd(df, col_list):
-    """
-    extract multiple columns from a pandas DataFrame, and unique them
-    :param df: a pandas DataFrame
-    :param col_list: [col1, col2]
-    :return:
-    """
-    return df[col_list].drop_duplicates()
 
-
-def nested_dic2pd_df(dic, col_list):
+def nested_dic2df(dic, col_list):
     """
     :param dic: {key: {v1, v2}}
     :param col_list:
@@ -406,7 +394,7 @@ def nested_dic2set(dic):
     return {(k, m) for (k, v) in iter(dic.items()) for m in v}
 
 
-def dic2pd_df(dic, cols):
+def dic2df(dic, cols):
     """
     :param dic:
     :param cols: set column names
@@ -415,7 +403,7 @@ def dic2pd_df(dic, cols):
     return pd.DataFrame(dic.items(), columns=cols)
 
 
-def dic2extended_pd_df(dic, cols):
+def dic2extended_df(dic, cols):
     """
     :param dic:
     :param cols: set column names
@@ -442,6 +430,20 @@ def combine_multi_series(df, col_name=['Extracted']):
     return pd.DataFrame(reduce(add_series, [df[col] for col in df]), columns=col_name)
 
 
+def remap_series(df, col, new_col, label_set, new_label, misc='MISC'):
+    """
+    :param df:
+    :param col: the column to be changed
+    :param new_col: the new column
+    :param label_set: labels to be changed
+    :param new_label: new label
+    :param misc: set the misc label
+    :return: the original df with new_col
+    """
+    df[new_col] = np.where(df[col].isin(label_set), new_label, misc)
+    return df
+
+
 ########################################################################################################################
 
 
@@ -464,27 +466,13 @@ def json2pd(in_file, col_list, lines=True):
     return result
 
 
-def remap_series(df, col, new_col, label_set, new_label, misc='MISC'):
-    """
-    :param df:
-    :param col: the column to be changed
-    :param new_col: the new column
-    :param label_set: labels to be changed
-    :param new_label: new label
-    :param misc: set the misc label
-    :return: the original df with new_col
-    """
-    df[new_col] = np.where(df[col].isin(label_set), new_label, misc)
-    return df
-
-
 ########################################################################################################################
 
 
 # Math
 
 
-def divide_pd_series(col1, col2, index, dec=2):
+def divide_series(col1, col2, index, dec=2):
     """
     :param col1: a pandas DataFrame column
     :param col2: a pandas DataFrame column
