@@ -42,9 +42,9 @@ def csv2pd(in_file, column_constant, column_names, sep=",", quote=3, engine='pyt
     """
     user Function get_column_index to get a list of column indices
     :param in_file: a csv_file
-    :param column_names: [column_names]
+    :param column_names: the full column names of the csv
     :param column_constant: a predefined column header
-    :param sep , by default
+    :param sep: ',' by default
     :param quote: exlcude quotation marks
     :param engine: choose engine for reading data
     :return: a trimmed pandas table
@@ -53,20 +53,11 @@ def csv2pd(in_file, column_constant, column_names, sep=",", quote=3, engine='pyt
     return pd.read_csv(in_file, usecols=column_indices, sep=sep, quoting=quote, engine=engine)
 
 
-def get_header(infile, sep=","):
-    infile = open(infile)
-    res = next(infile).strip('\n\r').split(sep)
-    infile.close()
-    return res
-
-
-def get_last_files(base, time_range):
-    """
-    :param base: e.g.: '/Users/acepor/Work/gemii_data/datapool/input/wechat_wyeth_RoomMsgInfo_raw_'
-    :param time_range: get_past_week() or get_past_month()
-    :return: [file_paths]
-    """
-    return [''.join((base, ''.join(i.split('-')), '.csv')) for i in time_range]
+def get_header(in_file, sep=","):
+    in_file = open(in_file)
+    result = next(in_file).strip('\n\r').split(sep)
+    in_file.close()
+    return result
 
 
 def quickest_read_csv(in_file, column_names):
@@ -76,6 +67,15 @@ def quickest_read_csv(in_file, column_names):
     data = csv2pd(column_constant=get_header(in_file), column_names=column_names, engine='c',
                   in_file=in_file, quote=0, sep=',')
     return data
+
+
+def get_last_files(base, time_range):
+    """
+    :param base: e.g.: '/Users/acepor/Work/gemii_data/datapool/input/wechat_wyeth_RoomMsgInfo_raw_'
+    :param time_range: get_past_week() or get_past_month()
+    :return: [file_paths]
+    """
+    return [''.join((base, ''.join(i.split('-')), '.csv')) for i in time_range]
 
 
 def choose_file(in_file, time_format, day, header, sep, engine):
