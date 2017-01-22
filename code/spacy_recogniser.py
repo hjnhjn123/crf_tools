@@ -17,7 +17,6 @@ LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 
-
 ##############################################################################################
 
 
@@ -47,6 +46,14 @@ def read_gold_parser_train_data(input, col, file=True):
     data = quickest_read_csv(input, col) if file is True else input
     train_data = [(i[0], list((tuple((int(i[1]), int(i[2]), i[3])),))) for i in data[col].tolist()]
     return train_data
+
+
+def spacy_chunker(doc):
+    """
+    :param doc:
+    :return: a list of sentences
+    """
+    return [i for i in NLP(doc).sents]
 
 
 def spacy_ner(sent):
