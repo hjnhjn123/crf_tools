@@ -7,15 +7,14 @@ from collections import OrderedDict
 
 NLP = spacy.load('en')
 
-
 LABEL_FACTSET = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'NPO', 'HED', 'UIT', 'MUE', 'COL', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
                  'IDX', 'BAS', 'PRT', 'SHP']
 LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
 
-
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
+
 
 ##############################################################################################
 
@@ -48,32 +47,18 @@ def read_gold_parser_train_data(input, col, file=True):
     return train_data
 
 
-def spacy_chunker(doc):
+def spacy_parser(text, switch, label):
     """
-    :param doc:
-    :return: a list of sentences
+    :param text:
+    :param switch:
+    :param label:
+    :return:
     """
-    return [i for i in NLP(doc).sents]
-
-
-def spacy_ner(sent):
-    """
-    param: sent csv file
-    return: {ner: ner type}
-    """
-    entity = NLP(sent).ents
-    extracted = OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in entity if i.label_ in LABEL_NER])
-    return extracted
-
-
-def spacy_pos(sent):
-    """
-    param: sent csv file
-    return: {word: pos}
-    """
-    doc = NLP(sent)
-    extracted = OrderedDict([(i.text, i.pos_) for i in doc])
-    return extracted
+    spacy_dic = {'chk': [i.text for i in NLP(text).sents],
+                 'pos': OrderedDict([(i.text, i.pos_) for i in NLP(text)]),
+                 'ner': OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in NLP(text).ents if i.label_ in label])
+                 }
+    return spacy_dic[switch]
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
