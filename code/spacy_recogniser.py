@@ -21,7 +21,7 @@ HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 
 def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
     """
-    ('Who  is Chaka Khan?', [(7, 17, 'PERSON')]),
+    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
     :param df: a df containing entity names and entity types
     :param entity_col: entity names
     :param tag_col: entity types
@@ -47,18 +47,19 @@ def read_gold_parser_train_data(input, col, file=True):
     return train_data
 
 
-def spacy_parser(text, switch, label):
+def spacy_parser(text, switches, label):
     """
-    :param text:
-    :param switch:
-    :param label:
+    :param text: a sentence or a doc
+    :param switch: chk for sentence chunking, pos for pos tagging, and ner for name entity recognition
+    :param label: filtering the NER labels
     :return:
     """
-    spacy_dic = {'chk': [i.text for i in NLP(text).sents],
-                 'pos': OrderedDict([(i.text, i.pos_) for i in NLP(text)]),
-                 'ner': OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in NLP(text).ents if i.label_ in label])
+    nlp_result = NLP(text)
+    spacy_dic = {'chk': [i.text for i in nlp_result.sents],
+                 'pos': OrderedDict([(i.text, i.pos_) for i in nlp_result]),
+                 'ner': OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
                  }
-    return spacy_dic[switch]
+    return spacy_dic[{i for i in switches}]
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
@@ -81,14 +82,10 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 ##############################################################################################
 
 
-DIC_SPACY = {'ner': spacy_ner,
-             'pos': spacy_pos}
-
-
 def spacy_batch_processing(in_file, out_file, switch, col='CONTENT', header=HEADER_TC):
     data = quickest_read_csv(in_file, header)
     data = data.dropna()
-    result = data[col].apply(DIC_SPACY[switch])
+    result = data[col].apply(spacy_parser[switch])
     result.to_csv(out_file)
 
 
