@@ -82,13 +82,21 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 ##############################################################################################
 
 
-def spacy_batch_processing(in_file, out_file, switches, label, col='CONTENT', header=HEADER_TC):
+def spacy_batch_processing(in_file, out_file, switches, label, col, header):
+    """
+    :param in_file: a csv file
+    :param out_file: a csv file
+    :param switches: set switches for spacy_parser
+    :param label: set label for spacy_parser
+    :param col: set the needed column
+    :param header: set the needed header
+    :return:
+    """
     data = quickest_read_csv(in_file, header)
-    print(data.info())
     data = data.dropna()
-    print(data.info())
+    data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))
-    result.to_csv(out_file)
+    result.to_csv(out_file, index=False)
 
 
 def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
