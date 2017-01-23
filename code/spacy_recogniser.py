@@ -50,7 +50,7 @@ def read_gold_parser_train_data(input, col, file=True):
 def spacy_parser(text, switches, label):
     """
     :param text: a sentence or a doc
-    :param switch: chk for sentence chunking, pos for pos tagging, and ner for name entity recognition
+    :param switch: a list of switches: chk for sentence chunking, pos for pos tagging, and ner for NER
     :param label: filtering the NER labels
     :return:
     """
@@ -59,7 +59,7 @@ def spacy_parser(text, switches, label):
                  'pos': OrderedDict([(i.text, i.pos_) for i in nlp_result]),
                  'ner': OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
                  }
-    return spacy_dic[{i for i in switches}]
+    return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
@@ -82,10 +82,12 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 ##############################################################################################
 
 
-def spacy_batch_processing(in_file, out_file, switch, col='CONTENT', header=HEADER_TC):
+def spacy_batch_processing(in_file, out_file, switches, label, col='CONTENT', header=HEADER_TC):
     data = quickest_read_csv(in_file, header)
+    print(data.info())
     data = data.dropna()
-    result = data[col].apply(spacy_parser[switch])
+    print(data.info())
+    result = data[col].apply(spacy_parser, args=(switches, label))
     result.to_csv(out_file)
 
 
