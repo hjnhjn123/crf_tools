@@ -64,8 +64,8 @@ def quickest_read_csv(in_file, column_names):
     """
     param: in_file: csv file
     """
-    data = csv2pd(original_columns=get_header(in_file), needed_columns=column_names, engine='c',
-                  in_file=in_file, quote=0, sep=',')
+    data = csv2pd(in_file=in_file, original_columns=get_header(in_file), needed_columns=column_names, engine='c',
+                  quote=0, sep=',')
     return data
 
 
@@ -274,6 +274,7 @@ def prepare_keywords(keywords, in_file):
     keyword_dic = {keyword: {i for i in config.get('CONF', keyword).split(',')} for keyword in keywords}
     return keyword_dic
 
+
 ########################################################################################################################
 
 
@@ -375,7 +376,6 @@ def check_df(df, column, value):
     return df.loc[column == value]
 
 
-
 def nested_dic2df(dic, col_list):
     """
     :param dic: {key: {v1, v2}}
@@ -422,12 +422,12 @@ def combine_multi_df(dfs, on, how):
     return reduce(lambda left, right: pd.merge(left, right, on=on, how=how), dfs)
 
 
-def add_series(sr1, sr2):
-    return sr1 + sr2
+def add(a, b):
+    return a + b
 
 
 def combine_multi_series(df, col_name=['Extracted']):
-    return pd.DataFrame(reduce(add_series, [df[col] for col in df]), columns=col_name)
+    return pd.DataFrame(reduce(add, [df[col] for col in df]), columns=col_name)
 
 
 def remap_series(df, col, new_col, label_set, new_label, misc='MISC'):
@@ -462,6 +462,7 @@ def json2pd(in_file, col_list, lines=True):
     :return: a pd df
     """
     data = pd.read_json(in_file, lines=lines)
+    print(list(data.columns))
     result = data[col_list]
     return result
 
