@@ -39,12 +39,12 @@ def spacy_parser(text, switches, label):
     return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
 
 
-def spacy_pos_text_list(text_list, end_label=[('##END', '###', 'O')]):
+def spacy_pos_text_list(text_list):
     """
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    result = [spacy_parser(i, ['pos'], '') + end_label for i in text_list]
+    result = [spacy_parser(i, ['trn'], '') + [('##END', '###', 'O')] for i in text_list]
     # use spacy pos tagger to annotate each chunk
     # add end_label to the end of each chunk
     return reduce(add, result)  # merge nested chunks
@@ -141,13 +141,12 @@ def random_rows(df, size):
 def prepare_techcrunch(in_file, header, col):
     data = quickest_read_csv(in_file, header)
     data = data.dropna()
-    print(data.head())
     data = clean_dataframe(data, [col], rpls={'\n': ' ', '\t': ' '})
     return data
 
 
 def process_techcrunch(in_file, out_file, header, col):
     data = prepare_techcrunch(in_file, header, col)
-    parsed_data = spacy_batch_processing(data, 'trn', '', 'CONTENT', ['"CONTENT"'])
-    random_data = random_rows(parsed_data, 100)
+    parsed_data = spacy_batch_processing(data, ['chk'], '', 'CONTENT', ['CONTENT'])
+    random_data = random_rows(parsed_data, 10)
     pd.Series(random_data).to_csv(out_file)
