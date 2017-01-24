@@ -19,6 +19,46 @@ HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 ##############################################################################################
 
 
+# Applying
+
+
+def add(a, b):
+    return a + b
+
+
+def spacy_parser(text, switches, label):
+    """
+    :param text: a sentence or a doc
+    :param switch: a list of switches: chk for sentence chunking, pos for pos tagging, and ner for NER
+    :param label: filtering the NER labels
+    :return:
+    """
+    nlp_result = NLP(text)
+    spacy_dic = {'chk': [i.text for i in nlp_result.sents],
+                 'pos': [(i.text, i.pos_) for i in nlp_result],
+                 'ner': OrderedDict(
+                     [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
+                 }
+    return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
+
+
+def spacy_pos_text_list(text_list, end_label=[('##END', '###')]):
+    """
+    :param text_list: a list of sentences
+    :return: a list of POS result
+    """
+    result = [spacy_parser(i, ['pos'], '') + end_label for i in text_list]
+    # use spacy pos tagger to annotate each chunk
+    # add end_label to the end of each chunk
+    return reduce(add, result)  # merge nested chunks
+
+
+##############################################################################################
+
+
+# Training
+
+
 def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
     """
     ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
@@ -45,21 +85,6 @@ def read_gold_parser_train_data(input, col, file=True):
     data = quickest_read_csv(input, col) if file is True else input
     train_data = [(i[0], list((tuple((int(i[1]), int(i[2]), i[3])),))) for i in data[col].tolist()]
     return train_data
-
-
-def spacy_parser(text, switches, label):
-    """
-    :param text: a sentence or a doc
-    :param switch: a list of switches: chk for sentence chunking, pos for pos tagging, and ner for NER
-    :param label: filtering the NER labels
-    :return:
-    """
-    nlp_result = NLP(text)
-    spacy_dic = {'chk': [i.text for i in nlp_result.sents],
-                 'pos': OrderedDict([(i.text, i.pos_) for i in nlp_result]),
-                 'ner': OrderedDict([(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
-                 }
-    return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
 
 
 def gold_parser(train_data, label=LABEL_FACTSET):
@@ -94,9 +119,12 @@ def spacy_batch_processing(in_file, out_file, switches, label, col, header):
     """
     data = quickest_read_csv(in_file, header)
     data = data.dropna()
+    data = clean_dataframe(data, [col], rpls={'\n': ' ', '\t': ' '})
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
-    result = data[col].apply(spacy_parser, args=(switches, label))
-    result.to_csv(out_file, index=False)
+    result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
+    result = result.apply(spacy_pos_text_list)  # POS tagging
+    return result
+    # result.to_csv(out_file, index=False)
 
 
 def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
