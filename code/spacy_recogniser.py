@@ -128,14 +128,14 @@ def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
     gold_parser(data, label)
 
 
-def random_pick(df, size=100):
+def random_pick(df, size=10):
     return random.sample(range(0, len(df)-1), size)
 
 
-def random_rows(df, size):
+def random_rows(df, size, col_name):
     row_number = random_pick(df, size)
-    row_list = [df.tolist()[i] for i in row_number]
-    return reduce(add, row_list)
+    result = df.iloc[row_number]
+    return result
 
 
 def prepare_techcrunch(in_file, header, col):
@@ -145,8 +145,10 @@ def prepare_techcrunch(in_file, header, col):
     return data
 
 
-def process_techcrunch(in_file, out_file, header, col):
-    data = prepare_techcrunch(in_file, header, col)
-    parsed_data = spacy_batch_processing(data, ['chk'], '', 'CONTENT', ['CONTENT'])
-    random_data = random_rows(parsed_data, 10)
-    pd.Series(random_data).to_csv(out_file)
+def process_techcrunch(in_file, out_file, col):
+    data = json2pd(in_file, col, lines=True)
+    data = data.dropna()
+    random_data = random_rows(data, 10, 'content')
+    parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
+    parsed_data = reduce(add, parsed_data)
+    pd.Series(parsed_data).to_csv(out_file)
