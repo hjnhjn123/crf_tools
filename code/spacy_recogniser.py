@@ -129,7 +129,7 @@ def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
 
 
 def random_pick(df, size=10):
-    return random.sample(range(0, len(df)-1), size)
+    return random.sample(range(0, len(df) - 1), size)
 
 
 def random_rows(df, size, col_name):
