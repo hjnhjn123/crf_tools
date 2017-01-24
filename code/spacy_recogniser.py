@@ -22,10 +22,6 @@ HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 # Applying
 
 
-def add(a, b):
-    return a + b
-
-
 def spacy_parser(text, switches, label):
     """
     :param text: a sentence or a doc
@@ -36,13 +32,14 @@ def spacy_parser(text, switches, label):
     nlp_result = NLP(text)
     spacy_dic = {'chk': [i.text for i in nlp_result.sents],
                  'pos': [(i.text, i.pos_) for i in nlp_result],
+                 'trn': [(i.text, i.pos_, 'O') for i in nlp_result],
                  'ner': OrderedDict(
                      [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
                  }
     return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
 
 
-def spacy_pos_text_list(text_list, end_label=[('##END', '###')]):
+def spacy_pos_text_list(text_list, end_label=[('##END', '###', 'O')]):
     """
     :param text_list: a list of sentences
     :return: a list of POS result
@@ -107,7 +104,7 @@ def gold_parser(train_data, label=LABEL_FACTSET):
 ##############################################################################################
 
 
-def spacy_batch_processing(in_file, out_file, switches, label, col, header):
+def spacy_batch_processing(data, switches, label, col, header):
     """
     :param in_file: a csv file
     :param out_file: a csv file
@@ -117,9 +114,6 @@ def spacy_batch_processing(in_file, out_file, switches, label, col, header):
     :param header: set the needed header
     :return:
     """
-    data = quickest_read_csv(in_file, header)
-    data = data.dropna()
-    data = clean_dataframe(data, [col], rpls={'\n': ' ', '\t': ' '})
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
     result = result.apply(spacy_pos_text_list)  # POS tagging
@@ -132,3 +126,28 @@ def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
     data = df2gold_parser(data, entity_col, tag_col)
     data = read_gold_parser_train_data(data, gold_parser_col, False)
     gold_parser(data, label)
+
+
+def random_pick(df, size=100):
+    return random.sample(range(0, len(df)-1), size)
+
+
+def random_rows(df, size):
+    row_number = random_pick(df, size)
+    row_list = [df.tolist()[i] for i in row_number]
+    return reduce(add, row_list)
+
+
+def prepare_techcrunch(in_file, header, col):
+    data = quickest_read_csv(in_file, header)
+    data = data.dropna()
+    print(data.head())
+    data = clean_dataframe(data, [col], rpls={'\n': ' ', '\t': ' '})
+    return data
+
+
+def process_techcrunch(in_file, out_file, header, col):
+    data = prepare_techcrunch(in_file, header, col)
+    parsed_data = spacy_batch_processing(data, 'trn', '', 'CONTENT', ['"CONTENT"'])
+    random_data = random_rows(parsed_data, 100)
+    pd.Series(random_data).to_csv(out_file)
