@@ -462,7 +462,6 @@ def json2pd(in_file, col_list, lines=True):
     :return: a pd df
     """
     data = pd.read_json(in_file, lines=lines)
-    print(list(data.columns))
     result = data[col_list]
     return result
 
