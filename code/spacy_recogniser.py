@@ -151,4 +151,4 @@ def process_techcrunch(in_file, out_file, col):
     random_data = random_rows(data, 10, 'content')
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
-    pd.Series(parsed_data).to_csv(out_file)
+    pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, index=False)
