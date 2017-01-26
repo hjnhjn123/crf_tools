@@ -3002,7 +3002,7 @@ companies,NOUN,O
 manufacturing,VERB,O
 robots,NOUN,O
 ",",PUNCT,O
-Mountz,PROPN,U_PPL
+Mountz,PROPN,U-PPL
 believes,VERB,O
 it,PRON,O
 ’s,VERB,O
@@ -3025,9 +3025,9 @@ machine,NOUN,O
 shops,NOUN,O
 in,ADP,O
 the,DET,O
-New,PROPN,B_GPE
+New,PROPN,B-GPE
 England,PROPN,I-GPE
-area,NOUN,L_GPE
+area,NOUN,L-GPE
 ##END,###,O
 “,PUNCT,O
 that,ADJ,O
@@ -4370,7 +4370,7 @@ HD,PROPN,L-PDT
 and,CONJ,O
 Motorola,PROPN,U-COM
 ’s,PROPN,O
-MOTOCast,PROPN,U_PDT
+MOTOCast,PROPN,U-PDT
 app,NOUN,O
 .,PUNCT,O
 ##END,###,O
