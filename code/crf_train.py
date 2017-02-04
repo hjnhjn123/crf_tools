@@ -2,21 +2,20 @@
 
 from .arsenal_stats import *
 import numpy as np
+from itertools import groupby
 
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
+HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
                  'IDX', 'BAS', 'PRT', 'SHP']
-
 LABEL_COLLEGE = ['COL']
-
 LABEL_REMAPPED = ['ORG', 'MISC']
-
 LABEL_ANS = ['category', 'nname_en']
 
 
@@ -53,6 +52,17 @@ def prepare_schweb_dataset(in_file, out_file):
     result = rename_series(result, 'Title', 'entity_name')
     result = result.drop(['Language', 'Type'], axis=1)
     result.to_csv(out_file, index=False)
+
+
+def prepare_annotation(in_file):
+    with open(in_file) as data:
+        sents = [tuple(i.split(',')) for i in data.read().split('\n')[1:]]
+        # convert file to tuples, use [1:] to remove header
+        sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+        # split each sentences, use [:1] to remove the empty end
+        sents = [i for i in sents if i!=[]]
+        # Remove empty sent
+        return sents
 
 
 ##############################################################################
