@@ -4,6 +4,7 @@ from .arsenal_stats import *
 import numpy as np
 from itertools import groupby
 from collections import defaultdict
+import sklearn_crfsuite
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
@@ -68,22 +69,11 @@ def prepare_annotation(in_file):
 ##############################################################################
 
 
-def update_feature(word, postag):
-    features = defaultdict()
-    features = features.update({
-            '+1:word.lower()': word.lower(),
-            '+1:word.istitle()': word.istitle(),
-            '+1:word.isupper()': word.isupper(),
-            '+1:postag': postag,
-        })
-    return features
+# Feature extraction
 
 
-def word2features(sent, i):
-    word = sent[i][0]
-    postag = sent[i][1]
-
-    features = {
+def set_features(word, postag):
+    return {
         'bias': 1.0,
         'word.lower()': word.lower(),
         'word[-3:]': word[-3:],  # suffix
@@ -93,16 +83,30 @@ def word2features(sent, i):
         'word.isdigit()': word.isdigit(),
         'postag': postag,
     }
-    
+
+
+def update_feature(word, postag):
+    features = defaultdict()
+    features = features.update({
+        '+1:word.lower()': word.lower(),
+        '+1:word.istitle()': word.istitle(),
+        '+1:word.isupper()': word.isupper(),
+        '+1:postag': postag,
+    })
+    return features
+
+
+def word2features(sent, i):
+    word, postag = sent[i][0], sent[i][1]
+    features = set_features(word, postag)
+
     if i > 0:
-        word1, postag1 = sent[i - 1][0], sent[i - 1][1]
-        features = update_feature(word1, postag1)
+        features = update_feature(sent[i - 1][0], sent[i - 1][1])
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1 = sent[i + 1][0], sent[i + 1][1]
-        features = update_feature(word1, postag1)
+        features = update_feature(sent[i + 1][0], sent[i + 1][1])
     else:
         features['EOS'] = True
 
@@ -120,6 +124,24 @@ def sent2labels(sent):
 def sent2tokens(sent):
     return [token for token, postag, label in sent]
 
+
+##############################################################################
+
+
+# CRF training
+
+def train_crf(X_train, y_train):
+    crf = sklearn_crfsuite.CRF(
+        algorithm='lbfgs',
+        c1=0.1,
+        c2=0.1,
+        max_iterations=100,
+        all_possible_transitions=True
+    )
+    crf.fit(X_train, y_train)
+    return crf
+
+# 2017-02-04 F1: 0.44002688708718896
 
 ##############################################################################
 
