@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from .arsenal_stats import *
-import random
 import spacy
 from collections import OrderedDict
 
@@ -126,16 +125,6 @@ def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
     data = df2gold_parser(data, entity_col, tag_col)
     data = read_gold_parser_train_data(data, gold_parser_col, False)
     gold_parser(data, label)
-
-
-def random_pick(df, size=10):
-    return random.sample(range(0, len(df) - 1), size)
-
-
-def random_rows(df, size, col_name):
-    row_number = random_pick(df, size)
-    result = df.iloc[row_number]
-    return result
 
 
 def prepare_techcrunch(in_file, header, col):

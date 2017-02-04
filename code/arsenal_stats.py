@@ -12,6 +12,7 @@ import pandas as pd
 from pandas import ExcelWriter
 from functools import reduce
 from configparser import ConfigParser
+import random
 
 
 ########################################################################################################################
@@ -553,3 +554,19 @@ def get_time_range(time_str, prd=300, freq='S'):
 
 def get_now(format='%Y-%m-%d %H:%M:%S:%f'):
     return date.strftime(datetime.now(), format)
+
+
+########################################################################################################################
+
+
+# Randomization
+
+
+def random_pick(df, size=10):
+    return random.sample(range(0, len(df) - 1), size)
+
+
+def random_rows(df, size, col_name):
+    row_number = random_pick(df, size)
+    result = df.iloc[row_number]
+    return result
