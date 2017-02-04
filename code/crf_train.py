@@ -3,7 +3,7 @@
 from .arsenal_stats import *
 import numpy as np
 from itertools import groupby
-
+from collections import defaultdict
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
@@ -60,9 +60,65 @@ def prepare_annotation(in_file):
         # convert file to tuples, use [1:] to remove header
         sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
         # split each sentences, use [:1] to remove the empty end
-        sents = [i for i in sents if i!=[]]
+        sents = [i for i in sents if i != []]
         # Remove empty sent
         return sents
+
+
+##############################################################################
+
+
+def update_feature(word, postag):
+    features = defaultdict()
+    features = features.update({
+            '+1:word.lower()': word.lower(),
+            '+1:word.istitle()': word.istitle(),
+            '+1:word.isupper()': word.isupper(),
+            '+1:postag': postag,
+        })
+    return features
+
+
+def word2features(sent, i):
+    word = sent[i][0]
+    postag = sent[i][1]
+
+    features = {
+        'bias': 1.0,
+        'word.lower()': word.lower(),
+        'word[-3:]': word[-3:],  # suffix
+        'word[-2:]': word[-2:],  # suffix
+        'word.isupper()': word.isupper(),
+        'word.istitle()': word.istitle(),
+        'word.isdigit()': word.isdigit(),
+        'postag': postag,
+    }
+    
+    if i > 0:
+        word1, postag1 = sent[i - 1][0], sent[i - 1][1]
+        features = update_feature(word1, postag1)
+    else:
+        features['BOS'] = True
+
+    if i < len(sent) - 1:
+        word1, postag1 = sent[i + 1][0], sent[i + 1][1]
+        features = update_feature(word1, postag1)
+    else:
+        features['EOS'] = True
+
+    return features
+
+
+def sent2features(sent):
+    return [word2features(sent, i) for i in range(len(sent))]
+
+
+def sent2labels(sent):
+    return [i[-1] for i in sent]
+
+
+def sent2tokens(sent):
+    return [token for token, postag, label in sent]
 
 
 ##############################################################################
@@ -81,6 +137,3 @@ def remap_factset_sn_type(in_file, out_file):
     result = remap_series(data, 'entity_type', 'new_entity_type', LABEL_COMPANY, 'ORG')
     result = result.drop(['entity_type'], axis=1)
     result.to_csv(out_file, index=False)
-
-
-
