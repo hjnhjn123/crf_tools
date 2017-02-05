@@ -55,7 +55,13 @@ def prepare_schweb_dataset(in_file, out_file):
     result.to_csv(out_file, index=False)
 
 
-def prepare_annotation(in_file):
+def process_annotated(in_file):
+    """
+    following python-ccrfsuit, sklearn_crfsuit doesn't support pandas DF, so feature dic is used instead
+    http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
+    :param in_file: CSV file: TOKEN, POS, NER
+    :return: [[sent]]
+    """
     with open(in_file) as data:
         sents = [tuple(i.split(',')) for i in data.read().split('\n')[1:]]
         # convert file to tuples, use [1:] to remove header
@@ -72,44 +78,47 @@ def prepare_annotation(in_file):
 # Feature extraction
 
 
-def set_features(word, postag):
-    return {
-        'bias': 1.0,
-        'word.lower()': word.lower(),
-        'word[-3:]': word[-3:],  # suffix
-        'word[-2:]': word[-2:],  # suffix
-        'word.isupper()': word.isupper(),
-        'word.istitle()': word.istitle(),
-        'word.isdigit()': word.isdigit(),
-        'postag': postag,
-    }
-
-
-def update_feature(word, postag):
-    features = defaultdict()
-    features = features.update({
-        '+1:word.lower()': word.lower(),
-        '+1:word.istitle()': word.istitle(),
-        '+1:word.isupper()': word.isupper(),
-        '+1:postag': postag,
-    })
-    return features
-
-
 def word2features(sent, i):
     word, postag = sent[i][0], sent[i][1]
-    features = set_features(word, postag)
+    features = set_features(postag, word)
 
     if i > 0:
-        features = update_feature(sent[i - 1][0], sent[i - 1][1])
+        word1, postag1 = sent[i - 1][0], sent[i - 1][1]
+        update_features(features, postag1, word1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        features = update_feature(sent[i + 1][0], sent[i + 1][1])
+        word1, postag1 = sent[i + 1][0], sent[i + 1][1]
+        update_features(features, postag1, word1)
     else:
         features['EOS'] = True
 
+    return features
+
+
+def update_features(features, postag1, word1):
+    features.update({
+        '-1:word.lower()': word1.lower(),
+        '-1:word.istitle()': word1.istitle(),
+        '-1:word.isupper()': word1.isupper(),
+        '-1:postag': postag1,
+        '-1:postag[:2]': postag1[:2],
+    })
+
+
+def set_features(postag, word):
+    features = {
+        'bias': 1.0,
+        'word.lower()': word.lower(),
+        'word[-3:]': word[-3:],
+        'word[-2:]': word[-2:],
+        'word.isupper()': word.isupper(),
+        'word.istitle()': word.istitle(),
+        'word.isdigit()': word.isdigit(),
+        'postag': postag,
+        'postag[:2]': postag[:2],
+    }
     return features
 
 
@@ -140,6 +149,7 @@ def train_crf(X_train, y_train):
     )
     crf.fit(X_train, y_train)
     return crf
+
 
 # 2017-02-04 F1: 0.44002688708718896
 
