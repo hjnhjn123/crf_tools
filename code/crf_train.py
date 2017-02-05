@@ -3,8 +3,9 @@
 from .arsenal_stats import *
 import numpy as np
 from itertools import groupby
-from collections import defaultdict
 import sklearn_crfsuite
+from sklearn_crfsuite import metrics
+from re import findall
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
@@ -63,8 +64,8 @@ def process_annotated(in_file):
     :return: [[sent]]
     """
     with open(in_file) as data:
-        sents = [tuple(i.split(',')) for i in data.read().split('\n')[1:]]
-        # convert file to tuples, use [1:] to remove header
+        sents = [tuple(i.split(',')) for i in data.read().split('\n')]
+        # convert file to tuples
         sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
         # split each sentences, use [:1] to remove the empty end
         sents = [i for i in sents if i != []]
@@ -76,25 +77,6 @@ def process_annotated(in_file):
 
 
 # Feature extraction
-
-
-def word2features(sent, i):
-    word, postag = sent[i][0], sent[i][1]
-    features = set_features(postag, word)
-
-    if i > 0:
-        word1, postag1 = sent[i - 1][0], sent[i - 1][1]
-        update_features(features, postag1, word1)
-    else:
-        features['BOS'] = True
-
-    if i < len(sent) - 1:
-        word1, postag1 = sent[i + 1][0], sent[i + 1][1]
-        update_features(features, postag1, word1)
-    else:
-        features['EOS'] = True
-
-    return features
 
 
 def update_features(features, postag1, word1):
@@ -116,9 +98,29 @@ def set_features(postag, word):
         'word.isupper()': word.isupper(),
         'word.istitle()': word.istitle(),
         'word.isdigit()': word.isdigit(),
+        'word.islower()': word.islower(), # iPhone
         'postag': postag,
         'postag[:2]': postag[:2],
     }
+    return features
+
+
+def word2features(sent, i):
+    word, postag = sent[i][0], sent[i][1]
+    features = set_features(postag, word)
+
+    if i > 0:
+        word1, postag1 = sent[i - 1][0], sent[i - 1][1]
+        update_features(features, postag1, word1)
+    else:
+        features['BOS'] = True
+
+    if i < len(sent) - 1:
+        word1, postag1 = sent[i + 1][0], sent[i + 1][1]
+        update_features(features, postag1, word1)
+    else:
+        features['EOS'] = True
+
     return features
 
 
@@ -139,6 +141,17 @@ def sent2tokens(sent):
 
 # CRF training
 
+
+def feed_crf_trainer(train_sents, test_sents):
+    X_train = [sent2features(s) for s in train_sents]
+    y_train = [sent2labels(s) for s in train_sents]
+
+    X_test = [sent2features(s) for s in test_sents]
+    y_test = [sent2labels(s) for s in test_sents]
+
+    return X_train, y_train, X_test, y_test
+
+
 def train_crf(X_train, y_train):
     crf = sklearn_crfsuite.CRF(
         algorithm='lbfgs',
@@ -147,8 +160,25 @@ def train_crf(X_train, y_train):
         max_iterations=100,
         all_possible_transitions=True
     )
-    crf.fit(X_train, y_train)
-    return crf
+    return crf.fit(X_train, y_train)
+
+
+def show_crf_label(crf):
+    labels = list(crf.classes_)
+    labels.remove('O')
+    labels.remove('')
+    return labels
+
+
+def predict_crf(crf, X_test, y_test):
+    col = ['precision', 'recall', 'f1', 'score', 'support']
+    labels = show_crf_label(crf)
+    y_pred = crf.predict(X_test)
+    result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
+    details = metrics.flat_classification_report(y_test, y_pred, digits=3)
+    details = [i for i in [findall(r"[\w\d\.-]+", i) for i in details.split('\n')] if i !=[]][1:-1]
+    details = pd.DataFrame(details, columns = col)
+    return result, details
 
 
 # 2017-02-04 F1: 0.44002688708718896
