@@ -1,16 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from .arsenal_stats import *
-import numpy as np
 from itertools import groupby
 import sklearn_crfsuite
 from sklearn_crfsuite import metrics
 from re import findall
 
-HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
-HEADER_SN = ['factset_entity_id', 'short_name']
-HEADER_SN_TYPE = ['entity_type', 'short_name']
-HEADER_SCHWEB = ['Language', 'Title', 'Type']
+
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
@@ -18,42 +14,11 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
                  'IDX', 'BAS', 'PRT', 'SHP']
 LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
-LABEL_ANS = ['category', 'nname_en']
 
 
 ##############################################################################
 
 # Data preparation
-
-
-def prepare_ans_dataset(in_file, out_file, col_list=LABEL_ANS):
-    """
-    It read ANS dataset
-    :param in_file: an ANS json file
-    :param col_list:
-    :return: a df for gold parser to train
-    """
-    data = json2pd(in_file, col_list)
-    data = rename_series(data, 'category', 'entity_types')
-    data = rename_series(data, 'nname_en', 'entity_names')
-    data['entity_names'] = data['entity_names'].str.title()
-    data.to_csv(out_file, index=False)
-
-
-def prepare_schweb_dataset(in_file, out_file):
-    """
-    :param in_file: schweb raw csv
-    :param out_file: schweb csv
-    """
-    data = csv2pd(in_file, HEADER_SCHWEB, HEADER_SCHWEB, sep='\t')
-    en_data = data[data.Language == 'en']
-    result = en_data[en_data.Type.str.contains('Location|Personal|Organisation')]
-    result['entity_type'] = np.where(result.Type.str.contains('Personal'), 'PERSON',
-                                     np.where(result.Type.str.contains('Location'), 'GPE',
-                                              np.where(result.Type.str.contains('Organisation'), 'ORG', 'MISC')))
-    result = rename_series(result, 'Title', 'entity_name')
-    result = result.drop(['Language', 'Type'], axis=1)
-    result.to_csv(out_file, index=False)
 
 
 def process_annotated(in_file):
@@ -98,7 +63,7 @@ def set_features(postag, word):
         'word.isupper()': word.isupper(),
         'word.istitle()': word.istitle(),
         'word.isdigit()': word.isdigit(),
-        'word.islower()': word.islower(), # iPhone
+        'word.islower()': word.islower(),  # iPhone
         'postag': postag,
         'postag[:2]': postag[:2],
     }
@@ -171,13 +136,13 @@ def show_crf_label(crf):
 
 
 def predict_crf(crf, X_test, y_test):
-    col = ['precision', 'recall', 'f1', 'score', 'support']
+    col = ['tag', 'precision', 'recall', 'f1', 'support']
     labels = show_crf_label(crf)
     y_pred = crf.predict(X_test)
     result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
     details = metrics.flat_classification_report(y_test, y_pred, digits=3)
-    details = [i for i in [findall(r"[\w\d\.-]+", i) for i in details.split('\n')] if i !=[]][1:-1]
-    details = pd.DataFrame(details, columns = col)
+    details = [i for i in [findall(r"[\w\d\.-]+", i) for i in details.split('\n')] if i != []][1:-1]
+    details = pd.DataFrame(details, columns=col)
     return result, details
 
 
@@ -186,16 +151,12 @@ def predict_crf(crf, X_test, y_test):
 ##############################################################################
 
 
-def output_factset_sn_type(type_file, sn_file, out_file):
-    sn = quickest_read_csv(sn_file, HEADER_SN)
-    ty = quickest_read_csv(type_file, HEADER_FS)
-    result = pd.merge(ty, sn, on='factset_entity_id', how='inner')
-    result = result.dropna()
-    result.tocsv(out_file, index=False)
-
-
-def remap_factset_sn_type(in_file, out_file):
-    data = quickest_read_csv(in_file, HEADER_SN_TYPE)
-    result = remap_series(data, 'entity_type', 'new_entity_type', LABEL_COMPANY, 'ORG')
-    result = result.drop(['entity_type'], axis=1)
-    result.to_csv(out_file, index=False)
+def pipeline_crf_train(train_file, test_file):
+    train_sents = process_annotated(train_file)
+    test_sents = process_annotated(test_file)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    crf = train_crf(X_train, y_train)
+    print(show_crf_label(crf))
+    result, details = predict_crf(crf, X_test, y_test)
+    print(result)
+    print(details)
