@@ -7,9 +7,9 @@ from sklearn_crfsuite import metrics
 from re import findall
 
 import logging
+
 logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger(__name__)
-
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 
@@ -47,7 +47,7 @@ def prepare_feature_set(in_file):
 
 
 def add_features(sent, feature_set):
-    feature_list = ['1'  if line[0] in feature_set else '0' for line in sent]
+    feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
     new_sent = [', '.join(i) for i in sent]
     return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
 
@@ -65,9 +65,9 @@ def batch_add_features(pos_file, name_file, company_file, country_file, city_fil
     company_added = [add_features(chunk, company_suffix) for chunk in name_added]
     print(get_now(), 'Adding company features ends')
     country_added = [add_features(chunk, country_set) for chunk in company_added]
-    print(get_now(), 'Adding company features ends')
+    print(get_now(), 'Adding country features ends')
     city_added = [add_features(chunk, city_set) for chunk in country_added]
-    print(get_now(), 'Adding company features ends')
+    print(get_now(), 'Adding city features ends')
     return city_added
 
 
@@ -77,17 +77,21 @@ def batch_add_features(pos_file, name_file, company_file, country_file, city_fil
 # Feature extraction
 
 
-def update_features(features, postag1, word1):
+def update_features(features, postag1, word1, name1, company1, city1, country1):
     features.update({
         '-1:word.lower()': word1.lower(),
         '-1:word.istitle()': word1.istitle(),
         '-1:word.isupper()': word1.isupper(),
         '-1:postag': postag1,
         '-1:postag[:2]': postag1[:2],
+        '-1name': name1,
+        '-1company_suffix': company1,
+        '-1city': city1,
+        '-1country': country1,
     })
 
 
-def set_features(postag, word):
+def set_features(postag, word, name, company, city, country):
     features = {
         'bias': 1.0,
         'word.lower()': word.lower(),
@@ -99,23 +103,29 @@ def set_features(postag, word):
         'word.islower()': word.islower(),  # iPhone
         'postag': postag,
         'postag[:2]': postag[:2],
+        'name': name,
+        'company_suffix': company,
+        'city': city,
+        'country': country,
     }
     return features
 
 
 def word2features(sent, i):
-    word, postag = sent[i][0], sent[i][1]
-    features = set_features(postag, word)
+    postag, word, name, company, city, country = sent[i][0], sent[i][1], sent[i][2], sent[i][3], sent[i][4], sent[i][5]
+    features = set_features(postag, word, name, company, city, country)
 
     if i > 0:
-        word1, postag1 = sent[i - 1][0], sent[i - 1][1]
-        update_features(features, postag1, word1)
+        postag1, word1, name1, company1, city1, country1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2], \
+                                                                     sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
+        update_features(features, postag1, word1, name1, company1, city1, country1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1 = sent[i + 1][0], sent[i + 1][1]
-        update_features(features, postag1, word1)
+        postag1, word1, name1, company1, city1, country1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2], \
+                                                                     sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
+        update_features(features, postag1, word1, name1, company1, city1, country1)
     else:
         features['EOS'] = True
 
@@ -184,9 +194,9 @@ def predict_crf(crf, X_test, y_test):
 ##############################################################################
 
 
-def pipeline_crf_train(train_file, test_file, name_file, company_file):
-    train_sents = batch_add_features(train_file, name_file, company_file)
-    test_sents = batch_add_features(test_file, name_file, company_file)
+def pipeline_crf_train(train_file, test_file, name_file, company_file, country_file, city_file):
+    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
+    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     result, details = predict_crf(crf, X_test, y_test)
