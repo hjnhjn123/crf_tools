@@ -6,6 +6,10 @@ import sklearn_crfsuite
 from sklearn_crfsuite import metrics
 from re import findall
 
+import logging
+logging.basicConfig(format='%(asctime)s %(message)s')
+logger = logging.getLogger(__name__)
+
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 
@@ -36,6 +40,25 @@ def process_annotated(in_file):
         sents = [i for i in sents if i != []]
         # Remove empty sent
         return sents
+
+
+def prepare_feature_set(in_file):
+    return set(i.strip('\n\r') for i in open(in_file, 'r'))
+
+
+def add_features(sent, feature_set):
+    feature_list = ['1'  if line[0] in feature_set else '0' for line in sent]
+    new_sent = [', '.join(i) for i in sent]
+    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
+
+
+def batch_add_features(pos_file, name_file):
+    pos_data = process_annotated(pos_file)
+    name_set = prepare_feature_set(name_file)
+    print(get_now(), 'Adding features starts')
+    name_added = [add_features(chunk, name_set) for chunk in pos_data]
+    print(get_now(), 'Adding features ends')
+    return name_added
 
 
 ##############################################################################
@@ -89,16 +112,16 @@ def word2features(sent, i):
     return features
 
 
-def sent2features(sent):
-    return [word2features(sent, i) for i in range(len(sent))]
+def sent2features(line):
+    return [word2features(line, i) for i in range(len(line))]
 
 
-def sent2labels(sent):
-    return [i[-1] for i in sent]
+def sent2labels(line):
+    return [i[-1] for i in line]  # Remove the END
 
 
-def sent2tokens(sent):
-    return [token for token, postag, label in sent]
+def sent2tokens(line):
+    return [token for token, postag, label in line]
 
 
 ##############################################################################
@@ -151,9 +174,9 @@ def predict_crf(crf, X_test, y_test):
 ##############################################################################
 
 
-def pipeline_crf_train(train_file, test_file):
-    train_sents = process_annotated(train_file)
-    test_sents = process_annotated(test_file)
+def pipeline_crf_train(train_file, test_file, name_file):
+    train_sents = batch_add_features(train_file, name_file)
+    test_sents = batch_add_features(test_file, name_file)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     print(show_crf_label(crf))
