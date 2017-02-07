@@ -115,9 +115,9 @@ def spacy_batch_processing(data, switches, label, col, header):
     """
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
+    result = result.apply(extract_ner_candidate)
     result = result.apply(spacy_pos_text_list)  # POS tagging
     return result
-    # result.to_csv(out_file, index=False)
 
 
 def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
@@ -137,7 +137,22 @@ def prepare_techcrunch(in_file, header, col):
 def process_techcrunch(in_file, out_file, col):
     data = json2pd(in_file, col, lines=True)
     data = data.dropna()
-    random_data = random_rows(data, 10, 'content')
+    random_data = random_rows(data, 20, 'content')
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
     pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, index=False)
+
+
+def extract_ner_candidate(sents):
+    k, result = 0, []
+    for sent in sents:
+        for word in sent.split(' '):
+            if word.isalnum():
+                # extract all numbers and alphabets
+                if not word.islower():
+                    # extract non-lower words
+                    k += 1
+        if k > 2:
+            result.append(sent)
+            k = 0
+    return result
