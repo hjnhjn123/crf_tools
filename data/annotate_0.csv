@@ -1,4 +1,3 @@
-TOKEN,POS,NER
 Amazon,PROPN,U-COM
 quietly,ADV,O
 announced,VERB,O
@@ -9,9 +8,9 @@ with,ADP,O
 Fox,PROPN,B-COM
 Broadcasting,PROPN,I-COM
 Company,PROPN,L-COM
-over,ADP,O
-the,DET,O
-weekend,NOUN,O
+over,ADP,B-DAT
+the,DET,I-DAT
+weekend,NOUN,L-DAT
 .,PUNCT,O
 ##END,###,O
 Posting,VERB,O
@@ -291,8 +290,8 @@ launched,VERB,O
 Prime,PROPN,B-PDT
 Instant,PROPN,I-PDT
 Video,PROPN,L-PDT
-last,ADJ,O
-February,PROPN,I-DAT
+last,ADJ,B-DAT
+February,PROPN,L-DAT
 and,CONJ,O
 has,VERB,O
 steadily,ADV,O
@@ -4020,7 +4019,7 @@ founders,NOUN,O
 Ben,PROPN,B-PPL
 Carcio,PROPN,L-PPL
 ",",PUNCT,O
-Sonciary,PROPNB-PPLO
+Sonciary,PROPN,B-PPL
 Honnoll,PROPN,L-PPL
 ",",PUNCT,O
  ,SPACE,O
