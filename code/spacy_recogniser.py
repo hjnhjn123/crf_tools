@@ -24,14 +24,15 @@ HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 def spacy_parser(text, switches, label):
     """
     :param text: a sentence or a doc
-    :param switch: a list of switches: chk for sentence chunking, pos for pos tagging, and ner for NER
+    :param switch: a list of switches: chk for sentence chunking, pos for pos tagging, and ner for NER,
+    crf for crf pre-processing
     :param label: filtering the NER labels
     :return:
     """
     nlp_result = NLP(text)
     spacy_dic = {'chk': [i.text for i in nlp_result.sents],
                  'pos': [(i.text, i.pos_) for i in nlp_result],
-                 'trn': [(i.text, i.pos_, 'O') for i in nlp_result],
+                 'crf': [(i.text, i.pos_, 'O') for i in nlp_result],
                  'ner': OrderedDict(
                      [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
                  }
@@ -43,7 +44,7 @@ def spacy_pos_text_list(text_list):
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    result = [spacy_parser(i, ['trn'], '') + [('##END', '###', 'O')] for i in text_list]
+    result = [spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list]
     # use spacy pos tagger to annotate each chunk
     # add end_label to the end of each chunk
     return reduce(add, result)  # merge nested chunks
@@ -115,7 +116,7 @@ def spacy_batch_processing(data, switches, label, col, header):
     """
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
-    result = result.apply(extract_ner_candidate)
+    # result = result.apply(extract_ner_candidate)
     result = result.apply(spacy_pos_text_list)  # POS tagging
     return result
 
@@ -137,13 +138,18 @@ def prepare_techcrunch(in_file, header, col):
 def process_techcrunch(in_file, out_file, col):
     data = json2pd(in_file, col, lines=True)
     data = data.dropna()
-    random_data = random_rows(data, 20, 'content')
-    parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
+    # random_data = random_rows(data, 20, 'content')
+    parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
     pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, index=False)
 
 
 def extract_ner_candidate(sents):
+    """
+    If a chunk contains more than two non-upper words.
+    :param sents: chunks
+    :return: ner candidates
+    """
     k, result = 0, []
     for sent in sents:
         for word in sent.split(' '):
