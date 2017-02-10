@@ -174,13 +174,15 @@ def train_crf(X_train, y_train):
 def show_crf_label(crf):
     labels = list(crf.classes_)
     labels.remove('O')
-    labels.remove('')
+    if '':
+        labels.remove('')
     return labels
 
 
 def predict_crf(crf, X_test, y_test):
     col = ['tag', 'precision', 'recall', 'f1', 'support']
     labels = show_crf_label(crf)
+    print(labels)
     y_pred = crf.predict(X_test)
     result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
     details = metrics.flat_classification_report(y_test, y_pred, digits=3)
@@ -188,8 +190,6 @@ def predict_crf(crf, X_test, y_test):
     details = pd.DataFrame(details, columns=col)
     return result, details
 
-
-# 2017-02-04 F1: 0.44002688708718896
 
 ##############################################################################
 
