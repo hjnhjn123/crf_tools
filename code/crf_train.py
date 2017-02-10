@@ -116,15 +116,15 @@ def word2features(sent, i):
     features = set_features(postag, word, name, company, city, country)
 
     if i > 0:
-        postag1, word1, name1, company1, city1, country1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2], \
-                                                                     sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
+        postag1, word1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2],
+        company1, city1, country1 = sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
         update_features(features, postag1, word1, name1, company1, city1, country1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        postag1, word1, name1, company1, city1, country1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2], \
-                                                                     sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
+        postag1, word1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2],
+        company1, city1, country1 = sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
         update_features(features, postag1, word1, name1, company1, city1, country1)
     else:
         features['EOS'] = True
