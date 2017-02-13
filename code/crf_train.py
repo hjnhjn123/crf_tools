@@ -4,7 +4,7 @@ from .arsenal_stats import *
 from itertools import groupby
 import sklearn_crfsuite
 from sklearn_crfsuite import metrics
-from re import findall
+from re import findall, compile
 
 import logging
 
@@ -19,6 +19,7 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
 LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
 
+RE_WORDS = compile(r"[\w\d\.-]+")
 
 ##############################################################################
 
@@ -186,7 +187,7 @@ def predict_crf(crf, X_test, y_test):
     y_pred = crf.predict(X_test)
     result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
     details = metrics.flat_classification_report(y_test, y_pred, digits=3)
-    details = [i for i in [findall(r"[\w\d\.-]+", i) for i in details.split('\n')] if i != []][1:-1]
+    details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
     details = pd.DataFrame(details, columns=col)
     return result, details
 
