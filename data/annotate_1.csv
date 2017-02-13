@@ -915,7 +915,7 @@ indeed,ADV,O
 .,PUNCT,O
 ##END,###,O
 Dearest,ADJ,O
-Jimmy,PROPN,B-PDL
+Jimmy,PROPN,B-PPL
 Wales,PROPN,L-PPL
 ",",PUNCT,O
 So,CONJ,O
