@@ -146,7 +146,7 @@ def process_techcrunch(in_file, out_file, col):
 
 def extract_ner_candidate(sents):
     """
-    If a chunk contains more than two non-upper words.
+    If a chunk contains more than two non-lower words.
     :param sents: chunks
     :return: ner candidates
     """
