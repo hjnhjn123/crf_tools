@@ -4,8 +4,10 @@ from .arsenal_stats import *
 from itertools import groupby
 import sklearn_crfsuite
 from sklearn_crfsuite import metrics
+from sklearn.metrics import make_scorer
 from re import findall, compile
-
+from sklearn.grid_search import RandomizedSearchCV
+import scipy.stats
 import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s')
@@ -20,6 +22,7 @@ LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
 
 RE_WORDS = compile(r"[\w\d\.-]+")
+
 
 ##############################################################################
 
@@ -175,9 +178,23 @@ def train_crf(X_train, y_train):
 def show_crf_label(crf):
     labels = list(crf.classes_)
     labels.remove('O')
-    if '':
+    if 'NER' in labels:
+        labels.remove('NER')
+    if '' in labels:
         labels.remove('')
     return labels
+
+
+def make_param_space():
+    return {
+        'c1': scipy.stats.expon(scale=0.5),
+        'c2': scipy.stats.expon(scale=0.05),
+    }
+
+
+def make_f1_scorer(labels):
+    return make_scorer(metrics.flat_f1_score,
+                       average='weighted', labels=labels)
 
 
 def predict_crf(crf, X_test, y_test):
@@ -186,10 +203,20 @@ def predict_crf(crf, X_test, y_test):
     print(labels)
     y_pred = crf.predict(X_test)
     result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
-    details = metrics.flat_classification_report(y_test, y_pred, digits=3)
+    details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
     details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
     details = pd.DataFrame(details, columns=col)
     return result, details
+
+
+def cv_crf(X_train, y_train, crf, params_space, f1_scorer, iteration=50):
+    rs = RandomizedSearchCV(crf, params_space,
+                            cv=3,
+                            verbose=1,
+                            n_jobs=-1,
+                            n_iter=iteration,
+                            scoring=f1_scorer)
+    return rs.fit(X_train, y_train)
 
 
 ##############################################################################
@@ -203,3 +230,15 @@ def pipeline_crf_train(train_file, test_file, name_file, company_file, country_f
     result, details = predict_crf(crf, X_test, y_test)
     print(result)
     print(details)
+
+
+def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, iteration):
+    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
+    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
+    X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
+    crf = train_crf(X_train, y_train)
+    labels = show_crf_label(crf)
+    params_space = make_param_space()
+    f1_scorer = make_f1_scorer(labels)
+    result = cv_crf(X_train, y_train, crf, params_space, f1_scorer, iteration)
+    return result
