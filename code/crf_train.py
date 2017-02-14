@@ -209,9 +209,9 @@ def predict_crf(crf, X_test, y_test):
     return result, details
 
 
-def cv_crf(X_train, y_train, crf, params_space, f1_scorer, iteration=50):
+def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
     rs = RandomizedSearchCV(crf, params_space,
-                            cv=3,
+                            cv=cv,
                             verbose=1,
                             n_jobs=-1,
                             n_iter=iteration,
@@ -232,7 +232,7 @@ def pipeline_crf_train(train_file, test_file, name_file, company_file, country_f
     print(details)
 
 
-def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, iteration):
+def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, cv, iteration):
     train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
     test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
@@ -240,5 +240,5 @@ def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
-    result = cv_crf(X_train, y_train, crf, params_space, f1_scorer, iteration)
+    result = cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     return result
