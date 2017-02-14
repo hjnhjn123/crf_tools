@@ -135,11 +135,11 @@ def prepare_techcrunch(in_file, header, col):
     return data
 
 
-def process_techcrunch(in_file, out_file, col):
+def process_techcrunch(in_file, out_file, col, pieces=10):
     data = json2pd(in_file, col, lines=True)
     data = data.dropna()
-    # random_data = random_rows(data, 20, 'content')
-    parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
+    random_data = random_rows(data, pieces, 'content')
+    parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
     pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, index=False)
 
