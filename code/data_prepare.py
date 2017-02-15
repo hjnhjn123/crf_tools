@@ -64,6 +64,15 @@ def remap_factset_sn_type(in_file, out_file):
     result = result.drop(['entity_type'], axis=1)
     result.to_csv(out_file, index=False)
 
+def extract_factset_short_names(in_file, out_single, out_multi):
+    data = quickest_read_csv(in_file, ['entity_proper_name', 'entity_type', 'factset_entity_id', 'short_name'])
+    single_name = data[data.short_name.str.split(' ').apply(len) == 1]
+    multi_name = data[data.short_name.str.split(' ').apply(len) > 1]
+    single_name = single_name.drop(['entity_proper_name', 'entity_type', 'factset_entity_id'], axis=1)
+    multi_name = multi_name.drop(['entity_proper_name', 'entity_type', 'factset_entity_id'], axis=1)
+    single_name.to_csv(out_single, index=False)
+    multi_name.to_csv(out_multi, index=False)
+
 
 def titlefy_names(in_file, out_file):
     out = open(out_file, 'w')
@@ -72,3 +81,4 @@ def titlefy_names(in_file, out_file):
         result = [line.title() for line in result]
         for line in result:
             out.write(line)
+
