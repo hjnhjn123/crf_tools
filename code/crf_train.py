@@ -70,16 +70,15 @@ def add_multi_word_features(sent, feature_set):
         if tokens[i].istitle() or tokens[i].isupper():
             for names in feature_set:
                 name_split = names.split(' ')
-                for j in range(-1, len(name_split)-1):
+                for j in range(-1, len(name_split) - 1):
                     print('tt', tokens[i])
-                    print('cc', name_split[j+1])
-                    if tokens[i] == name_split[j+1]:
+                    print('cc', name_split[j + 1])
+                    if tokens[i] == name_split[j + 1]:
                         feature_list.append('1')
                         break
                     else:
                         feature_list.append('0')
     return feature_list
-
 
 
 def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file):
@@ -147,7 +146,7 @@ def set_features(word, postag, name, com_suffix, country, city, com_single):
 
 def word2features(sent, i):
     word, postag, name, company, city = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5]
-    country, com_single =  sent[i][6], sent[i][7]
+    country, com_single = sent[i][6], sent[i][7]
     features = set_features(word, postag, name, company, city, country, com_single)
 
     if i > 0:
@@ -255,18 +254,24 @@ def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
 ##############################################################################
 
 
-def pipeline_crf_train(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file):
-    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
-    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
+def pipeline_crf_train(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file,
+                       com_multi_file):
+    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file,
+                                     com_multi_file)
+    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file,
+                                    com_multi_file)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     result, details = predict_crf(crf, X_test, y_test)
     return crf, result, details
 
 
-def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file, cv, iteration):
-    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
-    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
+def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file,
+                    com_multi_file, cv, iteration):
+    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file,
+                                     com_multi_file)
+    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file,
+                                    com_multi_file)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
