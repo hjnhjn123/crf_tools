@@ -47,28 +47,57 @@ def process_annotated(in_file):
         return sents
 
 
-def prepare_feature_set(in_file):
+def prepare_features_set(in_file):
     return set(i.strip('\n\r') for i in open(in_file, 'r'))
 
 
-def add_features(sent, feature_set):
+def add_one_word_features(sent, feature_set):
+    """
+
+    :param sent:
+    :param feature_set:
+    :return:
+    """
     feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
     new_sent = [', '.join(i) for i in sent]
     return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
 
 
-def batch_add_features(pos_file, name_file, company_file, country_file, city_file):
-    pos_data = process_annotated(pos_file)
-    name_set = prepare_feature_set(name_file)
-    company_suffix = prepare_feature_set(company_file)
-    country_set = prepare_feature_set(country_file)
-    city_set = prepare_feature_set(city_file)
+def add_multi_word_features(sent, feature_set):
+    tokens = [i[0] for i in sent]
+    feature_list = []
+    for i in range(len(tokens)):
+        if tokens[i].istitle() or tokens[i].isupper():
+            for names in feature_set:
+                name_split = names.split(' ')
+                for j in range(-1, len(name_split)-1):
+                    print('tt', tokens[i])
+                    print('cc', name_split[j+1])
+                    if tokens[i] == name_split[j+1]:
+                        feature_list.append('1')
+                        break
+                    else:
+                        feature_list.append('0')
+    return feature_list
 
-    name_added = [add_features(chunk, name_set) for chunk in pos_data]
-    company_added = [add_features(chunk, company_suffix) for chunk in name_added]
-    country_added = [add_features(chunk, country_set) for chunk in company_added]
-    city_added = [add_features(chunk, city_set) for chunk in country_added]
-    return city_added
+
+
+def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file):
+    pos_data = process_annotated(pos_file)
+    name_set = prepare_features_set(name_file)
+    com_suffix = prepare_features_set(com_suffix_file)
+    country_set = prepare_features_set(country_file)
+    city_set = prepare_features_set(city_file)
+    com_single_set = prepare_features_set(com_single_file)
+    com_multi_set = prepare_features_set(com_multi_file)
+
+    name_added = [add_one_word_features(chunk, name_set) for chunk in pos_data]
+    company_added = [add_one_word_features(chunk, com_suffix) for chunk in name_added]
+    country_added = [add_one_word_features(chunk, country_set) for chunk in company_added]
+    city_added = [add_one_word_features(chunk, city_set) for chunk in country_added]
+    result = [add_one_word_features(chunk, com_single_set) for chunk in city_added]
+
+    return result
 
 
 ##############################################################################
@@ -76,22 +105,27 @@ def batch_add_features(pos_file, name_file, company_file, country_file, city_fil
 
 # Feature extraction
 
+# def if_two_words(word):
+#     if word.isupper() or word.istitle():
 
-def update_features(features, word1, postag1, name1, company1, city1, country1):
+
+
+
+def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1):
     features.update({
         '-1:word.lower()': word1.lower(),
         '-1:word.istitle()': word1.istitle(),
         '-1:word.isupper()': word1.isupper(),
         '-1:postag': postag1,
-        '-1:postag[:2]': postag1[:2],
         '-1name': name1,
-        '-1company_suffix': company1,
+        '-1com_suffix': com_suffix1,
+        '-1com_single': com_single1,
         '-1city': city1,
         '-1country': country1,
     })
 
 
-def set_features(word, postag, name, company, city, country):
+def set_features(word, postag, name, com_suffix, country, city, com_single):
     features = {
         'bias': 1.0,
         'word.lower()': word.lower(),
@@ -102,9 +136,9 @@ def set_features(word, postag, name, company, city, country):
         'word.isdigit()': word.isdigit(),
         'word.islower()': word.islower(),  # iPhone
         'postag': postag,
-        'postag[:2]': postag[:2],
         'name': name,
-        'company_suffix': company,
+        'comp_suffix': com_suffix,
+        'com_single': com_single,
         'city': city,
         'country': country,
     }
@@ -112,20 +146,23 @@ def set_features(word, postag, name, company, city, country):
 
 
 def word2features(sent, i):
-    word, postag, name, company, city, country = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5], sent[i][6]
-    features = set_features(word, postag, name, company, city, country)
+    word, postag, name, company, city = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5]
+    country, com_single =  sent[i][6], sent[i][7]
+    features = set_features(word, postag, name, company, city, country, com_single)
 
     if i > 0:
         word1, postag1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
         company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
-        update_features(features, word1, postag1, name1, company1, city1, country1)
+        com_single1 = sent[i - 1][7]
+        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
         word1, postag1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
         company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
-        update_features(features, word1, postag1, name1, company1, city1, country1)
+        com_single1 = sent[i - 1][7]
+        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
     else:
         features['EOS'] = True
 
@@ -137,7 +174,7 @@ def sent2features(line):
 
 
 def sent2labels(line):
-    return [i[-5] for i in line]  # Use the right column
+    return [i[-6] for i in line]  # Use the right column
 
 
 def sent2tokens(line):
@@ -218,21 +255,19 @@ def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
 ##############################################################################
 
 
-def pipeline_crf_train(train_file, test_file, name_file, company_file, country_file, city_file):
-    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
-    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
+def pipeline_crf_train(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file):
+    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
+    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
-    print(X_train[0][0])
     crf = train_crf(X_train, y_train)
     result, details = predict_crf(crf, X_test, y_test)
     return crf, result, details
 
 
-def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, cv, iteration):
-    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
-    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
+def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file, cv, iteration):
+    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
+    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file, com_multi_file)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
-    print(X_train[0][0])
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
