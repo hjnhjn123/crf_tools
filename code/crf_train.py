@@ -26,6 +26,7 @@ RE_WORDS = compile(r"[\w\d\.-]+")
 
 ##############################################################################
 
+
 # Data preparation
 
 
@@ -63,15 +64,10 @@ def batch_add_features(pos_file, name_file, company_file, country_file, city_fil
     country_set = prepare_feature_set(country_file)
     city_set = prepare_feature_set(city_file)
 
-    print(get_now(), 'Adding features starts')
     name_added = [add_features(chunk, name_set) for chunk in pos_data]
-    print(get_now(), 'Adding name features ends')
     company_added = [add_features(chunk, company_suffix) for chunk in name_added]
-    print(get_now(), 'Adding company features ends')
     country_added = [add_features(chunk, country_set) for chunk in company_added]
-    print(get_now(), 'Adding country features ends')
     city_added = [add_features(chunk, city_set) for chunk in country_added]
-    print(get_now(), 'Adding city features ends')
     return city_added
 
 
@@ -81,7 +77,7 @@ def batch_add_features(pos_file, name_file, company_file, country_file, city_fil
 # Feature extraction
 
 
-def update_features(features, postag1, word1, name1, company1, city1, country1):
+def update_features(features, word1, postag1, name1, company1, city1, country1):
     features.update({
         '-1:word.lower()': word1.lower(),
         '-1:word.istitle()': word1.istitle(),
@@ -95,7 +91,7 @@ def update_features(features, postag1, word1, name1, company1, city1, country1):
     })
 
 
-def set_features(postag, word, name, company, city, country):
+def set_features(word, postag, name, company, city, country):
     features = {
         'bias': 1.0,
         'word.lower()': word.lower(),
@@ -116,20 +112,20 @@ def set_features(postag, word, name, company, city, country):
 
 
 def word2features(sent, i):
-    postag, word, name, company, city, country = sent[i][0], sent[i][1], sent[i][2], sent[i][3], sent[i][4], sent[i][5]
-    features = set_features(postag, word, name, company, city, country)
+    word, postag, name, company, city, country = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5], sent[i][6]
+    features = set_features(word, postag, name, company, city, country)
 
     if i > 0:
-        postag1, word1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2],
-        company1, city1, country1 = sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
-        update_features(features, postag1, word1, name1, company1, city1, country1)
+        word1, postag1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
+        company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
+        update_features(features, word1, postag1, name1, company1, city1, country1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        postag1, word1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][2],
-        company1, city1, country1 = sent[i - 1][3], sent[i - 1][4], sent[i - 1][5]
-        update_features(features, postag1, word1, name1, company1, city1, country1)
+        word1, postag1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
+        company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
+        update_features(features, word1, postag1, name1, company1, city1, country1)
     else:
         features['EOS'] = True
 
@@ -226,19 +222,20 @@ def pipeline_crf_train(train_file, test_file, name_file, company_file, country_f
     train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
     test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    print(X_train[0][0])
     crf = train_crf(X_train, y_train)
     result, details = predict_crf(crf, X_test, y_test)
-    print(result)
-    print(details)
+    return crf, result, details
 
 
 def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, cv, iteration):
     train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file)
     test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
+    print(X_train[0][0])
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
     result = cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    return result
+    return crf, result
