@@ -22,6 +22,7 @@ LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
 
 RE_WORDS = compile(r"[\w\d\.-]+")
+RE_TITLR_UPPER = compile(r"")
 
 
 ##############################################################################
@@ -68,27 +69,30 @@ def add_multi_word_features(sent, feature_set):
     feature_list = ['0' for i in range(len(tks))]
     for i in range(len(tks) - 1):
         if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()):
-            print(tks[i:i+2])
+            print(tks[i:i + 2])
             for names in feature_set:
                 n_split = names.split(' ')
                 if len(n_split) == 2:
                     if tks[i] == n_split[0] and tks[i + 1] == n_split[1]:
-                        feature_list[i:i+2] = ['1', '1']
+                        feature_list[i:i + 2] = ['1', '1']
                         break
-                    else: tks = tks
+                    else:
+                        tks = tks
                 else:
                     tks = tks
 
         if i < (len(tks) - 2):
-            if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()) and (tks[i + 2].istitle() or tks[i + 2].isupper()):
-                print(tks[i:i+3])
+            if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()) and (
+                tks[i + 2].istitle() or tks[i + 2].isupper()):
+                print(tks[i:i + 3])
                 for names in feature_set:
                     n_split = names.split(' ')
                     if len(n_split) == 3:
                         if tks[i] == n_split[0] and tks[i + 1] == n_split[1] and tks[i + 2] == n_split[2]:
-                            feature_list[i:i+3] = ['1', '1', '1']
+                            feature_list[i:i + 3] = ['1', '1', '1']
                             break
-                    else: tks = tks
+                    else:
+                        tks = tks
             else:
                 tks = tks
         else:
@@ -99,7 +103,7 @@ def add_multi_word_features(sent, feature_set):
 
 def add_multi_features(sent, feature_set):
     token_list = [i[0] for i in sent]
-    token_dic = {v:k for (k, v ) in enumerate(token_list)}
+    token_dic = {v: k for (k, v) in enumerate(token_list)}
     tokens = ' '.join(token_list)
     feature_list = ['0' for i in range(len(sent))]
     if len([i[0] for i in sent if i[0].isupper() or i[0].istitle()]) >= 2:
@@ -108,12 +112,11 @@ def add_multi_features(sent, feature_set):
                 feature_words = feature.split(' ')
                 feature_start = token_dic.get(feature_words[0])
                 print(feature_words, feature_start, len(feature_words))
-                feature_end =  feature_start + len(feature_words)
+                feature_end = feature_start + len(feature_words)
                 feature_list[feature_start: feature_end] = ['1' for i in range(len(feature_words))]
                 break
     new_sent = [', '.join(i) for i in sent]
     return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
-
 
 
 def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file):
@@ -121,7 +124,6 @@ def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_
     name_set = prepare_features_set(name_file)
     print(get_now(), 'com_s')
     com_suffix = [i.title() for i in prepare_features_set(com_suffix_file)]
-    print(com_suffix)
     print(get_now(), 'com_s')
 
     country_set = prepare_features_set(country_file)
@@ -129,7 +131,6 @@ def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_
     com_single_set = prepare_features_set(com_single_file)
     com_multi_set = prepare_features_set(com_multi_file)
     print(get_now(), 'features_set')
-
 
     name_added = [add_one_word_features(chunk, name_set) for chunk in pos_data]
     print(get_now(), 'name')
@@ -143,12 +144,11 @@ def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_
     city_added = [add_one_word_features(chunk, city_set) for chunk in country_added]
     print(get_now(), 'city')
 
-    com_single_added = [add_one_word_features(chunk, com_single_set) for chunk in city_added]
+    result = [add_one_word_features(chunk, com_single_set) for chunk in city_added]
     print(get_now(), 'single_com')
 
-    result = [add_multi_features(chunk, com_multi_set) for chunk in com_single_added]
-    print(get_now(), 'multi_com')
-
+    # result = [add_multi_features(chunk, com_multi_set) for chunk in com_single_added]
+    # print(get_now(), 'multi_com')
 
     return result
 
@@ -158,11 +158,6 @@ def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_
 
 # Feature extraction
 
-# def if_two_words(word):
-#     if word.isupper() or word.istitle():
-
-
-
 
 def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1):
     features.update({
@@ -170,11 +165,11 @@ def update_features(features, word1, postag1, name1, com_suffix1, country1, city
         '-1:word.istitle()': word1.istitle(),
         '-1:word.isupper()': word1.isupper(),
         '-1:postag': postag1,
-        '-1name': name1,
-        '-1com_suffix': com_suffix1,
-        '-1com_single': com_single1,
-        '-1city': city1,
-        '-1country': country1,
+        '-1:name': name1,
+        '-1:com_suffix': com_suffix1,
+        '-1:com_single': com_single1,
+        '-1:city': city1,
+        '-1:country': country1,
     })
 
 
@@ -184,6 +179,8 @@ def set_features(word, postag, name, com_suffix, country, city, com_single):
         'word.lower()': word.lower(),
         'word[-3:]': word[-3:],
         'word[-2:]': word[-2:],
+        'word[:1]': word[:1],
+        'word[:2]': word[:2],
         'word.isupper()': word.isupper(),
         'word.istitle()': word.istitle(),
         'word.isdigit()': word.isdigit(),
@@ -227,7 +224,7 @@ def sent2features(line):
 
 
 def sent2labels(line):
-    return [i[-7] for i in line]  # Use the right column
+    return [i[-6] for i in line]  # Use the right column
 
 
 def sent2tokens(line):
@@ -263,7 +260,9 @@ def train_crf(X_train, y_train):
 
 def show_crf_label(crf):
     labels = list(crf.classes_)
-    labels.remove('O')
+    print(labels)
+    if 'O' in labels:
+        labels.remove('O')
     if 'NER' in labels:
         labels.remove('NER')
     if '' in labels:
@@ -286,7 +285,6 @@ def make_f1_scorer(labels):
 def predict_crf(crf, X_test, y_test):
     col = ['tag', 'precision', 'recall', 'f1', 'support']
     labels = show_crf_label(crf)
-    print(labels)
     y_pred = crf.predict(X_test)
     result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
     details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
