@@ -74,6 +74,16 @@ def extract_factset_short_names(in_file, out_single, out_multi):
     multi_name.to_csv(out_multi, index=False)
 
 
+def split_city(in_file, single_file, multi_file):
+    out_single, out_multi = open(single_file, 'w'), open(multi_file, 'w')
+    with open(in_file, 'r') as data:
+        for line in data:
+            if len(line.split(' ')) == 1:
+                out_single.write(line)
+            else:
+                out_multi.write(line)
+
+
 def titlefy_names(in_file, out_file):
     out = open(out_file, 'w')
     with open(in_file, 'r') as data:
