@@ -64,37 +64,91 @@ def add_one_word_features(sent, feature_set):
 
 
 def add_multi_word_features(sent, feature_set):
-    tokens = [i[0] for i in sent]
-    feature_list = []
-    for i in range(len(tokens)):
-        if tokens[i].istitle() or tokens[i].isupper():
+    tks = [i[0] for i in sent]
+    feature_list = ['0' for i in range(len(tks))]
+    for i in range(len(tks) - 1):
+        if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()):
+            print(tks[i:i+2])
             for names in feature_set:
-                name_split = names.split(' ')
-                for j in range(-1, len(name_split) - 1):
-                    print('tt', tokens[i])
-                    print('cc', name_split[j + 1])
-                    if tokens[i] == name_split[j + 1]:
-                        feature_list.append('1')
+                n_split = names.split(' ')
+                if len(n_split) == 2:
+                    if tks[i] == n_split[0] and tks[i + 1] == n_split[1]:
+                        feature_list[i:i+2] = ['1', '1']
                         break
-                    else:
-                        feature_list.append('0')
-    return feature_list
+                    else: tks = tks
+                else:
+                    tks = tks
+
+        if i < (len(tks) - 2):
+            if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()) and (tks[i + 2].istitle() or tks[i + 2].isupper()):
+                print(tks[i:i+3])
+                for names in feature_set:
+                    n_split = names.split(' ')
+                    if len(n_split) == 3:
+                        if tks[i] == n_split[0] and tks[i + 1] == n_split[1] and tks[i + 2] == n_split[2]:
+                            feature_list[i:i+3] = ['1', '1', '1']
+                            break
+                    else: tks = tks
+            else:
+                tks = tks
+        else:
+            tks = tks
+    new_sent = [', '.join(i) for i in sent]
+    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
+
+
+def add_multi_features(sent, feature_set):
+    token_list = [i[0] for i in sent]
+    token_dic = {v:k for (k, v ) in enumerate(token_list)}
+    tokens = ' '.join(token_list)
+    feature_list = ['0' for i in range(len(sent))]
+    if len([i[0] for i in sent if i[0].isupper() or i[0].istitle()]) >= 2:
+        for feature in feature_set:
+            if feature in tokens:
+                feature_words = feature.split(' ')
+                feature_start = token_dic.get(feature_words[0])
+                print(feature_words, feature_start, len(feature_words))
+                feature_end =  feature_start + len(feature_words)
+                feature_list[feature_start: feature_end] = ['1' for i in range(len(feature_words))]
+                break
+    new_sent = [', '.join(i) for i in sent]
+    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
+
 
 
 def batch_add_features(pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file):
     pos_data = process_annotated(pos_file)
     name_set = prepare_features_set(name_file)
-    com_suffix = prepare_features_set(com_suffix_file)
+    print(get_now(), 'com_s')
+    com_suffix = [i.title() for i in prepare_features_set(com_suffix_file)]
+    print(com_suffix)
+    print(get_now(), 'com_s')
+
     country_set = prepare_features_set(country_file)
     city_set = prepare_features_set(city_file)
     com_single_set = prepare_features_set(com_single_file)
     com_multi_set = prepare_features_set(com_multi_file)
+    print(get_now(), 'features_set')
+
 
     name_added = [add_one_word_features(chunk, name_set) for chunk in pos_data]
-    company_added = [add_one_word_features(chunk, com_suffix) for chunk in name_added]
-    country_added = [add_one_word_features(chunk, country_set) for chunk in company_added]
+    print(get_now(), 'name')
+
+    com_suffix_added = [add_one_word_features(chunk, com_suffix) for chunk in name_added]
+    print(get_now(), 'suffix')
+
+    country_added = [add_one_word_features(chunk, country_set) for chunk in com_suffix_added]
+    print(get_now(), 'country')
+
     city_added = [add_one_word_features(chunk, city_set) for chunk in country_added]
-    result = [add_one_word_features(chunk, com_single_set) for chunk in city_added]
+    print(get_now(), 'city')
+
+    com_single_added = [add_one_word_features(chunk, com_single_set) for chunk in city_added]
+    print(get_now(), 'single_com')
+
+    result = [add_multi_features(chunk, com_multi_set) for chunk in com_single_added]
+    print(get_now(), 'multi_com')
+
 
     return result
 
@@ -173,7 +227,7 @@ def sent2features(line):
 
 
 def sent2labels(line):
-    return [i[-6] for i in line]  # Use the right column
+    return [i[-7] for i in line]  # Use the right column
 
 
 def sent2tokens(line):
@@ -254,24 +308,23 @@ def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
 ##############################################################################
 
 
-def pipeline_crf_train(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file,
-                       com_multi_file):
-    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file,
-                                     com_multi_file)
-    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file,
-                                    com_multi_file)
+def pipeline_crf_train(train_f, test_f, name_f, com_suffix, country_f, city_f, com_single_f, com_multi_f):
+    '''pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file'''
+    train_sents = batch_add_features(train_f, name_f, com_suffix, country_f, city_f, com_single_f, com_multi_f)
+    test_sents = batch_add_features(test_f, name_f, com_suffix, country_f, city_f, com_single_f, com_multi_f)
+    print(get_now(), 'converted')
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
+    print(get_now(), 'train')
     result, details = predict_crf(crf, X_test, y_test)
+    print(get_now(), 'predict')
     return crf, result, details
 
 
-def pipeline_crf_cv(train_file, test_file, name_file, company_file, country_file, city_file, com_single_file,
-                    com_multi_file, cv, iteration):
-    train_sents = batch_add_features(train_file, name_file, company_file, country_file, city_file, com_single_file,
-                                     com_multi_file)
-    test_sents = batch_add_features(test_file, name_file, company_file, country_file, city_file, com_single_file,
-                                    com_multi_file)
+def pipeline_crf_cv(train_f, test_f, name_f, company_f, country_f, city_f, com_single_f, com_multi_f, cv, iteration):
+    train_sents = batch_add_features(train_f, name_f, company_f, country_f, city_f, com_single_f, com_multi_f)
+    test_sents = batch_add_features(test_f, name_f, company_f, country_f, city_f, com_single_f, com_multi_f)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
