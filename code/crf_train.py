@@ -22,7 +22,6 @@ LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
 
 RE_WORDS = compile(r"[\w\d\.-]+")
-RE_TITLR_UPPER = compile(r"")
 
 
 ##############################################################################
@@ -40,6 +39,7 @@ def process_annotated(in_file):
     """
     data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
     data.columns = HEADER_ANNOTATION
+    data = data.dropna()
     sents = (tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist()))
     sents = (list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0])
     sents = [i for i in sents if i != []]
@@ -57,7 +57,6 @@ def prepare_features_dict(in_file):
 
 def add_one_features_list(sent, feature_set):
     """
-
     :param sent: [(word, pos, ner)]
     :param feature_set: {feature1, feature2}
     :return: [(word, pos, ner, other_features)]
@@ -68,7 +67,6 @@ def add_one_features_list(sent, feature_set):
 
 def add_one_feature_dict(sent, feature_dic):
     """
-
     :param sent: [(word, pos, ner)]
     :param feature_set: {feature1:value1, feature2:value2}
     :return: [(word, pos, ner, other_features)]
@@ -80,8 +78,8 @@ def add_one_feature_dict(sent, feature_dic):
 ##############################################################################
 
 
-def batch_add_features(pos_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
-    pos_data = process_annotated(pos_file)
+def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
+    pos_data = process_annotated(text_file)
 
     name_set, country_set = line_file2set(name_f), line_file2set(country_f)
     city_set, com_single_set = line_file2set(city_f), line_file2set(com_single_f)
@@ -145,7 +143,6 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
 
 
 def word2features(sent, i):
-    print(sent[i])
     word, postag, name, company, city = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5]
     country, com_single, tfidf = sent[i][6], sent[i][7], sent[i][8]
     features = set_features(word, postag, name, company, city, country, com_single, tfidf)
@@ -174,7 +171,7 @@ def sent2features(line):
 
 
 def sent2labels(line):
-    return [i[-6] for i in line]  # Use the right column
+    return [i[2] for i in line]  # Use the right column
 
 
 def sent2tokens(line):
@@ -258,8 +255,7 @@ def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
 
 def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
     '''pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file'''
-    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                                     tfidf_f)
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     print(get_now(), 'converted')
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
