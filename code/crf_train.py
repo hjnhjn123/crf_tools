@@ -41,7 +41,7 @@ def process_annotated(in_file):
     data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
     data.columns = HEADER_ANNOTATION
     sents = {tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist())}
-    sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+    sents = {list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]}
     sents = [i for i in sents if i != []]
     return sents
 
