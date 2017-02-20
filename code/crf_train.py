@@ -63,10 +63,7 @@ def add_one_features_list(sent, feature_set):
     :return:
     """
     feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
-    result = []
-    for i in range(len(sent)):
-        result.append(sent[i] + (feature_list[i],))
-    return result
+    return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
 
 
 def add_one_feature_dict(sent, feature_dic):
