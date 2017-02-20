@@ -73,11 +73,8 @@ def add_one_feature_dict(sent, feature_dic):
     :param feature_dic:
     :return:
     """
-    result = []
     feature_list = [str(feature_dic.get(line[0])) if line[0] in feature_dic.keys() else '0' for line in sent]
-    for i in range(len(sent)):
-        result.append(sent[i] + (feature_list[i],))
-    return result
+    return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
 
 
 def add_multi_word_features(sent, feature_set):
