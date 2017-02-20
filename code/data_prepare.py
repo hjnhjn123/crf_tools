@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from .arsenal_stats import *
+from .arsenal_nlp import *
+from string import punctuation
+from zhon import hanzi
 
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
@@ -82,6 +85,20 @@ def split_city(in_file, single_file, multi_file):
                 out_single.write(line)
             else:
                 out_multi.write(line)
+
+
+def remove_punc(line):
+    return ''.join(i.lower().strip(punctuation+hanzi.punctuation+'“') for i in line if not i.isnumeric())
+
+
+def output_tfidf(in_file, out_file, cols, col_name):
+    out = open(out_file, 'w')
+    data = json2pd(in_file, cols, lines=True)
+    data = data[col_name].apply(remove_punc)
+    tfidf = get_tfidf(data.tolist())
+    for k, v in tfidf.items():
+        if v > 1.0:
+            out.write(k+','+str(v)+'\n')
 
 
 def titlefy_names(in_file, out_file):
