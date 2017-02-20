@@ -40,8 +40,8 @@ def process_annotated(in_file):
     """
     data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
     data.columns = HEADER_ANNOTATION
-    sents = {tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist())}
-    sents = {list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]}
+    sents = (tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist()))
+    sents = (list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0])
     sents = [i for i in sents if i != []]
     return sents
 
@@ -62,8 +62,8 @@ def add_one_features_list(sent, feature_set):
     :param feature_set:
     :return:
     """
-    feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
-    new_sent = [', '.join(i) for i in sent]
+    feature_list = {'1' if line[0] in feature_set else '0' for line in sent}
+    new_sent = {', '.join(str(i)) for i in sent}
     return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
 
 
