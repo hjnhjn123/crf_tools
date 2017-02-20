@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .arsenal_stats import *
+from .arsenal_spacy import *
 from .arsenal_nlp import *
 from string import punctuation
 from zhon import hanzi
@@ -77,7 +77,7 @@ def extract_factset_short_names(in_file, out_single, out_multi):
     multi_name.to_csv(out_multi, index=False)
 
 
-def split_city(in_file, single_file, multi_file):
+def split_lines_with_comma(in_file, single_file, multi_file):
     out_single, out_multi = open(single_file, 'w'), open(multi_file, 'w')
     with open(in_file, 'r') as data:
         for line in data:
@@ -85,6 +85,9 @@ def split_city(in_file, single_file, multi_file):
                 out_single.write(line)
             else:
                 out_multi.write(line)
+
+
+##############################################################################
 
 
 def remove_punc(line):
@@ -109,3 +112,45 @@ def titlefy_names(in_file, out_file):
         for line in result:
             out.write(line)
 
+
+def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
+    data = quickest_read_csv(in_file, HEADER_SN_TYPE)
+    data = df2gold_parser(data, entity_col, tag_col)
+    data = read_gold_parser_train_data(data, gold_parser_col, False)
+    gold_parser(data, label)
+
+
+def prepare_techcrunch(in_file, header, col):
+    data = quickest_read_csv(in_file, header)
+    data = data.dropna()
+    data = clean_dataframe(data, [col], rpls={'\n': ' ', '\t': ' '})
+    return data
+
+
+def process_techcrunch(in_file, out_file, col, pieces=10):
+    data = json2pd(in_file, col, lines=True)
+    data = data.dropna()
+    random_data = random_rows(data, pieces, 'content')
+    parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
+    parsed_data = reduce(add, parsed_data)
+    pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, index=False)
+
+
+def extract_ner_candidate(sents):
+    """
+    If a chunk contains more than two non-lower words.
+    :param sents: chunks
+    :return: ner candidates
+    """
+    k, result = 0, []
+    for sent in sents:
+        for word in sent.split(' '):
+            if word.isalnum():
+                # extract all numbers and alphabets
+                if not word.islower():
+                    # extract non-lower words
+                    k += 1
+        if k > 2:
+            result.append(sent)
+            k = 0
+    return result
