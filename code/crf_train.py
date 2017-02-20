@@ -58,9 +58,9 @@ def prepare_features_dict(in_file):
 def add_one_features_list(sent, feature_set):
     """
 
-    :param sent:
-    :param feature_set:
-    :return:
+    :param sent: [(word, pos, ner)]
+    :param feature_set: {feature1, feature2}
+    :return: [(word, pos, ner, other_features)]
     """
     feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
     return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
@@ -69,66 +69,15 @@ def add_one_features_list(sent, feature_set):
 def add_one_feature_dict(sent, feature_dic):
     """
 
-    :param sent:
-    :param feature_dic:
-    :return:
+    :param sent: [(word, pos, ner)]
+    :param feature_set: {feature1:value1, feature2:value2}
+    :return: [(word, pos, ner, other_features)]
     """
     feature_list = [str(feature_dic.get(line[0])) if line[0] in feature_dic.keys() else '0' for line in sent]
     return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
 
 
-def add_multi_word_features(sent, feature_set):
-    tks = [i[0] for i in sent]
-    feature_list = ['0' for i in range(len(tks))]
-    for i in range(len(tks) - 1):
-        if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()):
-            print(tks[i:i + 2])
-            for names in feature_set:
-                n_split = names.split(' ')
-                if len(n_split) == 2:
-                    if tks[i] == n_split[0] and tks[i + 1] == n_split[1]:
-                        feature_list[i:i + 2] = ['1', '1']
-                        break
-                    else:
-                        tks = tks
-                else:
-                    tks = tks
-
-        if i < (len(tks) - 2):
-            if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()) and (
-                        tks[i + 2].istitle() or tks[i + 2].isupper()):
-                print(tks[i:i + 3])
-                for names in feature_set:
-                    n_split = names.split(' ')
-                    if len(n_split) == 3:
-                        if tks[i] == n_split[0] and tks[i + 1] == n_split[1] and tks[i + 2] == n_split[2]:
-                            feature_list[i:i + 3] = ['1', '1', '1']
-                            break
-                    else:
-                        tks = tks
-            else:
-                tks = tks
-        else:
-            tks = tks
-    new_sent = [', '.join(i) for i in sent]
-    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
-
-
-def add_multi_features(sent, feature_set):
-    token_list = [i[0] for i in sent]
-    token_dic = {v: k for (k, v) in enumerate(token_list)}
-    tokens = ' '.join(token_list)
-    feature_list = ['0' for i in range(len(sent))]
-    if len([i[0] for i in sent if i[0].isupper() or i[0].istitle()]) >= 2:
-        for feature in feature_set:
-            if feature in tokens:
-                feature_words = feature.split(' ')
-                feature_start = token_dic.get(feature_words[0])
-                feature_end = feature_start + len(feature_words)
-                feature_list[feature_start: feature_end] = ['1' for i in range(len(feature_words))]
-                break
-    new_sent = [', '.join(i) for i in sent]
-    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
+##############################################################################
 
 
 def batch_add_features(pos_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
@@ -139,8 +88,6 @@ def batch_add_features(pos_file, name_f, com_suffix_f, country_f, city_f, com_si
     com_suffix = [i.title() for i in line_file2set(com_suffix_f)]
     com_multi_set = line_file2set(com_multi_f)
     tfidf = prepare_features_dict(tfidf_f)
-
-    print(get_now(), 'features_set')
 
     name_added = [add_one_features_list(chunk, name_set) for chunk in pos_data]
     com_suffix_added = [add_one_features_list(chunk, com_suffix) for chunk in name_added]
@@ -198,9 +145,9 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
 
 
 def word2features(sent, i):
-    print(len(sent), sent)
+    print(sent[i])
     word, postag, name, company, city = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5]
-    country, com_single, tfidf = sent[i][6], sent[i][7], sent[8]
+    country, com_single, tfidf = sent[i][6], sent[i][7], sent[i][8]
     features = set_features(word, postag, name, company, city, country, com_single, tfidf)
 
     if i > 0:
@@ -334,3 +281,60 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix, country_f, city_f, com_
     f1_scorer = make_f1_scorer(labels)
     result = cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     return crf, result
+
+
+##############################################################################
+
+
+def add_multi_word_features(sent, feature_set):
+    tks = [i[0] for i in sent]
+    feature_list = ['0' for i in range(len(tks))]
+    for i in range(len(tks) - 1):
+        if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()):
+            print(tks[i:i + 2])
+            for names in feature_set:
+                n_split = names.split(' ')
+                if len(n_split) == 2:
+                    if tks[i] == n_split[0] and tks[i + 1] == n_split[1]:
+                        feature_list[i:i + 2] = ['1', '1']
+                        break
+                    else:
+                        tks = tks
+                else:
+                    tks = tks
+
+        if i < (len(tks) - 2):
+            if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()) and (
+                        tks[i + 2].istitle() or tks[i + 2].isupper()):
+                print(tks[i:i + 3])
+                for names in feature_set:
+                    n_split = names.split(' ')
+                    if len(n_split) == 3:
+                        if tks[i] == n_split[0] and tks[i + 1] == n_split[1] and tks[i + 2] == n_split[2]:
+                            feature_list[i:i + 3] = ['1', '1', '1']
+                            break
+                    else:
+                        tks = tks
+            else:
+                tks = tks
+        else:
+            tks = tks
+    new_sent = [', '.join(i) for i in sent]
+    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
+
+
+def add_multi_features(sent, feature_set):
+    token_list = [i[0] for i in sent]
+    token_dic = {v: k for (k, v) in enumerate(token_list)}
+    tokens = ' '.join(token_list)
+    feature_list = ['0' for i in range(len(sent))]
+    if len([i[0] for i in sent if i[0].isupper() or i[0].istitle()]) >= 2:
+        for feature in feature_set:
+            if feature in tokens:
+                feature_words = feature.split(' ')
+                feature_start = token_dic.get(feature_words[0])
+                feature_end = feature_start + len(feature_words)
+                feature_list[feature_start: feature_end] = ['1' for i in range(len(feature_words))]
+                break
+    new_sent = [', '.join(i) for i in sent]
+    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
