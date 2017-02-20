@@ -76,7 +76,12 @@ def add_one_feature_dict(sent, feature_dic):
     :param feature_dic:
     :return:
     """
+    result = []
     feature_list = [str(feature_dic.get(line[0])) if line[0] in feature_dic.keys() else '0' for line in sent]
+    for i in range(len(sent)):
+        result.append(sent[i] + (feature_list[i],))
+    return result
+
     new_sent = [', '.join(i) for i in sent]
     return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
 
