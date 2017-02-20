@@ -62,9 +62,11 @@ def add_one_features_list(sent, feature_set):
     :param feature_set:
     :return:
     """
-    feature_list = {'1' if line[0] in feature_set else '0' for line in sent}
-    new_sent = {', '.join(str(i)) for i in sent}
-    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
+    feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
+    result = []
+    for i in range(len(sent)):
+        result.append(sent[i] + (feature_list[i],))
+    return result
 
 
 def add_one_feature_dict(sent, feature_dic):
@@ -135,37 +137,27 @@ def add_multi_features(sent, feature_set):
 
 def batch_add_features(pos_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
     pos_data = process_annotated(pos_file)
-    name_set = line_file2set(name_f)
-    print(get_now(), 'com_s')
-    com_suffix = [i.title() for i in line_file2set(com_suffix_f)]
-    print(get_now(), 'com_s')
 
-    country_set = line_file2set(country_f)
-    city_set = line_file2set(city_f)
-    com_single_set = line_file2set(com_single_f)
+    name_set, country_set = line_file2set(name_f), line_file2set(country_f)
+    com_suffix = [i.title() for i in line_file2set(com_suffix_f)]
+
+    city_set, com_single_set = line_file2set(city_f), line_file2set(com_single_f)
     com_multi_set = line_file2set(com_multi_f)
     tfidf = prepare_features_dict(tfidf_f)
+
     print(get_now(), 'features_set')
 
     name_added = [add_one_features_list(chunk, name_set) for chunk in pos_data]
-    print(get_now(), 'name')
 
     com_suffix_added = [add_one_features_list(chunk, com_suffix) for chunk in name_added]
-    print(get_now(), 'suffix')
 
     country_added = [add_one_features_list(chunk, country_set) for chunk in com_suffix_added]
-    print(get_now(), 'country')
 
     city_added = [add_one_features_list(chunk, city_set) for chunk in country_added]
-    print(get_now(), 'city')
 
     com_single_added = [add_one_features_list(chunk, com_single_set) for chunk in city_added]
-    print(get_now(), 'single_com')
-    print(com_single_added[0][0])
 
     result = [add_one_feature_dict(chunk, tfidf) for chunk in com_single_added]
-    print(result[0][0])
-    print(get_now(), 'tfidf')
 
     # result = [add_multi_features(chunk, com_multi_set) for chunk in com_single_added]
     # print(get_now(), 'multi_com')
