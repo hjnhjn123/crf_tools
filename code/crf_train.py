@@ -48,9 +48,6 @@ def process_annotated(in_file):
         return sents
 
 
-
-
-
 def prepare_features_dict(in_file):
     """
     | Reading a line-based csv file, and converting it to a feature dic
