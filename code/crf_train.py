@@ -33,14 +33,14 @@ RE_TITLR_UPPER = compile(r"")
 
 def process_annotated(in_file):
     """
-    following python-ccrfsuit, sklearn_crfsuit doesn't support pandas DF, so feature dic is used instead
-    http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
+    | following python-ccrfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
+    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
     :param in_file: CSV file: TOKEN, POS, NER
     :return: [[sent]]
     """
     with open(in_file) as data:
         sents = [tuple(i.split(',')) for i in data.read().split('\n')]
-        # convert file to tuples
+        # convert file to lists of tuples
         sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
         # split each sentences, use [:1] to remove the empty end
         sents = [i for i in sents if i != []]
@@ -48,12 +48,16 @@ def process_annotated(in_file):
         return sents
 
 
-def prepare_features_set(in_file):
-    return set(i.strip('\n\r') for i in open(in_file, 'r'))
+
 
 
 def prepare_features_dict(in_file):
-    return {i.strip('\n\r').split(',')[0]: i.strip('\n\r').split(',')[1] for i in open(in_file, 'r')}
+    """
+    | Reading a line-based csv file, and converting it to a feature dic
+    :param in_file:  token,value
+    :return: {token: value}
+    """
+    return {i.split(',')[0]: i.split(',')[1].strip('\r\n') for i in open(in_file, 'r')}
 
 
 def add_one_features_list(sent, feature_set):
@@ -136,15 +140,15 @@ def add_multi_features(sent, feature_set):
 
 def batch_add_features(pos_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
     pos_data = process_annotated(pos_file)
-    name_set = prepare_features_set(name_f)
+    name_set = line_file2set(name_f)
     print(get_now(), 'com_s')
-    com_suffix = [i.title() for i in prepare_features_set(com_suffix_f)]
+    com_suffix = [i.title() for i in line_file2set(com_suffix_f)]
     print(get_now(), 'com_s')
 
-    country_set = prepare_features_set(country_f)
-    city_set = prepare_features_set(city_f)
-    com_single_set = prepare_features_set(com_single_f)
-    com_multi_set = prepare_features_set(com_multi_f)
+    country_set = line_file2set(country_f)
+    city_set = line_file2set(city_f)
+    com_single_set = line_file2set(com_single_f)
+    com_multi_set = line_file2set(com_multi_f)
     tfidf = prepare_features_dict(tfidf_f)
     print(get_now(), 'features_set')
 

@@ -39,7 +39,7 @@ def get_column_index(column, col_list):
     return [int(col_index_dic[col]) for col in col_list]
 
 
-def csv2pd(in_file, original_columns, needed_columns, sep=",", quote=3, engine='c'):
+def  csv2pd(in_file, original_columns, needed_columns, sep=",", quote=3, engine='c'):
     """
     user Function get_column_index to get a list of column indices
     :param in_file: a csv_file
@@ -444,6 +444,14 @@ def remap_series(df, col, new_col, label_set, new_label, misc='MISC'):
     df[new_col] = np.where(df[col].isin(label_set), new_label, misc)
     return df
 
+
+def line_file2set(in_file):
+    """
+    | Reading a line-based file, and converting it to a feature set
+    :param in_file:
+    :return: (feature1, feautre2...)
+    """
+    return set(i.strip('\n\r') for i in open(in_file, 'r'))
 
 ########################################################################################################################
 
