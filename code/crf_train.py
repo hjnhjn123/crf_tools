@@ -38,28 +38,8 @@ def process_annotated(in_file):
     :param in_file: CSV file: TOKEN, POS, NER
     :return: [[sent]]
     """
-    with open(in_file) as data:
-
-        sents = [tuple(i.split(',')) for i in data.read().split('\n')]
-        # convert file to lists of tuples
-        sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-        # split each sentences, use [:1] to remove the empty end
-        sents = [i for i in sents if i != []]
-        # Remove empty sent
-        return sents
-
-
-def process_annotated_pd(in_file):
-    """
-    | following python-ccrfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
-    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
-    :param in_file: CSV file: TOKEN, POS, NER
-    :return: [[sent]]
-    """
     data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
     data.columns = HEADER_ANNOTATION
-    for col in HEADER_ANNOTATION:
-        data[col] = data[col].str.translate({',':'#COMMA'})
     sents = {tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist())}
     sents = [list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     sents = [i for i in sents if i != []]
