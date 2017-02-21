@@ -7,13 +7,14 @@ from sklearn_crfsuite import metrics
 from sklearn.metrics import make_scorer
 from re import findall, compile
 from sklearn.grid_search import RandomizedSearchCV
-import scipy.stats
+import scipy.stats as ss
 import logging
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger(__name__)
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
+HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
@@ -32,7 +33,7 @@ RE_WORDS = compile(r"[\w\d\.-]+")
 
 def process_annotated(in_file):
     """
-    | following python-ccrfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
+    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
     | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
     :param in_file: CSV file: TOKEN, POS, NER
     :return: [[sent]]
@@ -144,23 +145,16 @@ def word2features(sent, i):
     features = set_features(word, postag, name, company, city, country, com_single, tfidf)
 
     if i > 0:
-        # word1, postag1,  name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
-        # company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
-        # com_single1 = sent[i - 1][7]
-        word1, postag1, ner1, name1, company1, city1, country1, com_single1 = sent[i - 1]
+        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1 = sent[i - 1]
         update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        # word1, postag1,  name1 = sent[i + 1][0], sent[i + 1][1], sent[i + 1][3],
-        # company1, city1, country1 = sent[i + 1][4], sent[i + 1][5], sent[i + 1][6]
-        # com_single1 = sent[i + 1][7]
-        word1, postag1, ner1, name1, company1, city1, country1, com_single1 = sent[i + 1]
+        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1 = sent[i + 1]
         update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
     else:
         features['EOS'] = True
-
     return features
 
 
@@ -217,8 +211,8 @@ def show_crf_label(crf):
 
 def make_param_space():
     return {
-        'c1': scipy.stats.expon(scale=0.5),
-        'c2': scipy.stats.expon(scale=0.05),
+        'c1': ss.expon(scale=0.5),
+        'c2': ss.expon(scale=0.05),
     }
 
 
@@ -227,13 +221,12 @@ def make_f1_scorer(labels):
 
 
 def predict_crf(crf, X_test, y_test):
-    col = ['tag', 'precision', 'recall', 'f1', 'support']
     labels = show_crf_label(crf)
     y_pred = crf.predict(X_test)
     result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
     details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
     details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
-    details = pd.DataFrame(details, columns=col)
+    details = pd.DataFrame(details, columns=HEADER_CRF)
     return result, details
 
 
@@ -251,7 +244,6 @@ def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
 
 
 def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
-    '''pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file'''
     train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
                                      tfidf_f)
     test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
