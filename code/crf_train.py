@@ -75,26 +75,23 @@ def add_one_feature_dict(sent, feature_dic):
     return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
 
 
-##############################################################################
-
-
 def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
     pos_data = process_annotated(text_file)
 
-    name_set, country_set = line_file2set(name_f), line_file2set(country_f)
-    city_set, com_single_set = line_file2set(city_f), line_file2set(com_single_f)
-    com_suffix = [i.title() for i in line_file2set(com_suffix_f)]
-    com_multi_set = line_file2set(com_multi_f)
-    tfidf = prepare_features_dict(tfidf_f)
+    set_name, set_country = line_file2set(name_f), line_file2set(country_f)
+    set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
+    set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
+    set_com_multi = line_file2set(com_multi_f)
+    dict_tfidf = prepare_features_dict(tfidf_f)
 
-    name_added = [add_one_features_list(chunk, name_set) for chunk in pos_data]
-    com_suffix_added = [add_one_features_list(chunk, com_suffix) for chunk in name_added]
-    country_added = [add_one_features_list(chunk, country_set) for chunk in com_suffix_added]
-    city_added = [add_one_features_list(chunk, city_set) for chunk in country_added]
-    com_single_added = [add_one_features_list(chunk, com_single_set) for chunk in city_added]
-    result = [add_one_feature_dict(chunk, tfidf) for chunk in com_single_added]
+    name_added = [add_one_features_list(chunk, set_name) for chunk in pos_data]
+    com_suffix_added = [add_one_features_list(chunk, set_com_suffix) for chunk in name_added]
+    country_added = [add_one_features_list(chunk, set_country) for chunk in com_suffix_added]
+    city_added = [add_one_features_list(chunk, set_city) for chunk in country_added]
+    com_single_added = [add_one_features_list(chunk, set_com_single) for chunk in city_added]
+    result = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
 
-    # result = [add_multi_features(chunk, com_multi_set) for chunk in com_single_added]
+    # result = [add_multi_features(chunk, set_com_multi) for chunk in com_single_added]
     # print(get_now(), 'multi_com')
 
     return result
@@ -104,21 +101,6 @@ def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_s
 
 
 # Feature extraction
-
-
-def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1):
-    features.update({
-        '-1:word.lower()': word1.lower(),
-        '-1:word.istitle()': word1.istitle(),
-        '-1:word.isupper()': word1.isupper(),
-        '-1:postag': postag1,
-        '-1:name': name1,
-        '-1:com_suffix': com_suffix1,
-        '-1:com_single': com_single1,
-        '-1:city': city1,
-        '-1:country': country1,
-        # '-1:tfidf': tfidf1
-    })
 
 
 def set_features(word, postag, name, com_suffix, country, city, com_single, tfidf):
@@ -142,23 +124,39 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
     return features
 
 
+def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1):
+    features.update({
+        '-1:word.lower()': word1.lower(),
+        '-1:word.istitle()': word1.istitle(),
+        '-1:word.isupper()': word1.isupper(),
+        '-1:postag': postag1,
+        '-1:name': name1,
+        '-1:com_suffix': com_suffix1,
+        '-1:com_single': com_single1,
+        '-1:city': city1,
+        '-1:country': country1,
+        # '-1:tfidf': tfidf1
+    })
+
+
 def word2features(sent, i):
-    word, postag, name, company, city = sent[i][0], sent[i][1], sent[i][3], sent[i][4], sent[i][5]
-    country, com_single, tfidf = sent[i][6], sent[i][7], sent[i][8]
+    word, postag, _, name, company, city, country, com_single, tfidf = sent[i]
     features = set_features(word, postag, name, company, city, country, com_single, tfidf)
 
     if i > 0:
-        word1, postag1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
-        company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
-        com_single1 = sent[i - 1][7]
+        # word1, postag1,  name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
+        # company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
+        # com_single1 = sent[i - 1][7]
+        word1, postag1, ner1, name1, company1, city1, country1, com_single1 = sent[i - 1]
         update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1, name1 = sent[i - 1][0], sent[i - 1][1], sent[i - 1][3],
-        company1, city1, country1 = sent[i - 1][4], sent[i - 1][5], sent[i - 1][6]
-        com_single1 = sent[i - 1][7]
+        # word1, postag1,  name1 = sent[i + 1][0], sent[i + 1][1], sent[i + 1][3],
+        # company1, city1, country1 = sent[i + 1][4], sent[i + 1][5], sent[i + 1][6]
+        # com_single1 = sent[i + 1][7]
+        word1, postag1, ner1, name1, company1, city1, country1, com_single1 = sent[i + 1]
         update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
     else:
         features['EOS'] = True
@@ -225,8 +223,7 @@ def make_param_space():
 
 
 def make_f1_scorer(labels):
-    return make_scorer(metrics.flat_f1_score,
-                       average='weighted', labels=labels)
+    return make_scorer(metrics.flat_f1_score, average='weighted', labels=labels)
 
 
 def predict_crf(crf, X_test, y_test):
@@ -255,7 +252,8 @@ def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
 
 def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
     '''pos_file, name_file, com_suffix_file, country_file, city_file, com_single_file, com_multi_file'''
-    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
+                                     tfidf_f)
     test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     print(get_now(), 'converted')
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
