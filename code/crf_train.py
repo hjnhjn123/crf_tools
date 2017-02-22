@@ -76,26 +76,7 @@ def add_one_feature_dict(sent, feature_dic):
     return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
 
 
-def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f):
-    pos_data = process_annotated(text_file)
 
-    set_name, set_country = line_file2set(name_f), line_file2set(country_f)
-    set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
-    set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    set_com_multi = line_file2set(com_multi_f)
-    dict_tfidf = prepare_features_dict(tfidf_f)
-
-    name_added = [add_one_features_list(chunk, set_name) for chunk in pos_data]
-    com_suffix_added = [add_one_features_list(chunk, set_com_suffix) for chunk in name_added]
-    country_added = [add_one_features_list(chunk, set_country) for chunk in com_suffix_added]
-    city_added = [add_one_features_list(chunk, set_city) for chunk in country_added]
-    com_single_added = [add_one_features_list(chunk, set_com_single) for chunk in city_added]
-    result = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
-
-    # result = [add_multi_features(chunk, set_com_multi) for chunk in com_single_added]
-    # print(get_now(), 'multi_com')
-
-    return result
 
 
 ##############################################################################
@@ -104,7 +85,7 @@ def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_s
 # Feature extraction
 
 
-def set_features(word, postag, name, com_suffix, country, city, com_single, tfidf):
+def set_features(word, postag, name, com_suffix, country, city, com_single, tfidf, tfdf):
     features = {
         'bias': 1.0,
         'word.lower()': word.lower(),
@@ -120,12 +101,14 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
         'com_single': com_single,
         'city': city,
         'country': country,
-        'tf_idf': tfidf
+        'tf_idf': tfidf,
+        'tfidf': tfdf
+
     }
     return features
 
 
-def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1, tfidf1):
+def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1, tfidf1, tfdf1):
     features.update({
         '-1:word.lower()': word1.lower(),
         '-1:word.istitle()': word1.istitle(),
@@ -136,23 +119,25 @@ def update_features(features, word1, postag1, name1, com_suffix1, country1, city
         '-1:com_single': com_single1,
         '-1:city': city1,
         '-1:country': country1,
-        '-1:tfidf': tfidf1
+        '-1:tfidf': tfidf1,
+        '-1:tfdf': tfdf1
+
     })
 
 
 def word2features(sent, i):
-    word, postag, _, name, company, city, country, com_single, tfidf = sent[i]
-    features = set_features(word, postag, name, company, city, country, com_single, tfidf)
+    word, postag, _, name, company, city, country, com_single, tfidf, tfdf = sent[i]
+    features = set_features(word, postag, name, company, city, country, com_single, tfidf, tfdf)
 
     if i > 0:
-        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1 = sent[i - 1]
-        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1)
+        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
+        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1 = sent[i + 1]
-        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1)
+        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
+        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1)
     else:
         features['EOS'] = True
     return features
@@ -168,6 +153,31 @@ def sent2labels(line):
 
 def sent2tokens(line):
     return [token for token, postag, label in line]
+
+
+def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f):
+    pos_data = process_annotated(text_file)
+
+    set_name, set_country = line_file2set(name_f), line_file2set(country_f)
+    set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
+    set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
+    set_com_multi = line_file2set(com_multi_f)
+    dict_tfidf = prepare_features_dict(tfidf_f)
+    dict_tfdf = prepare_features_dict(tfdf_f)
+
+    name_added = [add_one_features_list(chunk, set_name) for chunk in pos_data]
+    com_suffix_added = [add_one_features_list(chunk, set_com_suffix) for chunk in name_added]
+    country_added = [add_one_features_list(chunk, set_country) for chunk in com_suffix_added]
+    city_added = [add_one_features_list(chunk, set_city) for chunk in country_added]
+    com_single_added = [add_one_features_list(chunk, set_com_single) for chunk in city_added]
+    tfidf_added = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
+    result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
+
+
+    # result = [add_multi_features(chunk, set_com_multi) for chunk in com_single_added]
+    # print(get_now(), 'multi_com')
+
+    return result
 
 
 ##############################################################################
@@ -272,9 +282,9 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, co
     return crf, rs_cv
 
 
-def pipeline_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv, iteration):
-    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
-    test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
+def pipeline_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f, cv, iteration):
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f)
+    test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
