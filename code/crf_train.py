@@ -125,7 +125,7 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
     return features
 
 
-def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1):
+def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1, tfidf1):
     features.update({
         '-1:word.lower()': word1.lower(),
         '-1:word.istitle()': word1.istitle(),
@@ -136,7 +136,7 @@ def update_features(features, word1, postag1, name1, com_suffix1, country1, city
         '-1:com_single': com_single1,
         '-1:city': city1,
         '-1:country': country1,
-        # '-1:tfidf': tfidf1
+        '-1:tfidf': tfidf1
     })
 
 
@@ -146,13 +146,13 @@ def word2features(sent, i):
 
     if i > 0:
         word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1 = sent[i - 1]
-        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
+        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1)
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
         word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1 = sent[i + 1]
-        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1)
+        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1)
     else:
         features['EOS'] = True
     return features
@@ -230,7 +230,7 @@ def predict_crf(crf, X_test, y_test):
     return result, details
 
 
-def cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
+def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
     rs = RandomizedSearchCV(crf, params_space,
                             cv=cv,
                             verbose=1,
@@ -257,16 +257,34 @@ def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f,
     return crf, result, details
 
 
-def pipeline_crf_cv(train_f, test_f, name_f, com_suffix, country_f, city_f, com_single_f, com_multi_f, cv, iteration):
-    train_sents = batch_add_features(train_f, name_f, com_suffix, country_f, city_f, com_single_f, com_multi_f)
-    test_sents = batch_add_features(test_f, name_f, com_suffix, country_f, city_f, com_single_f, com_multi_f)
+def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv, iteration):
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
+    test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
-    result = cv_crf(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    result = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    print('best params:', result.best_params_)
+    print('best CV score:', result.best_score_)
+    print('model size: {:0.2f}M'.format(result.best_estimator_.size_ / 1000000))
     return crf, result
+
+
+def best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv, iteration):
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
+    test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    crf = train_crf(X_train, y_train)
+    labels = show_crf_label(crf)
+    params_space = make_param_space()
+    f1_scorer = make_f1_scorer(labels)
+    result = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    print(get_now(), 'predict')
+    best_predictor = result.best_estimator_
+    best_result, best_details = predict_crf(best_predictor, X_test, y_test)
+    return crf, best_predictor, result, best_result, best_details
 
 
 ##############################################################################
