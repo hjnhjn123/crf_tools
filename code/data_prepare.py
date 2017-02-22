@@ -104,6 +104,16 @@ def output_tfidf(in_file, out_file, cols, col_name):
             out.write(k+','+str(v)+'\n')
 
 
+def output_tfdf(in_file, out_file, cols, col_name):
+    out = open(out_file, 'w')
+    data = json2pd(in_file, cols, lines=True)
+    data = data[col_name].apply(remove_punc)
+    _, tfdf, _ = get_tfdf(data.tolist())
+    for k, v in tfdf.items():
+        if v > 1.0:
+            out.write(k+','+str(v)+'\n')
+
+
 def titlefy_names(in_file, out_file):
     out = open(out_file, 'w')
     with open(in_file, 'r') as data:
