@@ -140,6 +140,7 @@ def word2features(sent, i):
         update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1)
     else:
         features['EOS'] = True
+
     return features
 
 
