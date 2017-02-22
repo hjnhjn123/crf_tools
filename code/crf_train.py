@@ -265,14 +265,14 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, co
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
-    result = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    print('best params:', result.best_params_)
-    print('best CV score:', result.best_score_)
-    print('model size: {:0.2f}M'.format(result.best_estimator_.size_ / 1000000))
-    return crf, result
+    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    print('best params:', rs_cv.best_params_)
+    print('best CV score:', rs_cv.best_score_)
+    print('model size: {:0.2f}M'.format(rs_cv.best_estimator_.size_ / 1000000))
+    return crf, rs_cv
 
 
-def best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv, iteration):
+def pipeline_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv, iteration):
     train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
@@ -280,11 +280,11 @@ def best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_s
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
-    result = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     print(get_now(), 'predict')
-    best_predictor = result.best_estimator_
+    best_predictor = rs_cv.best_estimator_
     best_result, best_details = predict_crf(best_predictor, X_test, y_test)
-    return crf, best_predictor, result, best_result, best_details
+    return crf, best_predictor, rs_cv, best_result, best_details
 
 
 ##############################################################################
