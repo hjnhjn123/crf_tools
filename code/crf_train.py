@@ -76,9 +76,6 @@ def add_one_feature_dict(sent, feature_dic):
     return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
 
 
-
-
-
 ##############################################################################
 
 
@@ -174,7 +171,6 @@ def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_s
     tfidf_added = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
     result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
 
-
     # result = [add_multi_features(chunk, set_com_multi) for chunk in com_single_added]
     # print(get_now(), 'multi_com')
 
@@ -268,8 +264,10 @@ def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f,
     return crf, result, details
 
 
-def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv, iteration):
-    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
+def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, cv,
+                    iteration):
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
+                                     tfidf_f)
     test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f)
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
@@ -283,9 +281,12 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, co
     return crf, rs_cv
 
 
-def pipeline_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f, cv, iteration):
-    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f)
-    test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f, tfdf_f)
+def pipeline_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
+                          tfdf_f, cv, iteration):
+    train_sents = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
+                                     tfidf_f, tfdf_f)
+    test_sents = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
+                                    tfdf_f)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
