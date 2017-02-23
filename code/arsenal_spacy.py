@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from .arsenal_stats import *
+from .arsenal_stats import quickest_read_csv, add
 import spacy
+from spacy import pipeline, gold
+import pandas as pd
+import random
 from collections import OrderedDict
+from functools import reduce
 
 NLP = spacy.load('en')
 
@@ -41,13 +45,33 @@ def spacy_parser(text, switches, label):
 
 def spacy_pos_text_list(text_list):
     """
+    | use spacy pos tagger to annotate each chunk
+    | add end_label to the end of each chunk
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    result = [spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list]
-    # use spacy pos tagger to annotate each chunk
-    # add end_label to the end of each chunk
+    result = (spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list)
     return reduce(add, result)  # merge nested chunks
+
+
+def extract_ner_candidate(sents):
+    """
+    If a chunk contains more than two non-lower words.
+    :param sents: chunks
+    :return: ner candidates
+    """
+    k, result = 0, []
+    for sent in sents:
+        for word in sent.split(' '):
+            if word.isalnum():
+                # extract all numbers and alphabets
+                if not word.islower():
+                    # extract non-lower words
+                    k += 1
+        if k > 2:
+            result.append(sent)
+            k = 0
+    return result
 
 
 def spacy_batch_processing(data, switches, label, col, header):
@@ -62,7 +86,7 @@ def spacy_batch_processing(data, switches, label, col, header):
     """
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
-    # result = result.apply(extract_ner_candidate)
+    result = result.apply(extract_ner_candidate)
     result = result.apply(spacy_pos_text_list)  # POS tagging
     return result
 
@@ -107,7 +131,7 @@ def gold_parser(train_data, label=LABEL_FACTSET):
     :param train_data: list of (string containing entities, [(start, end, type)])
     :param label: a list of entity types
     """
-    ner = spacy.pipeline.EntityRecognizer(NLP.vocab, entity_types=label)
+    ner = pipeline.EntityRecognizer(NLP.vocab, entity_types=label)
     for itn in range(5):
         random.shuffle(train_data)
         for raw_text, entity_offsets in train_data:
@@ -116,4 +140,3 @@ def gold_parser(train_data, label=LABEL_FACTSET):
             NLP.tagger(doc)
             ner.update(doc, gold)
     ner.model.end_training()
-
