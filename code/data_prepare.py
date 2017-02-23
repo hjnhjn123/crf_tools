@@ -162,30 +162,10 @@ def prepare_techcrunch(in_file, header, col):
     return data
 
 
-def process_techcrunch(in_file, out_file, col, pieces=10):
-    data = json2pd(in_file, col, lines=True)
+def process_techcrunch(in_file, out_file, cols, pieces=10):
+    data = json2pd(in_file, cols, lines=True)
     data = data.dropna()
     random_data = random_rows(data, pieces, 'content')
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
     pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, header=False, index=False)
-
-
-def extract_ner_candidate(sents):
-    """
-    If a chunk contains more than two non-lower words.
-    :param sents: chunks
-    :return: ner candidates
-    """
-    k, result = 0, []
-    for sent in sents:
-        for word in sent.split(' '):
-            if word.isalnum():
-                # extract all numbers and alphabets
-                if not word.islower():
-                    # extract non-lower words
-                    k += 1
-        if k > 2:
-            result.append(sent)
-            k = 0
-    return result
