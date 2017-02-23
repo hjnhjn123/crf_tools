@@ -250,10 +250,9 @@ def test_crf_prediction(crf, X_test, y_test):
 
 def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
-    crf_result = []
-    for j in range(len(new_data)):
-        crf_result.append([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))])
-    return crf_result
+    crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in range(len(new_data)))
+    crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
+    return reduce(add, crf_result)
 
 
 ##############################################################################
@@ -313,7 +312,7 @@ def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f
 
 
 def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
-                         tfdf_f):
+                         tfdf_f, out_f):
     train_sents, _ = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
                                         tfidf_f, tfdf_f)
     test_sents, pos_data = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f,
@@ -325,6 +324,8 @@ def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_
     print(get_now(), 'train')
     result = crf_predict(crf, pos_data, X_test)
     print(get_now(), 'predict')
+    out = pd.DataFrame(result)
+    out.to_csv(out_f, header=False, index=False)
     return crf, result
 
 
