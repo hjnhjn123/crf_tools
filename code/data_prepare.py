@@ -4,6 +4,7 @@ from .arsenal_spacy import *
 from .arsenal_nlp import *
 from string import punctuation
 from zhon import hanzi
+from scipy import stats
 
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
@@ -112,6 +113,29 @@ def output_tfdf(in_file, out_file, cols, col_name):
     for k, v in tfdf.items():
         if v > 1.0:
             out.write(k+','+str(v)+'\n')
+
+def output_tfidf_zscore(in_file, out_file, cols, col_name):
+    data = json2pd(in_file, cols, lines=True)
+    data = data[col_name].apply(remove_punc)
+    tfidf_dic = get_tfidf(data.tolist())
+    tfidf_df = pd.DataFrame.from_dict(tfidf_dic, orient='index')
+    tfidf_df.columns = ['tf_idf']
+    tfidf_df['zscore'] = stats.mstats.zscore(tfidf_df['tf_idf'])
+    tfidf_df['zvalue'] = tfidf_df['zscore'].apply(lambda x:0 if x < 0 else 1)
+    tfidf_df = tfidf_df.drop(['tf_idf', 'zscore'], axis=1)
+    tfidf_df.to_csv(out_file, header=False)
+
+
+def output_tfdf_zscore(in_file, out_file, cols, col_name):
+    data = json2pd(in_file, cols, lines=True)
+    data = data[col_name].apply(remove_punc)
+    tfidf_dic = get_tfdf(data.tolist())
+    tfidf_df = pd.DataFrame.from_dict(tfidf_dic, orient='index')
+    tfidf_df.columns = ['tf_idf']
+    tfidf_df['zscore'] = stats.mstats.zscore(tfidf_df['tf_idf'])
+    tfidf_df['zvalue'] = tfidf_df['zscore'].apply(lambda x:0 if x < 0 else 1)
+    tfidf_df = tfidf_df.drop(['tf_idf', 'zscore'], axis=1)
+    tfidf_df.to_csv(out_file, header=False)
 
 
 def titlefy_names(in_file, out_file):
