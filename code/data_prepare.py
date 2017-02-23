@@ -129,13 +129,13 @@ def output_tfidf_zscore(in_file, out_file, cols, col_name):
 def output_tfdf_zscore(in_file, out_file, cols, col_name):
     data = json2pd(in_file, cols, lines=True)
     data = data[col_name].apply(remove_punc)
-    tfidf_dic = get_tfdf(data.tolist())
-    tfidf_df = pd.DataFrame.from_dict(tfidf_dic, orient='index')
-    tfidf_df.columns = ['tf_idf']
-    tfidf_df['zscore'] = stats.mstats.zscore(tfidf_df['tf_idf'])
-    tfidf_df['zvalue'] = tfidf_df['zscore'].apply(lambda x:0 if x < 0 else 1)
-    tfidf_df = tfidf_df.drop(['tf_idf', 'zscore'], axis=1)
-    tfidf_df.to_csv(out_file, header=False)
+    _, tfdf_dic, _ = get_tfdf(data.tolist())
+    tfdf_df = pd.DataFrame.from_dict(tfdf_dic, orient='index')
+    tfdf_df.columns = ['tf_idf']
+    tfdf_df['zscore'] = stats.mstats.zscore(tfdf_df['tf_idf'])
+    tfdf_df['zvalue'] = tfdf_df['zscore'].apply(lambda x:0 if x < 0 else 1)
+    tfdf_df = tfdf_df.drop(['tf_idf', 'zscore'], axis=1)
+    tfdf_df.to_csv(out_file, header=False)
 
 
 def titlefy_names(in_file, out_file):
