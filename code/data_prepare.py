@@ -68,6 +68,7 @@ def remap_factset_sn_type(in_file, out_file):
     result = result.drop(['entity_type'], axis=1)
     result.to_csv(out_file, index=False)
 
+
 def extract_factset_short_names(in_file, out_single, out_multi):
     data = quickest_read_csv(in_file, ['entity_proper_name', 'entity_type', 'factset_entity_id', 'short_name'])
     single_name = data[data.short_name.str.split(' ').apply(len) == 1]
@@ -167,7 +168,7 @@ def process_techcrunch(in_file, out_file, col, pieces=10):
     random_data = random_rows(data, pieces, 'content')
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
-    pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, index=False)
+    pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, header=False, index=False)
 
 
 def extract_ner_candidate(sents):
