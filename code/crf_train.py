@@ -152,8 +152,8 @@ def sent2tokens(line):
     return [token for token, postag, label in line]
 
 
-def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
-    pos_data = process_annotated(text_file)
+def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
+    # pos_data = process_annotated(text_file)
 
     set_name, set_country = line_file2set(name_f), line_file2set(country_f)
     set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
@@ -169,14 +169,13 @@ def batch_add_features(text_file, name_f, com_suffix_f, country_f, city_f, com_s
     tfidf_added = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
     result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
 
-    return result, pos_data
+    return result
 
 
 def batch_add_features_from_list(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
     set_name, set_country = line_file2set(name_f), line_file2set(country_f)
     set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
     set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    dict_tfidf = prepare_features_dict(tfidf_f)
     dict_tfdf = prepare_features_dict(tfdf_f)
 
     name_added = [add_one_features_list(chunk, set_name) for chunk in pos_data]
@@ -277,13 +276,12 @@ def crf_predict(crf, new_data, processed_data):
 ##############################################################################
 
 
-def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
-                       tfdf_f):
-    train_sents, _ = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                                        tfidf_f, tfdf_f)
-    test_sents, _ = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                                       tfidf_f, tfdf_f)
+def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
+    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
+
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
@@ -295,10 +293,11 @@ def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f,
 
 def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
                     tfdf_f, cv, iteration):
-    train_sents, _ = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                                        tfidf_f, tfdf_f)
-    test_sents, _ = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                                       tfidf_f, tfdf_f)
+    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    print(get_now(), 'converted')
+
     X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
@@ -311,13 +310,13 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, co
     return crf, rs_cv
 
 
-def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f,
-                                tfidf_f,
+def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                                 tfdf_f, tfidf_z_f, tfdf_z_f, cv, iteration):
-    train_sents, _ = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f,
-                                        tfidf_f, tfdf_f)
-    test_sents, _ = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f,
-                                       tfidf_f, tfdf_f)
+    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    print(get_now(), 'converted')
+
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
@@ -332,15 +331,17 @@ def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f
 
 def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                          tfdf_f, out_f):
-    train_sents, _ = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents, pos_data = batch_add_features(test_f, name_f, com_suffix_f, country_f, city_f, com_single_f,
-                                              tfidf_f, tfdf_f)
+    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+
+    print(get_now(), 'converted')
     print(get_now(), 'converted')
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
-    result = crf_predict(crf, pos_data, X_test)
+    result = crf_predict(crf, test_data, X_test)
     print(get_now(), 'predict')
     out = pd.DataFrame(result)
     out.to_csv(out_f, header=False, index=False)
@@ -350,9 +351,10 @@ def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_
 def pipeline_pos_crf(in_file, out_f, train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f,
                      cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
-    data = data.dropna()
     random_data = random_rows(data, pieces, 'content')
+    random_data = random_data.dropna()
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
+    print([i for i in parsed_data if len(i)==0])
     parsed_data = reduce(add, parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
