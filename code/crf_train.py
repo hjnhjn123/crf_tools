@@ -120,6 +120,17 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
         '-1:country': country,
         '-1:tfidf': tfidf,
         '-1:tfdf': tfdf,
+        '+1:word.lower()': word.lower(),
+        '+1:word.istitle()': word.istitle(),
+        '+1:word.isupper()': word.isupper(),
+        '+1:postag': postag,
+        '+1:name': name,
+        '+1:com_suffix': com_suffix,
+        '+1:com_single': com_single,
+        '+1:city': city,
+        '+1:country': country,
+        '+1:tfidf': tfidf,
+        '+1:tfdf': tfdf,
     }
     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
 
@@ -130,44 +141,6 @@ def load_yaml_conf(conf_f):
     return result
 
 
-# def neighbor_features(feature_conf, conf_switch, word1, postag1, name1, com_suffix1, country1, city1, com_single1,
-#                       tfidf1, tfdf1):
-#     feature_dict = {
-#         '-1:word.lower()': word1.lower(),
-#         '-1:word.istitle()': word1.istitle(),
-#         '-1:word.isupper()': word1.isupper(),
-#         '-1:postag': postag1,
-#         '-1:name': name1,
-#         '-1:com_suffix': com_suffix1,
-#         '-1:com_single': com_single1,
-#         '-1:city': city1,
-#         '-1:country': country1,
-#         '-1:tfidf': tfidf1,
-#         '-1:tfdf': tfdf1,
-#     }
-#     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
-
-
-# def word2features(sent, i):
-#     word, postag, _, name, company, city, country, com_single, tfidf, tfdf = sent[i]
-#     # features = current_features(word, postag, name, company, city, country, com_single, tfidf, tfdf)
-#     features = current_features(word, postag, name, company, city, country, com_single, tfidf, tfdf)
-#
-#
-#     if i > 0:
-#         word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
-#         neighbor_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf, tfdf)
-#     else:
-#         features['BOS'] = True
-#
-#     if i < len(sent) - 1:
-#         word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
-#         neighbor_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf, tfdf)
-#     else:
-#         features['EOS'] = True
-#
-#     return features
-
 def word2features(sent, i, feature_conf):
     word, postag, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
     features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single,
@@ -175,7 +148,7 @@ def word2features(sent, i, feature_conf):
     if i > 0:
         word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
         features.update(
-            feature_selector(word1, feature_conf, 'neighbour', postag1, name1, comp_suffix1, country1, city1,
+            feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1,
                              com_single1, tfidf1, tfdf1))
     else:
         features['BOS'] = True
@@ -183,7 +156,7 @@ def word2features(sent, i, feature_conf):
     if i < len(sent) - 1:
         word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
         features.update(
-            feature_selector(word1, feature_conf, 'neighbour', postag1, name1, comp_suffix1, country1, city1,
+            feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1,
                              com_single1, tfidf1, tfdf1))
     else:
         features['EOS'] = True
@@ -192,10 +165,6 @@ def word2features(sent, i, feature_conf):
 
 def sent2features(line, feature_conf):
     return [word2features(line, i, feature_conf) for i in range(len(line))]
-
-
-# def sent2features(line):
-#     return [word2features(line, i) for i in range(len(line))]
 
 
 def sent2labels(line):
@@ -229,15 +198,6 @@ def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_si
 
 # CRF training
 
-
-# def feed_crf_trainer(train_sents, test_sents):
-#     X_train = [sent2features(s) for s in train_sents]
-#     y_train = [sent2labels(s) for s in train_sents]
-#
-#     X_test = [sent2features(s) for s in test_sents]
-#     y_test = [sent2labels(s) for s in test_sents]
-#
-#     return X_train, y_train, X_test, y_test
 
 def feed_crf_trainer(train_sents, test_sents, conf_f):
     conf = load_yaml_conf(conf_f)
@@ -336,14 +296,15 @@ def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f,
     return crf, result, details
 
 
-def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
+def pipeline_crf_cv(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
+                    tfidf_f,
                     tfdf_f, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
 
-    X_train, y_train, _, _ = feed_crf_trainer(train_sents, test_sents)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -355,14 +316,14 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, co
     return crf, rs_cv
 
 
-def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
+def pipeline_train_best_predict(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                                 tfdf_f, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
 
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -374,14 +335,14 @@ def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
+def pipeline_crf_predict(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                          tfdf_f, out_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
 
     print(get_now(), 'converted')
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
@@ -392,7 +353,8 @@ def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_
     return crf, result
 
 
-def pipeline_pos_crf(in_file, out_f, train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f,
+def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
+                     tfdf_f,
                      cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
     data = data.drop_duplicates()
@@ -406,7 +368,7 @@ def pipeline_pos_crf(in_file, out_f, train_f, name_f, com_suffix_f, country_f, c
 
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
