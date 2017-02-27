@@ -7,6 +7,7 @@ import pandas as pd
 import random
 from collections import OrderedDict
 from functools import reduce
+from itertools import chain
 
 NLP = spacy.load('en')
 
@@ -53,7 +54,8 @@ def spacy_pos_text_list(text_list):
     #TODO itertools.chain
     result = (spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list)
     result = (i for i in result if len(i) > 1)
-    return reduce(add, result)  # merge nested chunks
+    return chain.from_iterable(result)
+    # return reduce(add, result)  # merge nested chunks
 
 
 def extract_ner_candidate(sents):
