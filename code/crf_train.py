@@ -56,7 +56,6 @@ def prepare_features_dict(in_file):
     :return: {token: value}
 
     """
-    # TODO no use of two splits
     with open(in_file, 'r') as data:
         result = defaultdict()
         for i in data:
@@ -92,6 +91,21 @@ def add_one_feature_dict(sent, feature_dic):
 
 
 def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, country, city, com_single, tfidf, tfdf):
+    """
+    Set the feature dict here
+    :param word: word itself
+    :param feature_conf: feature config
+    :param conf_switch: select the right config from feature_config
+    :param postag:
+    :param name:
+    :param com_suffix:
+    :param country:
+    :param city:
+    :param com_single:
+    :param tfidf:
+    :param tfdf:
+    :return:
+    """
     feature_dict = {
         'bias': 1.0,
         conf_switch + '_word.lower()': word.lower(),
@@ -112,12 +126,6 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
         conf_switch + '_1:word.lower()': word.lower(),
     }
     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
-
-
-def load_yaml_conf(conf_f):
-    with open(conf_f, 'r') as f:
-        result = load(f)
-    return result
 
 
 def word2features(sent, i, feature_conf):

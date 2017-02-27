@@ -577,3 +577,15 @@ def random_rows(df, size, col_name):
     row_number = random_pick(df, size)
     result = df.iloc[row_number]
     return result
+
+
+########################################################################################################################
+
+
+# Config
+
+
+def load_yaml_conf(conf_f):
+    with open(conf_f, 'r') as f:
+        result = load(f)
+    return result
