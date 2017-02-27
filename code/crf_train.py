@@ -359,43 +359,6 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
 ##############################################################################
 
 
-def add_multi_word_features(sent, feature_set):
-    tks = [i[0] for i in sent]
-    feature_list = ['0' for i in range(len(tks))]
-    for i in range(len(tks) - 1):
-        if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()):
-            print(tks[i:i + 2])
-            for names in feature_set:
-                n_split = names.split(' ')
-                if len(n_split) == 2:
-                    if tks[i] == n_split[0] and tks[i + 1] == n_split[1]:
-                        feature_list[i:i + 2] = ['1', '1']
-                        break
-                    else:
-                        tks = tks
-                else:
-                    tks = tks
-
-        if i < (len(tks) - 2):
-            if (tks[i].istitle() or tks[i].isupper()) and (tks[i + 1].istitle() or tks[i + 1].isupper()) and (
-                        tks[i + 2].istitle() or tks[i + 2].isupper()):
-                print(tks[i:i + 3])
-                for names in feature_set:
-                    n_split = names.split(' ')
-                    if len(n_split) == 3:
-                        if tks[i] == n_split[0] and tks[i + 1] == n_split[1] and tks[i + 2] == n_split[2]:
-                            feature_list[i:i + 3] = ['1', '1', '1']
-                            break
-                    else:
-                        tks = tks
-            else:
-                tks = tks
-        else:
-            tks = tks
-    new_sent = [', '.join(i) for i in sent]
-    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
-
-
 def add_multi_features(sent, feature_set):
     token_list = [i[0] for i in sent]
     token_dic = {v: k for (k, v) in enumerate(token_list)}
