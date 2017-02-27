@@ -4,6 +4,7 @@ import logging
 from itertools import groupby
 from re import findall, compile
 from itertools import chain
+from collections import  defaultdict
 
 import scipy.stats as ss
 import sklearn_crfsuite
@@ -60,7 +61,11 @@ def prepare_features_dict(in_file):
     """
     #TODO no use of two splits
     with open(in_file, 'r') as data:
-        return {i.split(',')[0]: i.split(',')[1].strip('\r\n') for i in data}
+        result = defaultdict()
+        for i in data:
+            line = i.split(',')
+            result[line[0]] = line[1].strip('\r\n')
+        return result
 
 
 def add_one_features_list(sent, feature_set):
