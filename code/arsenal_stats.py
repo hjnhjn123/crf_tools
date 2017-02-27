@@ -9,6 +9,7 @@ from functools import reduce
 from itertools import islice
 from json import loads
 from operator import itemgetter
+from yaml import load
 
 import numpy as np
 import pandas as pd
