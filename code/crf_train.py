@@ -10,6 +10,7 @@ import sklearn_crfsuite
 from sklearn.grid_search import RandomizedSearchCV
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import metrics
+from yaml import load
 
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import *
@@ -17,7 +18,7 @@ from .arsenal_stats import *
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
 
-LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
+LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS',
                  'PRT', 'SHP']
 LABEL_COLLEGE = ['COL']
@@ -90,8 +91,8 @@ def add_one_feature_dict(sent, feature_dic):
 # Feature extraction
 
 
-def set_features(word, postag, name, com_suffix, country, city, com_single, tfidf, tfdf):
-    features = {
+def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, country, city, com_single, tfidf, tfdf):
+    feature_dict = {
         'bias': 1.0,
         'word.lower()': word.lower(),
         'word[-3:]': word[-3:],
@@ -99,7 +100,7 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
         'word.isupper()': word.isupper(),
         'word.istitle()': word.istitle(),
         'word.isdigit()': word.isdigit(),
-        'word.islower()': word.islower(),  # iPhone
+        'word.islower()': word.islower(),
         'postag': postag,
         'name': name,
         'comp_suffix': com_suffix,
@@ -108,47 +109,93 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
         'country': country,
         'tfidf': tfidf,
         'tfdf': tfdf,
+        '-1:word.lower()': word.lower(),
+        '-1:word.istitle()': word.istitle(),
+        '-1:word.isupper()': word.isupper(),
+        '-1:postag': postag,
+        '-1:name': name,
+        '-1:com_suffix': com_suffix,
+        '-1:com_single': com_single,
+        '-1:city': city,
+        '-1:country': country,
+        '-1:tfidf': tfidf,
+        '-1:tfdf': tfdf,
     }
-    return features
+    return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
 
 
-def update_features(features, word1, postag1, name1, com_suffix1, country1, city1, com_single1, tfidf1, tfdf1):
-    features.update({
-        '-1:word.lower()': word1.lower(),
-        '-1:word.istitle()': word1.istitle(),
-        '-1:word.isupper()': word1.isupper(),
-        '-1:postag': postag1,
-        '-1:name': name1,
-        '-1:com_suffix': com_suffix1,
-        '-1:com_single': com_single1,
-        '-1:city': city1,
-        '-1:country': country1,
-        '-1:tfidf': tfidf1,
-        '-1:tfdf': tfdf1,
-    })
+def load_yaml_conf(conf_f):
+    with open(conf_f, 'r') as f:
+        result = load(f)
+    return result
 
 
-def word2features(sent, i):
-    word, postag, _, name, company, city, country, com_single, tfidf, tfdf = sent[i]
-    features = set_features(word, postag, name, company, city, country, com_single, tfidf, tfdf)
+# def neighbor_features(feature_conf, conf_switch, word1, postag1, name1, com_suffix1, country1, city1, com_single1,
+#                       tfidf1, tfdf1):
+#     feature_dict = {
+#         '-1:word.lower()': word1.lower(),
+#         '-1:word.istitle()': word1.istitle(),
+#         '-1:word.isupper()': word1.isupper(),
+#         '-1:postag': postag1,
+#         '-1:name': name1,
+#         '-1:com_suffix': com_suffix1,
+#         '-1:com_single': com_single1,
+#         '-1:city': city1,
+#         '-1:country': country1,
+#         '-1:tfidf': tfidf1,
+#         '-1:tfdf': tfdf1,
+#     }
+#     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
 
+
+# def word2features(sent, i):
+#     word, postag, _, name, company, city, country, com_single, tfidf, tfdf = sent[i]
+#     # features = current_features(word, postag, name, company, city, country, com_single, tfidf, tfdf)
+#     features = current_features(word, postag, name, company, city, country, com_single, tfidf, tfdf)
+#
+#
+#     if i > 0:
+#         word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
+#         neighbor_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf, tfdf)
+#     else:
+#         features['BOS'] = True
+#
+#     if i < len(sent) - 1:
+#         word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
+#         neighbor_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf, tfdf)
+#     else:
+#         features['EOS'] = True
+#
+#     return features
+
+def word2features(sent, i, feature_conf):
+    word, postag, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
+    features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single,
+                                tfidf, tfdf)
     if i > 0:
-        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
-        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf, tfdf)
+        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
+        features.update(
+            feature_selector(word1, feature_conf, 'neighbour', postag1, name1, comp_suffix1, country1, city1,
+                             com_single1, tfidf1, tfdf1))
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1, ner1, name1, company1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
-        update_features(features, word1, postag1, name1, company1, city1, country1, com_single1, tfidf, tfdf)
+        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
+        features.update(
+            feature_selector(word1, feature_conf, 'neighbour', postag1, name1, comp_suffix1, country1, city1,
+                             com_single1, tfidf1, tfdf1))
     else:
         features['EOS'] = True
-
     return features
 
 
-def sent2features(line):
-    return [word2features(line, i) for i in range(len(line))]
+def sent2features(line, feature_conf):
+    return [word2features(line, i, feature_conf) for i in range(len(line))]
+
+
+# def sent2features(line):
+#     return [word2features(line, i) for i in range(len(line))]
 
 
 def sent2labels(line):
@@ -183,11 +230,21 @@ def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_si
 # CRF training
 
 
-def feed_crf_trainer(train_sents, test_sents):
-    X_train = [sent2features(s) for s in train_sents]
+# def feed_crf_trainer(train_sents, test_sents):
+#     X_train = [sent2features(s) for s in train_sents]
+#     y_train = [sent2labels(s) for s in train_sents]
+#
+#     X_test = [sent2features(s) for s in test_sents]
+#     y_test = [sent2labels(s) for s in test_sents]
+#
+#     return X_train, y_train, X_test, y_test
+
+def feed_crf_trainer(train_sents, test_sents, conf_f):
+    conf = load_yaml_conf(conf_f)
+    X_train = [sent2features(s, conf) for s in train_sents]
     y_train = [sent2labels(s) for s in train_sents]
 
-    X_test = [sent2features(s) for s in test_sents]
+    X_test = [sent2features(s, conf) for s in test_sents]
     y_test = [sent2labels(s) for s in test_sents]
 
     return X_train, y_train, X_test, y_test
@@ -264,13 +321,13 @@ def crf_predict(crf, new_data, processed_data):
 ##############################################################################
 
 
-def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
+def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
 
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
+    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
