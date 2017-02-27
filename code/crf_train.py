@@ -164,19 +164,18 @@ def sent2tokens(line):
 
 
 def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
-    #TODO use generator comprehension
     set_name, set_country = line_file2set(name_f), line_file2set(country_f)
     set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
     set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
     dict_tfidf = prepare_features_dict(tfidf_f)
     dict_tfdf = prepare_features_dict(tfdf_f)
 
-    name_added = [add_one_features_list(chunk, set_name) for chunk in pos_data]
-    com_suffix_added = [add_one_features_list(chunk, set_com_suffix) for chunk in name_added]
-    country_added = [add_one_features_list(chunk, set_country) for chunk in com_suffix_added]
-    city_added = [add_one_features_list(chunk, set_city) for chunk in country_added]
-    com_single_added = [add_one_features_list(chunk, set_com_single) for chunk in city_added]
-    tfidf_added = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
+    name_added = (add_one_features_list(chunk, set_name) for chunk in pos_data)
+    com_suffix_added = (add_one_features_list(chunk, set_com_suffix) for chunk in name_added)
+    country_added = (add_one_features_list(chunk, set_country) for chunk in com_suffix_added)
+    city_added = (add_one_features_list(chunk, set_city) for chunk in country_added)
+    com_single_added = (add_one_features_list(chunk, set_com_single) for chunk in city_added)
+    tfidf_added = (add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added)
     result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
 
     return result
