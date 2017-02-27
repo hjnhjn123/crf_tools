@@ -94,43 +94,22 @@ def add_one_feature_dict(sent, feature_dic):
 def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, country, city, com_single, tfidf, tfdf):
     feature_dict = {
         'bias': 1.0,
-        'word.lower()': word.lower(),
-        'word[-3:]': word[-3:],
-        'word[-2:]': word[-2:],
-        'word.isupper()': word.isupper(),
-        'word.istitle()': word.istitle(),
-        'word.isdigit()': word.isdigit(),
-        'word.islower()': word.islower(),
-        'postag': postag,
-        'name': name,
-        'comp_suffix': com_suffix,
-        'com_single': com_single,
-        'city': city,
-        'country': country,
-        'tfidf': tfidf,
-        'tfdf': tfdf,
-        '-1:word.lower()': word.lower(),
-        '-1:word.istitle()': word.istitle(),
-        '-1:word.isupper()': word.isupper(),
-        '-1:postag': postag,
-        '-1:name': name,
-        '-1:com_suffix': com_suffix,
-        '-1:com_single': com_single,
-        '-1:city': city,
-        '-1:country': country,
-        '-1:tfidf': tfidf,
-        '-1:tfdf': tfdf,
-        '+1:word.lower()': word.lower(),
-        '+1:word.istitle()': word.istitle(),
-        '+1:word.isupper()': word.isupper(),
-        '+1:postag': postag,
-        '+1:name': name,
-        '+1:com_suffix': com_suffix,
-        '+1:com_single': com_single,
-        '+1:city': city,
-        '+1:country': country,
-        '+1:tfidf': tfidf,
-        '+1:tfdf': tfdf,
+        conf_switch + '_word.lower()': word.lower(),
+        conf_switch + '_word[-3]': word[-3:],
+        conf_switch + '_word[-2]': word[-2:],
+        conf_switch + '_word.isupper()': word.isupper(),
+        conf_switch + '_word.istitle()': word.istitle(),
+        conf_switch + '_word.isdigit()': word.isdigit(),
+        conf_switch + '_word.islower()': word.islower(),
+        conf_switch + '_postag': postag,
+        conf_switch + '_name': name,
+        conf_switch + '_comp_suffix': com_suffix,
+        conf_switch + '_com_single': com_single,
+        conf_switch + '_city': city,
+        conf_switch + '_country': country,
+        conf_switch + '_tfidf': tfidf,
+        conf_switch + '_tfdf': tfdf,
+        conf_switch + '_1:word.lower()': word.lower(),
     }
     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
 
@@ -297,8 +276,7 @@ def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f,
 
 
 def pipeline_crf_cv(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                    tfidf_f,
-                    tfdf_f, cv, iteration):
+                    tfidf_f, tfdf_f, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
@@ -354,8 +332,7 @@ def pipeline_crf_predict(train_f, test_f, conf_f, name_f, com_suffix_f, country_
 
 
 def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                     tfdf_f,
-                     cols, pieces=10):
+                     tfdf_f, cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
     data = data.drop_duplicates()
     random_data = random_rows(data, pieces, 'content')
