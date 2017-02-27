@@ -1,15 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from .arsenal_stats import *
-from .arsenal_spacy import spacy_batch_processing
-from itertools import groupby
-import sklearn_crfsuite
-from sklearn_crfsuite import metrics
-from sklearn.metrics import make_scorer
-from re import findall, compile
-from sklearn.grid_search import RandomizedSearchCV
-import scipy.stats as ss
 import logging
+from itertools import groupby
+from re import findall, compile
+from itertools import chain
+
+import scipy.stats as ss
+import sklearn_crfsuite
+from sklearn.grid_search import RandomizedSearchCV
+from sklearn.metrics import make_scorer
+from sklearn_crfsuite import metrics
+
+from .arsenal_spacy import spacy_batch_processing
+from .arsenal_stats import *
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 logger = logging.getLogger(__name__)
@@ -18,8 +21,8 @@ HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
-                 'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
-                 'IDX', 'BAS', 'PRT', 'SHP']
+                 'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS',
+                 'PRT', 'SHP']
 LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
 
@@ -53,8 +56,11 @@ def prepare_features_dict(in_file):
     | Reading a line-based csv file, and converting it to a feature dic
     :param in_file:  token,value
     :return: {token: value}
+
     """
-    return {i.split(',')[0]: i.split(',')[1].strip('\r\n') for i in open(in_file, 'r')}
+    #TODO no use of two splits
+    with open(in_file, 'r') as data:
+        return {i.split(',')[0]: i.split(',')[1].strip('\r\n') for i in data}
 
 
 def add_one_features_list(sent, feature_set):
@@ -99,8 +105,8 @@ def set_features(word, postag, name, com_suffix, country, city, com_single, tfid
         'com_single': com_single,
         'city': city,
         'country': country,
-        'tf_idf': tfidf,
-        'tfidf': tfdf,
+        'tfidf': tfidf,
+        'tfdf': tfdf,
     }
     return features
 
@@ -153,8 +159,7 @@ def sent2tokens(line):
 
 
 def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
-    # pos_data = process_annotated(text_file)
-
+    #TODO use generator comprehension
     set_name, set_country = line_file2set(name_f), line_file2set(country_f)
     set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
     set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
@@ -170,23 +175,6 @@ def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_si
     result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
 
     return result
-
-
-def batch_add_features_from_list(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
-    set_name, set_country = line_file2set(name_f), line_file2set(country_f)
-    set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
-    set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    dict_tfdf = prepare_features_dict(tfdf_f)
-
-    name_added = [add_one_features_list(chunk, set_name) for chunk in pos_data]
-    com_suffix_added = [add_one_features_list(chunk, set_com_suffix) for chunk in name_added]
-    country_added = [add_one_features_list(chunk, set_country) for chunk in com_suffix_added]
-    city_added = [add_one_features_list(chunk, set_city) for chunk in country_added]
-    com_single_added = [add_one_features_list(chunk, set_com_single) for chunk in city_added]
-    tfidf_added = [add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added]
-    result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
-
-    return result, pos_data
 
 
 ##############################################################################
@@ -239,7 +227,7 @@ def make_f1_scorer(labels):
     return make_scorer(metrics.flat_f1_score, average='weighted', labels=labels)
 
 
-def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
+def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteration=50):
     rs = RandomizedSearchCV(crf, params_space,
                             cv=cv,
                             verbose=1,
@@ -266,18 +254,20 @@ def test_crf_prediction(crf, X_test, y_test):
 
 
 def crf_predict(crf, new_data, processed_data):
+    #TODO check itertools.chain
     result = crf.predict(processed_data)
     crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
                   range(len(new_data)))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
-    return reduce(add, crf_result)
+    # return reduce(add, crf_result)
+    return chain.from_iterable(crf_result)
 
 
 ##############################################################################
 
 
 def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
-    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
@@ -293,7 +283,7 @@ def pipeline_crf_train(train_f, test_f, name_f, com_suffix_f, country_f, city_f,
 
 def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f, tfidf_f,
                     tfdf_f, cv, iteration):
-    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
@@ -311,8 +301,8 @@ def pipeline_crf_cv(train_f, test_f, name_f, com_suffix_f, country_f, city_f, co
 
 
 def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                                tfdf_f, tfidf_z_f, tfdf_z_f, cv, iteration):
-    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+                                tfdf_f, cv, iteration):
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
@@ -331,11 +321,10 @@ def pipeline_train_best_predict(train_f, test_f, name_f, com_suffix_f, country_f
 
 def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                          tfdf_f, out_f):
-    train_data, test_data  = process_annotated(train_f), process_annotated(test_f)
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
 
-    print(get_now(), 'converted')
     print(get_now(), 'converted')
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     print(get_now(), 'feed')
@@ -351,15 +340,18 @@ def pipeline_crf_predict(train_f, test_f, name_f, com_suffix_f, country_f, city_
 def pipeline_pos_crf(in_file, out_f, train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f,
                      cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
+    data = data.drop_duplicates()
     random_data = random_rows(data, pieces, 'content')
     random_data = random_data.dropna()
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
-    print([i for i in parsed_data if len(i)==0])
-    parsed_data = reduce(add, parsed_data)
+    # parsed_data = reduce(add, parsed_data)  #TODO itertools.chain
+    parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
-    train_sents, _ = batch_add_features(train_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents, pos_data = batch_add_features_from_list(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    train_data = process_annotated(train_f)
+
+    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)

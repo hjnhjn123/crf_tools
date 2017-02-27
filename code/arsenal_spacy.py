@@ -50,7 +50,9 @@ def spacy_pos_text_list(text_list):
     :param text_list: a list of sentences
     :return: a list of POS result
     """
+    #TODO itertools.chain
     result = (spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list)
+    result = (i for i in result if len(i) > 1)
     return reduce(add, result)  # merge nested chunks
 
 
@@ -76,8 +78,6 @@ def extract_ner_candidate(sents):
 
 def spacy_batch_processing(data, switches, label, col, header):
     """
-    :param in_file: a csv file
-    :param out_file: a csv file
     :param switches: set switches for spacy_parser
     :param label: set label for spacy_parser
     :param col: set the needed column
@@ -86,7 +86,7 @@ def spacy_batch_processing(data, switches, label, col, header):
     """
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
-    result = result.apply(extract_ner_candidate)
+    # result = result.apply(extract_ner_candidate)
     result = result.apply(spacy_pos_text_list)  # POS tagging
     return result
 

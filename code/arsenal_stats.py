@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 from __future__ import (unicode_literals, print_function, division)
 
+import random
 from collections import OrderedDict
+from configparser import ConfigParser
 from datetime import date, datetime
+from functools import reduce
 from itertools import islice
 from json import loads
 from operator import itemgetter
@@ -10,9 +13,6 @@ from operator import itemgetter
 import numpy as np
 import pandas as pd
 from pandas import ExcelWriter
-from functools import reduce
-from configparser import ConfigParser
-import random
 
 
 ########################################################################################################################
@@ -39,7 +39,7 @@ def get_column_index(column, col_list):
     return [int(col_index_dic[col]) for col in col_list]
 
 
-def  csv2pd(in_file, original_columns, needed_columns, sep=",", quote=3, engine='c'):
+def csv2pd(in_file, needed_columns, sep=",", quote=3, engine='c'):
     """
     user Function get_column_index to get a list of column indices
     :param in_file: a csv_file
@@ -50,8 +50,7 @@ def  csv2pd(in_file, original_columns, needed_columns, sep=",", quote=3, engine=
     :param engine: choose engine for reading data
     :return: a trimmed pandas table
     """
-    column_indices = get_column_index(column=original_columns, col_list=needed_columns)
-    return pd.read_csv(in_file, usecols=column_indices, sep=sep, quoting=quote, engine=engine)
+    return pd.read_csv(in_file, usecols=needed_columns, sep=sep, quoting=quote, engine=engine)
 
 
 def get_header(in_file, sep=","):
@@ -65,8 +64,7 @@ def quickest_read_csv(in_file, column_names):
     """
     param: in_file: csv file
     """
-    data = csv2pd(in_file=in_file, original_columns=get_header(in_file), needed_columns=column_names, engine='c',
-                  quote=0, sep=',')
+    data = pd.read_csv(in_file, usecols=column_names, engine='c', quoting=0, sep=',')
     return data
 
 
@@ -452,6 +450,7 @@ def line_file2set(in_file):
     :return: (feature1, feautre2...)
     """
     return set(i.strip('\n\r') for i in open(in_file, 'r'))
+
 
 ########################################################################################################################
 
