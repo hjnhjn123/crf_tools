@@ -10,7 +10,6 @@ import sklearn_crfsuite
 from sklearn.grid_search import RandomizedSearchCV
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import metrics
-from yaml import load
 
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import *
@@ -363,22 +362,3 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
     out.to_csv(out_f, header=False, index=False)
     return crf, result
 
-
-##############################################################################
-
-
-def add_multi_features(sent, feature_set):
-    token_list = [i[0] for i in sent]
-    token_dic = {v: k for (k, v) in enumerate(token_list)}
-    tokens = ' '.join(token_list)
-    feature_list = ['0' for i in range(len(sent))]
-    if len([i[0] for i in sent if i[0].isupper() or i[0].istitle()]) >= 2:
-        for feature in feature_set:
-            if feature in tokens:
-                feature_words = feature.split(' ')
-                feature_start = token_dic.get(feature_words[0])
-                feature_end = feature_start + len(feature_words)
-                feature_list[feature_start: feature_end] = ['1' for i in range(len(feature_words))]
-                break
-    new_sent = [', '.join(i) for i in sent]
-    return [tuple(', '.join(i).split(', ')) for i in zip(new_sent, feature_list)]
