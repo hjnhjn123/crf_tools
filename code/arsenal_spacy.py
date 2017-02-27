@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from .arsenal_stats import quickest_read_csv, add
-import spacy
-from spacy import pipeline, gold
-import pandas as pd
 import random
 from collections import OrderedDict
-from functools import reduce
 from itertools import chain
+
+import pandas as pd
+import spacy
+from spacy import pipeline, gold
 
 NLP = spacy.load('en')
 
@@ -51,11 +50,9 @@ def spacy_pos_text_list(text_list):
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    #TODO itertools.chain
     result = (spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list)
     result = (i for i in result if len(i) > 1)
     return chain.from_iterable(result)
-    # return reduce(add, result)  # merge nested chunks
 
 
 def extract_ner_candidate(sents):
@@ -122,7 +119,7 @@ def read_gold_parser_train_data(input, col, file=True):
     :param file: True for csv file, else dataframe
     :return: list of (string containing entities, [(start, end, type)])
     """
-    data = quickest_read_csv(input, col) if file is True else input
+    data = pd.read_csv(input, usecols=col, quoting=0, engine='c') if file else input
     train_data = [(i[0], list((tuple((int(i[1]), int(i[2]), i[3])),))) for i in data[col].tolist()]
     return train_data
 
