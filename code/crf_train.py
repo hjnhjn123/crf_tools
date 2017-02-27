@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import logging
+from collections import defaultdict
+from itertools import chain
 from itertools import groupby
 from re import findall, compile
-from itertools import chain
-from collections import  defaultdict
 
 import scipy.stats as ss
 import sklearn_crfsuite
@@ -14,9 +13,6 @@ from sklearn_crfsuite import metrics
 
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import *
-
-logging.basicConfig(format='%(asctime)s %(message)s')
-logger = logging.getLogger(__name__)
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
@@ -59,7 +55,7 @@ def prepare_features_dict(in_file):
     :return: {token: value}
 
     """
-    #TODO no use of two splits
+    # TODO no use of two splits
     with open(in_file, 'r') as data:
         result = defaultdict()
         for i in data:
@@ -258,13 +254,11 @@ def test_crf_prediction(crf, X_test, y_test):
 
 
 def crf_predict(crf, new_data, processed_data):
-    #TODO check itertools.chain
     result = crf.predict(processed_data)
     crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
                   range(len(new_data)))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
-    # return reduce(add, crf_result)
-    return chain.from_iterable(crf_result)
+    return [chain.from_iterable(crf_result)]
 
 
 ##############################################################################
@@ -348,7 +342,6 @@ def pipeline_pos_crf(in_file, out_f, train_f, name_f, com_suffix_f, country_f, c
     random_data = random_rows(data, pieces, 'content')
     random_data = random_data.dropna()
     parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
-    # parsed_data = reduce(add, parsed_data)  #TODO itertools.chain
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
