@@ -185,15 +185,16 @@ def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_si
 # CRF training
 
 
-def feed_crf_trainer(train_sents, test_sents, conf_f):
+def feed_crf_trainer(in_data, conf_f):
+    """
+    :param in_data:
+    :param conf_f:
+    :return:
+    """
     conf = load_yaml_conf(conf_f)
-    X_train = [sent2features(s, conf) for s in train_sents]
-    y_train = [sent2labels(s) for s in train_sents]
-
-    X_test = [sent2features(s, conf) for s in test_sents]
-    y_test = [sent2labels(s) for s in test_sents]
-
-    return X_train, y_train, X_test, y_test
+    features = [sent2features(s, conf) for s in in_data]
+    labels = [sent2labels(s) for s in in_data]
+    return features, labels
 
 
 def train_crf(X_train, y_train):
@@ -267,13 +268,17 @@ def crf_predict(crf, new_data, processed_data):
 ##############################################################################
 
 
+# Pipelines
+
+
 def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
 
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
+    X_train, y_train = feed_crf_trainer(train_sents, conf_f)
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
@@ -289,7 +294,8 @@ def pipeline_crf_cv(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, ci
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
 
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
+    X_train, y_train = feed_crf_trainer(train_sents, conf_f)
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -308,7 +314,8 @@ def pipeline_train_best_predict(train_f, test_f, conf_f, name_f, com_suffix_f, c
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     print(get_now(), 'converted')
 
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
+    X_train, y_train = feed_crf_trainer(train_sents, conf_f)
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -318,24 +325,6 @@ def pipeline_train_best_predict(train_f, test_f, conf_f, name_f, com_suffix_f, c
     best_predictor = rs_cv.best_estimator_
     best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test)
     return crf, best_predictor, rs_cv, best_result, best_details
-
-
-def pipeline_crf_predict(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                         tfdf_f, out_f):
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-
-    print(get_now(), 'converted')
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
-    print(get_now(), 'feed')
-    crf = train_crf(X_train, y_train)
-    print(get_now(), 'train')
-    result = crf_predict(crf, test_data, X_test)
-    print(get_now(), 'predict')
-    out = pd.DataFrame(result)
-    out.to_csv(out_f, header=False, index=False)
-    return crf, result
 
 
 def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
@@ -352,7 +341,8 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
 
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    X_train, y_train, X_test, y_test = feed_crf_trainer(train_sents, test_sents, conf_f)
+    X_train, y_train = feed_crf_trainer(train_sents, conf_f)
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
@@ -362,3 +352,20 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
     out.to_csv(out_f, header=False, index=False)
     return crf, result
 
+
+def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
+                         tfdf_f, out_f):
+    # train_data = process_annotated(train_f)
+    test_data = process_annotated(test_f)
+    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+
+    print(get_now(), 'converted')
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
+    print(get_now(), 'feed')
+    crf = train_crf(X_train, y_train)
+    print(get_now(), 'train')
+    result = crf_predict(crf, test_data, X_test)
+    print(get_now(), 'predict')
+    out = pd.DataFrame(result)
+    out.to_csv(out_f, header=False, index=False)
+    return crf, result
