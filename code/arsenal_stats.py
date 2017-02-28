@@ -14,6 +14,7 @@ from yaml import load
 import numpy as np
 import pandas as pd
 from pandas import ExcelWriter
+import hashlib
 
 
 ########################################################################################################################
@@ -590,3 +591,9 @@ def load_yaml_conf(conf_f):
     with open(conf_f, 'r') as f:
         result = load(f)
     return result
+
+
+########################################################################################################################
+
+def hashit(string):
+    return hashlib.md5(string.encode('utf-8')).hexdigest()
