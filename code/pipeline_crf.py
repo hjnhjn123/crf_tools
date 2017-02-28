@@ -1,8 +1,30 @@
 # -*- coding: utf-8 -*-
 
 from .arsenal_crf import *
+from .arsenal_stats import *
+from .arsenal_spacy import *
+from itertools import groupby
+from pickle import load
+from json import dumps
+
+from collections import OrderedDict
 
 # Pipelines
+
+
+def crf_result2list(crf_re):
+    text_list, ner_list = [i[0] for i in crf_re], [i[2] for i in crf_re]
+    ner_candidate = [(token, ner) for token, _, ner in crf_re if ner[0] != 'O']
+    ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
+    new_index = [a + b for a, b in enumerate(ner_index)]
+    for i in new_index:
+        ner_candidate[i+1:i+1] = [(' ##split ', ' ##split ')]
+    ner_result = list(set(' '.join([i[0].strip() for i in ner_candidate]).split(' ##split ')))
+    return text_list, ner_list, ner_result
+
+
+##############################################################################
+
 
 
 def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
@@ -65,9 +87,9 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
                      tfdf_f, cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
     data = data.drop_duplicates()
-    random_data = random_rows(data, pieces, 'content')
-    random_data = random_data.dropna()
-    parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
+    # data = random_rows(data, pieces, 'content')
+    data = data.dropna()
+    parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
@@ -103,4 +125,34 @@ def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_
     out.to_csv(out_f, header=False, index=False)
     return result
 
+
 ##############################################################################
+
+
+def streaming_pos_crf(in_f, out_f, model_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
+                     tfdf_f, cols=['url', 'content']):
+    result = defaultdict()
+    data = json2pd(in_f, cols, lines=True)
+    data = data.dropna()
+    taskid = data['url'].apply(hashit).to_string(index=False)
+    parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
+    parsed_data = chain.from_iterable(parsed_data)
+    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+
+    test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
+    crf = load(open(model_f, 'rb'))
+
+    crf_result = crf_predict(crf, pos_data, X_test)
+    text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    result['taskid'] = taskid
+    result['text'] = text_list
+    result['ner_complete'] = list(zip(text_list, ner_complete))
+    result['ner_phrase'] = ner_phrase
+
+    json_result = dumps(result)
+    out = open(out_f, 'w')
+    out.write(json_result)
+    out.flush(), out.close()
+
+
