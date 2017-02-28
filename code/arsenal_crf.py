@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
-from itertools import chain
-from itertools import groupby
+from itertools import chain, groupby
 from re import findall, compile
 
 import scipy.stats as ss
@@ -11,7 +10,6 @@ from sklearn.grid_search import RandomizedSearchCV
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import metrics
 
-from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import *
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
@@ -262,4 +260,4 @@ def crf_predict(crf, new_data, processed_data):
     crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
                   range(len(new_data)))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
-    return [chain.from_iterable(crf_result)]
+    return reduce(add, crf_result)
