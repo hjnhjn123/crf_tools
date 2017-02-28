@@ -355,17 +355,16 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
 
 def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                          tfdf_f, out_f):
-    # train_data = process_annotated(train_f)
     test_data = process_annotated(test_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
 
     print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     print(get_now(), 'feed')
-    crf = train_crf(X_train, y_train)
+    crf = sklearn_crfsuite.CRF(model_filename=model_f)
     print(get_now(), 'train')
     result = crf_predict(crf, test_data, X_test)
     print(get_now(), 'predict')
     out = pd.DataFrame(result)
     out.to_csv(out_f, header=False, index=False)
-    return crf, result
+    return result
