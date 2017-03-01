@@ -68,7 +68,7 @@ def add_one_features_list(sent, feature_set):
     :return: [(word, pos, ner, other_features)]
     """
     feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
-    return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
+    return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
 
 
 def add_one_feature_dict(sent, feature_dic):
@@ -78,7 +78,7 @@ def add_one_feature_dict(sent, feature_dic):
     :return: [(word, pos, ner, other_features)]
     """
     feature_list = [str(feature_dic.get(line[0])) if line[0] in feature_dic.keys() else '0' for line in sent]
-    return [(sent[i] + (feature_list[i],)) for i in range(len(sent))]
+    return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
 
 
 ##############################################################################
@@ -170,8 +170,8 @@ def feed_crf_trainer(in_data, conf):
     :param conf_f:
     :return:
     """
-    features = [sent2features(s, conf) for s in in_data]
-    labels = [sent2labels(s) for s in in_data]
+    features = (sent2features(s, conf) for s in in_data)
+    labels = (sent2labels(s) for s in in_data)
     return features, labels
 
 
@@ -237,7 +237,7 @@ def test_crf_prediction(crf, X_test, y_test):
 
 def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
-    crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
-                  range(len(new_data)))
+    crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(list(new_data[j])))] for j in
+                  range(len(list(new_data))))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
