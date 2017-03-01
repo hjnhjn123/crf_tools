@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
-from itertools import chain, groupby
+from itertools import groupby
 from re import findall, compile
 
 import scipy.stats as ss
@@ -159,21 +159,23 @@ def sent2tokens(line):
     return [token for token, postag, label in line]
 
 
-def batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
-    set_name, set_country = line_file2set(name_f), line_file2set(country_f)
-    set_city, set_com_single = line_file2set(city_f), line_file2set(com_single_f)
-    set_com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    dict_tfidf = prepare_features_dict(tfidf_f)
-    dict_tfdf = prepare_features_dict(tfdf_f)
+def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
+    name, country = line_file2set(name_f), line_file2set(country_f)
+    city, com_single = line_file2set(city_f), line_file2set(com_single_f)
+    com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
+    tfidf = prepare_features_dict(tfidf_f)
+    tfdf = prepare_features_dict(tfdf_f)
+    return tfdf, tfidf, city, com_single, com_suffix, country, name
 
-    name_added = (add_one_features_list(chunk, set_name) for chunk in pos_data)
-    com_suffix_added = (add_one_features_list(chunk, set_com_suffix) for chunk in name_added)
-    country_added = (add_one_features_list(chunk, set_country) for chunk in com_suffix_added)
-    city_added = (add_one_features_list(chunk, set_city) for chunk in country_added)
-    com_single_added = (add_one_features_list(chunk, set_com_single) for chunk in city_added)
-    tfidf_added = (add_one_feature_dict(chunk, dict_tfidf) for chunk in com_single_added)
-    result = [add_one_feature_dict(chunk, dict_tfdf) for chunk in tfidf_added]
 
+def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name):
+    name_added = (add_one_features_list(chunk, name) for chunk in pos_data)
+    com_suffix_added = (add_one_features_list(chunk, com_suffix) for chunk in name_added)
+    country_added = (add_one_features_list(chunk, country) for chunk in com_suffix_added)
+    city_added = (add_one_features_list(chunk, city) for chunk in country_added)
+    com_single_added = (add_one_features_list(chunk, com_single) for chunk in city_added)
+    tfidf_added = (add_one_feature_dict(chunk, tfidf) for chunk in com_single_added)
+    result = [add_one_feature_dict(chunk, tfdf) for chunk in tfidf_added]
     return result
 
 
