@@ -18,7 +18,7 @@ def crf_result2list(crf_re):
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = [a + b for a, b in enumerate(ner_index)]
     for i in new_index:
-        ner_candidate[i+1:i+1] = [(' ##split ', ' ##split ')]
+        ner_candidate[i+1:i+1] = [(' ##split ', '##split')]
     ner_result = list(set(' '.join([i[0].strip() for i in ner_candidate]).split(' ##split ')))
     return text_list, ner_list, ner_result
 
@@ -134,6 +134,7 @@ def streaming_pos_crf(in_f, out_f, model_f, conf_f, name_f, com_suffix_f, countr
     result = defaultdict()
     data = json2pd(in_f, cols, lines=True)
     data = data.dropna()
+    url = data['url'].to_string(index=False)
     taskid = data['url'].apply(hashit).to_string(index=False)
     parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
     parsed_data = chain.from_iterable(parsed_data)
@@ -145,12 +146,14 @@ def streaming_pos_crf(in_f, out_f, model_f, conf_f, name_f, com_suffix_f, countr
 
     crf_result = crf_predict(crf, pos_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    result['url'] = url
     result['taskid'] = taskid
     result['text'] = text_list
     result['ner_complete'] = list(zip(text_list, ner_complete))
     result['ner_phrase'] = ner_phrase
 
     json_result = dumps(result)
+
     out = open(out_f, 'w')
     out.write(json_result)
     out.flush(), out.close()
