@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from .arsenal_crf import *
-from .arsenal_stats import *
-from .arsenal_spacy import *
-from itertools import groupby
 from json import dumps
+
 import joblib as jl
+
+from .arsenal_crf import *
+from .arsenal_spacy import *
+from .arsenal_stats import *
 
 
 def crf_result2list(crf_re):
@@ -94,8 +95,9 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
 
     train_data = process_annotated(train_f)
 
-    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f)
+    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     X_train, y_train = feed_crf_trainer(train_sents, conf_f)
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     print(get_now(), 'feed')
@@ -111,8 +113,8 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
 def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                          tfdf_f, out_f):
     test_data = process_annotated(test_f)
-    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-
+    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f)
+    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     print(get_now(), 'feed')
@@ -128,8 +130,7 @@ def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_
 ##############################################################################
 
 
-def streaming_pos_crf(in_f, out_f, model_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                     tfdf_f, cols=['url', 'content']):
+def streaming_pos_crf(in_f, out_f, model_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cols=['url', 'content']):
     result = defaultdict()
     print(get_now(), 'get data')
     data = json2pd(in_f, cols, lines=True)
@@ -142,10 +143,13 @@ def streaming_pos_crf(in_f, out_f, model_f, conf_f, name_f, com_suffix_f, countr
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     print(get_now(), 'spacy')
 
-    test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
-    crf = jl.load(model_f)
+    test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'convert')
+
+    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
+    print(get_now(), 'feed')
+    crf = jl.load(model_f)
+    print(get_now(), 'get crf')
 
     crf_result = crf_predict(crf, pos_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
