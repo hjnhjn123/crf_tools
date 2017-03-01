@@ -4,12 +4,8 @@ from .arsenal_crf import *
 from .arsenal_stats import *
 from .arsenal_spacy import *
 from itertools import groupby
-from pickle import load
 from json import dumps
-
-from collections import OrderedDict
-
-# Pipelines
+import joblib as jl
 
 
 def crf_result2list(crf_re):
@@ -26,8 +22,10 @@ def crf_result2list(crf_re):
 ##############################################################################
 
 
+# Pipelines
 
-def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
+
+def pipeline_crf_train(train_f, test_f, model_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
@@ -40,6 +38,7 @@ def pipeline_crf_train(train_f, test_f, conf_f, name_f, com_suffix_f, country_f,
     print(get_now(), 'train')
     result, details = test_crf_prediction(crf, X_test, y_test)
     print(get_now(), 'predict')
+    jl.dump(crf, model_f)
     return crf, result, details
 
 
@@ -132,30 +131,39 @@ def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_
 def streaming_pos_crf(in_f, out_f, model_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
                      tfdf_f, cols=['url', 'content']):
     result = defaultdict()
+    print(get_now(), 'get data')
     data = json2pd(in_f, cols, lines=True)
     data = data.dropna()
     url = data['url'].to_string(index=False)
     taskid = data['url'].apply(hashit).to_string(index=False)
+    print(get_now(), 'extract')
     parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+    print(get_now(), 'spacy')
 
     test_sents = batch_add_features(pos_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
-    crf = load(open(model_f, 'rb'))
+    crf = jl.load(model_f)
+    print(get_now(), 'convert')
 
     crf_result = crf_predict(crf, pos_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    print(get_now(), 'crf', )
+
     result['url'] = url
     result['taskid'] = taskid
     result['text'] = text_list
     result['ner_complete'] = list(zip(text_list, ner_complete))
     result['ner_phrase'] = ner_phrase
+    print(get_now(), 'manipulate')
 
     json_result = dumps(result)
+    print(get_now(), 'json')
 
     out = open(out_f, 'w')
     out.write(json_result)
     out.flush(), out.close()
 
+    print(get_now(), 'to file')
 
