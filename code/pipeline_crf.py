@@ -35,7 +35,7 @@ def crf_result2list(crf_re):
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = [a + b for a, b in enumerate(ner_index)]
     for i in new_index:
-        ner_candidate[i+1:i+1] = [(' ##split ', '##split')]
+        ner_candidate[i + 1:i + 1] = [(' ##split ', '##split')]
     ner_result = list(set(' '.join([i[0].strip() for i in ner_candidate]).split(' ##split ')))
     return text_list, ner_list, ner_result
 
@@ -63,7 +63,8 @@ def pipeline_crf_train(train_f, test_f, model_f, conf_f, tfdf, tfidf, city, com_
     return crf, result, details
 
 
-def pipeline_crf_cv(train_f, test_f, conf_f, name_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cv, iteration):
+def pipeline_crf_cv(train_f, test_f, conf_f, name_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cv,
+                    iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
@@ -82,7 +83,8 @@ def pipeline_crf_cv(train_f, test_f, conf_f, name_f, tfdf, tfidf, city, com_sing
     return crf, rs_cv
 
 
-def pipeline_train_best_predict(train_f, test_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cv, iteration):
+def pipeline_train_best_predict(train_f, test_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cv,
+                                iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
@@ -101,7 +103,8 @@ def pipeline_train_best_predict(train_f, test_f, conf_f, tfdf, tfidf, city, com_
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_pos_crf(in_file, out_f, train_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cols, pieces=10):
+def pipeline_pos_crf(in_file, out_f, train_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cols,
+                     pieces=10):
     data = json2pd(in_file, cols, lines=True)
     data = data.drop_duplicates()
     # data = random_rows(data, pieces, 'content')
@@ -144,24 +147,20 @@ def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single,
 ##############################################################################
 
 
-def streaming_pos_crf(in_f, out_f, model_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cols=['url', 'content']):
-    result = defaultdict()
-    data = json2pd(in_f, cols, lines=True)
-    data = data.dropna()
+def streaming_pos_crf(in_f, out_f, crf, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name,
+                      cols=['url', 'content']):
+    data = json2pd(in_f, cols, lines=True).dropna()
     url = data['url'].to_string(index=False)
-    taskid = data['url'].apply(hashit).to_string(index=False)
-    parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
-    parsed_data = chain.from_iterable(parsed_data)
+    taskid = hashit(url)
+    parsed_data = chain.from_iterable(spacy_batch_processing(data, ['chk'], '', 'content', ['content']))
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
 
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
-    crf = jl.load(model_f)
-
     crf_result = crf_predict(crf, pos_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
 
+    result = defaultdict()
     result['url'] = url
     result['taskid'] = taskid
     result['text'] = text_list
@@ -174,3 +173,21 @@ def streaming_pos_crf(in_f, out_f, model_f, conf_f, tfdf, tfidf, city, com_singl
     out.write(json_result)
     out.flush(), out.close()
 
+
+def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
+    conf = load_yaml_conf(conf_f)
+    crf = jl.load(crf_f)
+    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f,
+                                                                                    country_f, name_f, tfdf_f, tfidf_f)
+    return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
+
+
+def pipeline_streaming(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
+                       tfdf_f, tfidf_f):
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(conf_f, crf_f, city_f,
+                                                                                           com_single_f, com_suffix_f,
+                                                                                           country_f, name_f, tfdf_f,
+                                                                                           tfidf_f)
+    for in_f in in_folder:
+        streaming_pos_crf(in_f, out_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
+                          cols=['url', 'content'])
