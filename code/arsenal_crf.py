@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import defaultdict
-from itertools import groupby
+from itertools import groupby, chain
 from re import findall, compile
 
 import scipy.stats as ss
@@ -240,4 +240,4 @@ def crf_predict(crf, new_data, processed_data):
     crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
                   range(len(new_data)))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
-    return reduce(add, crf_result)
+    return list(chain.from_iterable(crf_result))
