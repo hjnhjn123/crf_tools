@@ -451,7 +451,8 @@ def line_file2set(in_file):
     :param in_file:
     :return: (feature1, feautre2...)
     """
-    return set(i.strip('\n\r') for i in open(in_file, 'r'))
+    with open(in_file, 'r') as f:
+        return set(i.strip('\n\r') for i in f)
 
 
 ########################################################################################################################

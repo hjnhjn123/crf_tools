@@ -3,6 +3,7 @@
 from json import dumps
 
 import joblib as jl
+from os import listdir, path
 
 from .arsenal_crf import *
 from .arsenal_spacy import *
@@ -147,7 +148,7 @@ def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single,
 ##############################################################################
 
 
-def streaming_pos_crf(in_f, out_f, crf, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name,
+def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
                       cols=['url', 'content']):
     data = json2pd(in_f, cols, lines=True).dropna()
     url = data['url'].to_string(index=False)
@@ -156,27 +157,27 @@ def streaming_pos_crf(in_f, out_f, crf, conf_f, tfdf, tfidf, city, com_single, c
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
 
-    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
+    X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, pos_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
 
     result = defaultdict()
     result['url'] = url
     result['taskid'] = taskid
-    result['text'] = text_list
-    result['ner_complete'] = list(zip(text_list, ner_complete))
+    # result['text'] = text_list
+    # result['ner_complete'] = list(zip(text_list, ner_complete))
     result['ner_phrase'] = ner_phrase
 
     json_result = dumps(result)
 
-    out = open(out_f, 'w')
-    out.write(json_result)
-    out.flush(), out.close()
+    # out = open(out_f, 'w')
+    # out.write(json_result)
+    # out.flush(), out.close()
+    return taskid, json_result
 
 
 def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
-    conf = load_yaml_conf(conf_f)
-    crf = jl.load(crf_f)
+    conf, crf = load_yaml_conf(conf_f), jl.load(crf_f)
     tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f,
                                                                                     country_f, name_f, tfdf_f, tfidf_f)
     return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
@@ -188,6 +189,9 @@ def pipeline_streaming(in_folder, out_folder, conf_f, crf_f, city_f, com_single_
                                                                                            com_single_f, com_suffix_f,
                                                                                            country_f, name_f, tfdf_f,
                                                                                            tfidf_f)
-    for in_f in in_folder:
-        streaming_pos_crf(in_f, out_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
+    for in_f in listdir(in_folder):
+        ff = path.join(in_folder, in_f)
+        taskid, json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
                           cols=['url', 'content'])
+        with open(path.join(out_folder, taskid+'.json'), 'w') as out:
+            out.write(json_result)
