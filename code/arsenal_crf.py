@@ -164,13 +164,12 @@ def sent2tokens(line):
 # CRF training
 
 
-def feed_crf_trainer(in_data, conf_f):
+def feed_crf_trainer(in_data, conf):
     """
     :param in_data:
     :param conf_f:
     :return:
     """
-    conf = load_yaml_conf(conf_f)
     features = [sent2features(s, conf) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
     return features, labels
