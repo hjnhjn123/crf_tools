@@ -9,6 +9,26 @@ from .arsenal_spacy import *
 from .arsenal_stats import *
 
 
+def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
+    name, country = line_file2set(name_f), line_file2set(country_f)
+    city, com_single = line_file2set(city_f), line_file2set(com_single_f)
+    com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
+    tfidf = prepare_features_dict(tfidf_f)
+    tfdf = prepare_features_dict(tfdf_f)
+    return tfdf, tfidf, city, com_single, com_suffix, country, name
+
+
+def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name):
+    name_added = (add_one_features_list(chunk, name) for chunk in pos_data)
+    com_suffix_added = (add_one_features_list(chunk, com_suffix) for chunk in name_added)
+    country_added = (add_one_features_list(chunk, country) for chunk in com_suffix_added)
+    city_added = (add_one_features_list(chunk, city) for chunk in country_added)
+    com_single_added = (add_one_features_list(chunk, com_single) for chunk in city_added)
+    tfidf_added = (add_one_feature_dict(chunk, tfidf) for chunk in com_single_added)
+    result = [add_one_feature_dict(chunk, tfdf) for chunk in tfidf_added]
+    return result
+
+
 def crf_result2list(crf_re):
     text_list, ner_list = [i[0] for i in crf_re], [i[2] for i in crf_re]
     ner_candidate = [(token, ner) for token, _, ner in crf_re if ner[0] != 'O']
@@ -26,10 +46,10 @@ def crf_result2list(crf_re):
 # Pipelines
 
 
-def pipeline_crf_train(train_f, test_f, model_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f):
+def pipeline_crf_train(train_f, test_f, model_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
 
     X_train, y_train = feed_crf_trainer(train_sents, conf_f)
@@ -43,11 +63,10 @@ def pipeline_crf_train(train_f, test_f, model_f, conf_f, name_f, com_suffix_f, c
     return crf, result, details
 
 
-def pipeline_crf_cv(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, com_multi_f,
-                    tfidf_f, tfdf_f, cv, iteration):
+def pipeline_crf_cv(train_f, test_f, conf_f, name_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
 
     X_train, y_train = feed_crf_trainer(train_sents, conf_f)
@@ -63,11 +82,10 @@ def pipeline_crf_cv(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, ci
     return crf, rs_cv
 
 
-def pipeline_train_best_predict(train_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                                tfdf_f, cv, iteration):
+def pipeline_train_best_predict(train_f, test_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    train_sents = batch_add_features(train_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
-    test_sents = batch_add_features(test_data, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f, tfdf_f)
+    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
 
     X_train, y_train = feed_crf_trainer(train_sents, conf_f)
@@ -83,8 +101,7 @@ def pipeline_train_best_predict(train_f, test_f, conf_f, name_f, com_suffix_f, c
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                     tfdf_f, cols, pieces=10):
+def pipeline_pos_crf(in_file, out_f, train_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
     data = data.drop_duplicates()
     # data = random_rows(data, pieces, 'content')
@@ -95,7 +112,6 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
 
     train_data = process_annotated(train_f)
 
-    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f)
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     X_train, y_train = feed_crf_trainer(train_sents, conf_f)
@@ -110,10 +126,8 @@ def pipeline_pos_crf(in_file, out_f, train_f, conf_f, name_f, com_suffix_f, coun
     return crf, result
 
 
-def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_f, city_f, com_single_f, tfidf_f,
-                         tfdf_f, out_f):
+def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, out_f):
     test_data = process_annotated(test_f)
-    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
@@ -132,42 +146,31 @@ def pipeline_crf_predict(model_f, test_f, conf_f, name_f, com_suffix_f, country_
 
 def streaming_pos_crf(in_f, out_f, model_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name, cols=['url', 'content']):
     result = defaultdict()
-    print(get_now(), 'get data')
     data = json2pd(in_f, cols, lines=True)
     data = data.dropna()
     url = data['url'].to_string(index=False)
     taskid = data['url'].apply(hashit).to_string(index=False)
-    print(get_now(), 'extract')
     parsed_data = spacy_batch_processing(data, ['chk'], '', 'content', ['content'])
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-    print(get_now(), 'spacy')
 
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'convert')
 
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
-    print(get_now(), 'feed')
     crf = jl.load(model_f)
-    print(get_now(), 'get crf')
 
     crf_result = crf_predict(crf, pos_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
-    print(get_now(), 'crf', )
 
     result['url'] = url
     result['taskid'] = taskid
     result['text'] = text_list
     result['ner_complete'] = list(zip(text_list, ner_complete))
     result['ner_phrase'] = ner_phrase
-    print(get_now(), 'manipulate')
 
     json_result = dumps(result)
-    print(get_now(), 'json')
 
     out = open(out_f, 'w')
     out.write(json_result)
     out.flush(), out.close()
-
-    print(get_now(), 'to file')
 
