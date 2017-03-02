@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from json import dumps
+from math import modf
 from os import listdir, path
 
 import joblib as jl
+import redis
 
 from .arsenal_crf import *
 from .arsenal_spacy import *
@@ -148,45 +149,31 @@ def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single,
 ##############################################################################
 
 
-def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
-                      cols=['url', 'content']):
-    print(get_now(), 'start')
+def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name):
+    # print(get_now(), '')
+    raw_df = pd.read_json(in_f, lines=True)
+    # print(get_now(), 'read')
 
-    data = json2pd(in_f, cols, lines=True).dropna()
-    url = data['url'].to_string(index=False)
-    taskid = hashit(url)
-    print(get_now(), 'read_data')
+    raw_df['content'] = raw_df.result.to_dict()[0]['content']
+    # print(get_now(), 'extract')
 
-    parsed_data = chain.from_iterable(spacy_batch_processing(data, ['chk'], '', 'content', ['content']))
-    print(get_now(), 'spacy')
+    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, ['chk'], '', 'content', ['content']))
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-    print(get_now(), 'convert')
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'add features')
+    # print(get_now(), 'spacy')
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-    print(get_now(), 'feed')
 
     crf_result = crf_predict(crf, pos_data, X_test)
-    print(get_now(), 'predict')
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
-    print(get_now(), 'convert_crf')
+    # print(get_now(), 'crf')
 
-    result = defaultdict()
-    result['url'] = url
-    result['taskid'] = taskid
-    # result['text'] = text_list
-    # result['ner_complete'] = list(zip(text_list, ner_complete))
-    result['ner_phrase'] = ner_phrase
-    print(get_now(), 'dict')
+    raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
+    raw_df = raw_df.drop(['content'], axis=1)
+    json_result = raw_df.to_json(orient='records', lines=True)
+    # print(get_now(), 'json')
 
-    json_result = dumps(result)
-    print(get_now(), 'json')
-
-    # out = open(out_f, 'w')
-    # out.write(json_result)
-    # out.flush(), out.close()
-    return taskid, json_result
+    return json_result
 
 
 def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
@@ -197,33 +184,36 @@ def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_
 
 
 def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
-                              name_f,
-                              tfdf_f, tfidf_f):
-    # print(get_now(), 'start data')
-
+                              name_f, tfdf_f, tfidf_f):
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(conf_f, crf_f, city_f,
                                                                                            com_single_f, com_suffix_f,
                                                                                            country_f, name_f, tfdf_f,
                                                                                            tfidf_f)
-    # print(get_now(), 'load data')
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
-        # print(get_now(), 'read dir')
-        taskid, json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
-                                                cols=['url', 'content'])
-        # print(get_now(), 'crf')
-        with open(path.join(out_folder, taskid + '.json'), 'w') as out:
-            out.write(json_result)
+        json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        # with open(path.join(out_folder, taskid + '.json'), 'w') as out:
+        #     out.write(json_result)
 
 
-def pipeline_streaming_queue(in_queue, out_queue, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
-                             name_f,
+def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
                              tfdf_f, tfidf_f):
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(conf_f, crf_f, city_f,
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(dict_conf, crf_f, city_f,
                                                                                            com_single_f, com_suffix_f,
                                                                                            country_f, name_f, tfdf_f,
                                                                                            tfidf_f)
-    for q in in_queue:
-        taskid, json_result = streaming_pos_crf(q, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
-                                                cols=['url', 'content'])
+    r_address, r_port, r_db, r_key = OrderedDict(load_yaml_conf(redis_conf)['test_read']).values()
+    w_address, w_port, w_db, w_key = OrderedDict(load_yaml_conf(redis_conf)['test_write']).values()
 
+    r = redis.StrictRedis(host=r_address, port=r_port, db=r_db)
+    w = redis.StrictRedis(host=w_address, port=w_port, db=w_db)
+
+    i = 0
+
+    while True:
+        queue = r.lpop(r_key).decode('utf-8')
+        json_result = streaming_pos_crf(queue, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        w.lpush(w_key, json_result)
+        i += 1
+        if modf(i / 10)[0] == 0.0:
+            print(get_now(), i)
