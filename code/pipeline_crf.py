@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from json import dumps
+from os import listdir, path
 
 import joblib as jl
-from os import listdir, path
 
 from .arsenal_crf import *
 from .arsenal_spacy import *
@@ -150,16 +150,27 @@ def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single,
 
 def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
                       cols=['url', 'content']):
+    print(get_now(), 'start')
+
     data = json2pd(in_f, cols, lines=True).dropna()
     url = data['url'].to_string(index=False)
     taskid = hashit(url)
+    print(get_now(), 'read_data')
+
     parsed_data = chain.from_iterable(spacy_batch_processing(data, ['chk'], '', 'content', ['content']))
+    print(get_now(), 'spacy')
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+    print(get_now(), 'convert')
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    print(get_now(), 'add features')
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
+    print(get_now(), 'feed')
+
     crf_result = crf_predict(crf, pos_data, X_test)
+    print(get_now(), 'predict')
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    print(get_now(), 'convert_crf')
 
     result = defaultdict()
     result['url'] = url
@@ -167,8 +178,10 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
     # result['text'] = text_list
     # result['ner_complete'] = list(zip(text_list, ner_complete))
     result['ner_phrase'] = ner_phrase
+    print(get_now(), 'dict')
 
     json_result = dumps(result)
+    print(get_now(), 'json')
 
     # out = open(out_f, 'w')
     # out.write(json_result)
@@ -183,15 +196,34 @@ def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_
     return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
 
 
-def pipeline_streaming(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
-                       tfdf_f, tfidf_f):
+def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
+                              name_f,
+                              tfdf_f, tfidf_f):
+    # print(get_now(), 'start data')
+
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(conf_f, crf_f, city_f,
                                                                                            com_single_f, com_suffix_f,
                                                                                            country_f, name_f, tfdf_f,
                                                                                            tfidf_f)
+    # print(get_now(), 'load data')
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
+        # print(get_now(), 'read dir')
         taskid, json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
-                          cols=['url', 'content'])
-        with open(path.join(out_folder, taskid+'.json'), 'w') as out:
+                                                cols=['url', 'content'])
+        # print(get_now(), 'crf')
+        with open(path.join(out_folder, taskid + '.json'), 'w') as out:
             out.write(json_result)
+
+
+def pipeline_streaming_queue(in_queue, out_queue, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
+                             name_f,
+                             tfdf_f, tfidf_f):
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(conf_f, crf_f, city_f,
+                                                                                           com_single_f, com_suffix_f,
+                                                                                           country_f, name_f, tfdf_f,
+                                                                                           tfidf_f)
+    for q in in_queue:
+        taskid, json_result = streaming_pos_crf(q, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name,
+                                                cols=['url', 'content'])
+
