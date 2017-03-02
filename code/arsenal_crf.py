@@ -158,6 +158,7 @@ def sent2labels(line):
 def sent2tokens(line):
     return [token for token, postag, label in line]
 
+
 ##############################################################################
 
 
@@ -237,7 +238,8 @@ def test_crf_prediction(crf, X_test, y_test):
 
 def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
-    crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(list(new_data[j])))] for j in
-                  range(len(list(new_data))))
+    length = len(list(new_data))
+    crf_result = ([(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
+                  range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
