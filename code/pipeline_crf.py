@@ -31,15 +31,46 @@ def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, coun
     return result
 
 
-def crf_result2list(crf_re):
-    text_list, ner_list = [i[0] for i in crf_re], [i[2] for i in crf_re]
-    ner_candidate = [(token, ner) for token, _, ner in crf_re if ner[0] != 'O']
+def crf_result2list(crf_result):
+    text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
+    ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = [a + b for a, b in enumerate(ner_index)]
     for i in new_index:
-        ner_candidate[i + 1:i + 1] = [(' ##split ', '##split')]
-    ner_result = list(set(' '.join([i[0].strip() for i in ner_candidate]).split(' ##split ')))
+        ner_candidate[i + 1:i + 1] = [('##split', '##split')]
+    ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
+    ner_result = list(set(i.strip() for i in ner_result if i))
     return text_list, ner_list, ner_result
+
+
+# Streaming
+
+
+def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name):
+    # print(get_now(), '')
+    raw_df = pd.read_json(in_f, lines=True)
+    # print(get_now(), 'read')
+
+    raw_df['content'] = raw_df.result.to_dict()[0]['content']
+    # print(get_now(), 'extract')
+
+    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, ['chk'], '', 'content', ['content']))
+    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+    test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    # print(get_now(), 'spacy')
+
+    X_test, y_test = feed_crf_trainer(test_sents, conf)
+
+    crf_result = crf_predict(crf, pos_data, X_test)
+    text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    # print(get_now(), 'crf')
+
+    raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
+    raw_df = raw_df.drop(['content'], axis=1)
+    json_result = raw_df.to_json(orient='records', lines=True)
+    # print(get_now(), 'json')
+
+    return json_result
 
 
 ##############################################################################
@@ -147,33 +178,6 @@ def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single,
 
 
 ##############################################################################
-
-
-def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name):
-    # print(get_now(), '')
-    raw_df = pd.read_json(in_f, lines=True)
-    # print(get_now(), 'read')
-
-    raw_df['content'] = raw_df.result.to_dict()[0]['content']
-    # print(get_now(), 'extract')
-
-    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, ['chk'], '', 'content', ['content']))
-    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-    test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    # print(get_now(), 'spacy')
-
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
-
-    crf_result = crf_predict(crf, pos_data, X_test)
-    text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
-    # print(get_now(), 'crf')
-
-    raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
-    raw_df = raw_df.drop(['content'], axis=1)
-    json_result = raw_df.to_json(orient='records', lines=True)
-    # print(get_now(), 'json')
-
-    return json_result
 
 
 def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
