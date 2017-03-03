@@ -38,7 +38,7 @@ def prepare_schweb_dataset(in_file, out_file):
     :param in_file: schweb raw csv
     :param out_file: schweb csv
     """
-    data = csv2pd(in_file, HEADER_SCHWEB, HEADER_SCHWEB, sep='\t')
+    data = csv2pd(in_file, HEADER_SCHWEB, sep='\t')
     en_data = data[data.Language == 'en']
     result = en_data[en_data.Type.str.contains('Location|Personal|Organisation')]
     result['entity_type'] = np.where(result.Type.str.contains('Personal'), 'PERSON',
