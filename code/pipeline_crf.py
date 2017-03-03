@@ -34,13 +34,22 @@ def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, coun
 def crf_result2list(crf_result):
     text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
     ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
-    ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
-    new_index = [a + b for a, b in enumerate(ner_index)]
+    # Remove non NER words
+    ner_index = (i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
+    # Fetch the index of the ending of an NER
+    new_index = (a + b for a, b in enumerate(ner_index))
+    # Generate a new index
     for i in new_index:
         ner_candidate[i + 1:i + 1] = [('##split', '##split')]
+    # Add the split to each NER phrases
     ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
+    # Split each NER phrases
     ner_result = list(set(i.strip() for i in ner_result if i))
+    # Clean up
     return text_list, ner_list, ner_result
+
+
+##############################################################################
 
 
 # Streaming
