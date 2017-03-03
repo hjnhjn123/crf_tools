@@ -15,19 +15,18 @@ def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, 
     name, country = line_file2set(name_f), line_file2set(country_f)
     city, com_single = line_file2set(city_f), line_file2set(com_single_f)
     com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    tfidf = line_file2dict(tfidf_f)
-    tfdf = line_file2dict(tfdf_f)
+    tfidf, tfdf = line_file2dict(tfidf_f), line_file2dict(tfdf_f)
     return tfdf, tfidf, city, com_single, com_suffix, country, name
 
 
 def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name):
-    name_added = (add_one_features_list(chunk, name) for chunk in pos_data)
-    com_suffix_added = (add_one_features_list(chunk, com_suffix) for chunk in name_added)
-    country_added = (add_one_features_list(chunk, country) for chunk in com_suffix_added)
-    city_added = (add_one_features_list(chunk, city) for chunk in country_added)
-    com_single_added = (add_one_features_list(chunk, com_single) for chunk in city_added)
-    tfidf_added = (add_one_feature_dict(chunk, tfidf) for chunk in com_single_added)
-    result = [add_one_feature_dict(chunk, tfdf) for chunk in tfidf_added]
+    added_name = (add_one_features_list(chunk, name) for chunk in pos_data)
+    added_city = (add_one_features_list(chunk, city) for chunk in added_name)
+    added_country = (add_one_features_list(chunk, country) for chunk in added_city)
+    added_com_suffix = (add_one_features_list(chunk, com_suffix) for chunk in added_country)
+    added_com_single = (add_one_features_list(chunk, com_single) for chunk in added_com_suffix)
+    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_com_single)
+    result = [add_one_feature_dict(chunk, tfdf) for chunk in added_tfidf]
     return result
 
 
