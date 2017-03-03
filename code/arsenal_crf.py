@@ -3,7 +3,7 @@
 from itertools import groupby, chain
 from re import findall, compile
 
-import scipy.stats as ss
+import scipy.stats as sstats
 import sklearn_crfsuite
 from sklearn.grid_search import RandomizedSearchCV
 from sklearn.metrics import make_scorer
@@ -188,8 +188,8 @@ def show_crf_label(crf):
 
 def make_param_space():
     return {
-        'c1': ss.expon(scale=0.5),
-        'c2': ss.expon(scale=0.05),
+        'c1': sstats.expon(scale=0.5),
+        'c2': sstats.expon(scale=0.05),
     }
 
 
