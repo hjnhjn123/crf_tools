@@ -48,11 +48,13 @@ def crf_result2list(crf_result):
     return text_list, ner_list, ner_result
 
 
-def batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
-    conf, crf = load_yaml_conf(conf_f), jl.load(crf_f)
+def batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
+    conf = load_yaml_conf(conf_f)
+    crf = jl.load(crf_f) if swtich == 'test' else None
     tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f,
                                                                                     country_f, name_f, tfdf_f, tfidf_f)
     return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
+
 
 ##############################################################################
 
@@ -85,14 +87,18 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
 # Pipelines
 
 
-def pipeline_crf_train(train_f, test_f, model_f, conf_f, tfdf, tfidf, city, com_single, com_suffix, country, name):
+def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f, country_f,
+                       name_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
+    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
+                                                                                      com_single_f, com_suffix_f,
+                                                                                      country_f, name_f, tfdf_f,
+                                                                                      tfidf_f, 'train')
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
-
-    X_train, y_train = feed_crf_trainer(train_sents, conf_f)
-    X_test, y_test = feed_crf_trainer(test_sents, conf_f)
+    X_train, y_train = feed_crf_trainer(train_sents, conf)
+    X_test, y_test = feed_crf_trainer(test_sents, conf)
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
