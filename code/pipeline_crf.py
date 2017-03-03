@@ -48,6 +48,12 @@ def crf_result2list(crf_result):
     return text_list, ner_list, ner_result
 
 
+def batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
+    conf, crf = load_yaml_conf(conf_f), jl.load(crf_f)
+    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f,
+                                                                                    country_f, name_f, tfdf_f, tfidf_f)
+    return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
+
 ##############################################################################
 
 
@@ -55,28 +61,20 @@ def crf_result2list(crf_result):
 
 
 def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name):
-    # print(get_now(), '')
     raw_df = pd.read_json(in_f, lines=True)
-    # print(get_now(), 'read')
-
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
-    # print(get_now(), 'extract')
 
     parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, ['chk'], '', 'content', ['content']))
-    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-    test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    # print(get_now(), 'spacy')
+    prepared_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+    test_sents = batch_add_features(prepared_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-
-    crf_result = crf_predict(crf, pos_data, X_test)
+    crf_result = crf_predict(crf, prepared_data, X_test)
     text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
-    # print(get_now(), 'crf')
 
     raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
-    # print(get_now(), 'json')
 
     return json_result
 
@@ -120,7 +118,6 @@ def pipeline_crf_cv(train_f, test_f, conf_f, name_f, tfdf, tfidf, city, com_sing
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     print('best params:', rs_cv.best_params_)
     print('best CV score:', rs_cv.best_score_)
-    print('model size: {:0.2f}M'.format(rs_cv.best_estimator_.size_ / 1000000))
     return crf, rs_cv
 
 
@@ -185,22 +182,12 @@ def pipeline_crf_predict(model_f, test_f, conf_f, tfdf, tfidf, city, com_single,
     return result
 
 
-##############################################################################
-
-
-def pipeline_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
-    conf, crf = load_yaml_conf(conf_f), jl.load(crf_f)
-    tfdf, tfidf, city, com_single, com_suffix, country, name = prepare_feature_dict(city_f, com_single_f, com_suffix_f,
-                                                                                    country_f, name_f, tfdf_f, tfidf_f)
-    return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
-
-
 def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
                               name_f, tfdf_f, tfidf_f):
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(conf_f, crf_f, city_f,
-                                                                                           com_single_f, com_suffix_f,
-                                                                                           country_f, name_f, tfdf_f,
-                                                                                           tfidf_f)
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(conf_f, crf_f, city_f,
+                                                                                        com_single_f, com_suffix_f,
+                                                                                        country_f, name_f, tfdf_f,
+                                                                                        tfidf_f)
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
         json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
@@ -210,10 +197,10 @@ def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_
 
 def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
                              tfdf_f, tfidf_f):
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = pipeline_loading(dict_conf, crf_f, city_f,
-                                                                                           com_single_f, com_suffix_f,
-                                                                                           country_f, name_f, tfdf_f,
-                                                                                           tfidf_f)
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, crf_f, city_f,
+                                                                                        com_single_f, com_suffix_f,
+                                                                                        country_f, name_f, tfdf_f,
+                                                                                        tfidf_f)
     r_address, r_port, r_db, r_key = OrderedDict(load_yaml_conf(redis_conf)['test_read']).values()
     w_address, w_port, w_db, w_key = OrderedDict(load_yaml_conf(redis_conf)['test_write']).values()
 
