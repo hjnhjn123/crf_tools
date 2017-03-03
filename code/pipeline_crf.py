@@ -108,7 +108,7 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     return crf, result, details
 
 
-def pipeline_train_best_predict(train_f, test_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
+def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
                                 country_f, name_f, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
@@ -128,6 +128,7 @@ def pipeline_train_best_predict(train_f, test_f, dict_conf, tfdf_f, tfidf_f, cit
     print(get_now(), 'predict')
     best_predictor = rs_cv.best_estimator_
     best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test)
+    jl.dump(best_predictor, model_f)
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
