@@ -15,8 +15,8 @@ def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, 
     name, country = line_file2set(name_f), line_file2set(country_f)
     city, com_single = line_file2set(city_f), line_file2set(com_single_f)
     com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    tfidf = prepare_features_dict(tfidf_f)
-    tfdf = prepare_features_dict(tfdf_f)
+    tfidf = line_file2dict(tfidf_f)
+    tfdf = line_file2dict(tfdf_f)
     return tfdf, tfidf, city, com_single, com_suffix, country, name
 
 

@@ -2,7 +2,7 @@
 from __future__ import (unicode_literals, print_function, division)
 
 import random
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from configparser import ConfigParser
 from datetime import date, datetime
 from functools import reduce
@@ -455,6 +455,19 @@ def line_file2set(in_file):
         return set(i.strip('\n\r') for i in f)
 
 
+def line_file2dict(in_file):
+    """
+    | Reading a line-based csv file, and converting it to a feature dic
+    :param in_file:  token,value
+    :return: {token: value}
+
+    """
+    with open(in_file, 'r') as data:
+        result = defaultdict()
+        for i in data:
+            line = i.split(',')
+            result[line[0]] = line[1].strip('\r\n')
+        return result
 ########################################################################################################################
 
 

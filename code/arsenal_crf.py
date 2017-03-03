@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from collections import defaultdict
 from itertools import groupby, chain
 from re import findall, compile
 
@@ -46,19 +45,7 @@ def process_annotated(in_file):
     return sents
 
 
-def prepare_features_dict(in_file):
-    """
-    | Reading a line-based csv file, and converting it to a feature dic
-    :param in_file:  token,value
-    :return: {token: value}
 
-    """
-    with open(in_file, 'r') as data:
-        result = defaultdict()
-        for i in data:
-            line = i.split(',')
-            result[line[0]] = line[1].strip('\r\n')
-        return result
 
 
 def add_one_features_list(sent, feature_set):
