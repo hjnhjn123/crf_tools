@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-from collections import Counter, defaultdict
+import gc
+from collections import Counter
 from math import log
+from string import punctuation
 
 from sklearn.feature_extraction import text
+from zhon import hanzi
 
 from .arsenal_stats import *
-import gc
 
 
 ########################################################################################################################
@@ -27,6 +29,10 @@ def get_lexical(possed_sen, pos_tuple):
     :return a generator of words with appointed tags
     """
     return (i.split('#')[0] for i in possed_sen.split('\s') if i.endswith(pos_tuple))
+
+
+def remove_punc(line):
+    return ''.join(i.lower().strip(punctuation + hanzi.punctuation + '“') for i in line if not i.isnumeric())
 
 
 ########################################################################################################################

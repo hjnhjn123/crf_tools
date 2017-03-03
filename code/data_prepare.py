@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from .arsenal_spacy import *
-from .arsenal_nlp import *
-from string import punctuation
-from zhon import hanzi
 from scipy import stats
 
+from .arsenal_nlp import *
+from .arsenal_spacy import *
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
@@ -79,21 +77,7 @@ def extract_factset_short_names(in_file, out_single, out_multi):
     multi_name.to_csv(out_multi, index=False)
 
 
-def split_lines_with_comma(in_file, single_file, multi_file):
-    out_single, out_multi = open(single_file, 'w'), open(multi_file, 'w')
-    with open(in_file, 'r') as data:
-        for line in data:
-            if len(line.split(' ')) == 1:
-                out_single.write(line)
-            else:
-                out_multi.write(line)
-
-
 ##############################################################################
-
-
-def remove_punc(line):
-    return ''.join(i.lower().strip(punctuation+hanzi.punctuation+'“') for i in line if not i.isnumeric())
 
 
 def output_tfidf(in_file, out_file, cols, col_name):
@@ -103,7 +87,7 @@ def output_tfidf(in_file, out_file, cols, col_name):
     tfidf = get_tfidf(data.tolist())
     for k, v in tfidf.items():
         if v > 1.0:
-            out.write(k+','+str(v)+'\n')
+            out.write(k + ',' + str(v) + '\n')
 
 
 def output_tfdf(in_file, out_file, cols, col_name):
@@ -113,7 +97,8 @@ def output_tfdf(in_file, out_file, cols, col_name):
     _, tfdf, _ = get_tfdf(data.tolist())
     for k, v in tfdf.items():
         if v > 1.0:
-            out.write(k+','+str(v)+'\n')
+            out.write(k + ',' + str(v) + '\n')
+
 
 def output_tfidf_zscore(in_file, out_file, cols, col_name):
     data = json2pd(in_file, cols, lines=True)
@@ -122,7 +107,7 @@ def output_tfidf_zscore(in_file, out_file, cols, col_name):
     tfidf_df = pd.DataFrame.from_dict(tfidf_dic, orient='index')
     tfidf_df.columns = ['tf_idf']
     tfidf_df['zscore'] = stats.mstats.zscore(tfidf_df['tf_idf'])
-    tfidf_df['zvalue'] = tfidf_df['zscore'].apply(lambda x:0 if x < 0 else 1)
+    tfidf_df['zvalue'] = tfidf_df['zscore'].apply(lambda x: 0 if x < 0 else 1)
     tfidf_df = tfidf_df.drop(['tf_idf', 'zscore'], axis=1)
     tfidf_df.to_csv(out_file, header=False)
 
@@ -134,7 +119,7 @@ def output_tfdf_zscore(in_file, out_file, cols, col_name):
     tfdf_df = pd.DataFrame.from_dict(tfdf_dic, orient='index')
     tfdf_df.columns = ['tf_idf']
     tfdf_df['zscore'] = stats.mstats.zscore(tfdf_df['tf_idf'])
-    tfdf_df['zvalue'] = tfdf_df['zscore'].apply(lambda x:0 if x < 0 else 1)
+    tfdf_df['zvalue'] = tfdf_df['zscore'].apply(lambda x: 0 if x < 0 else 1)
     tfdf_df = tfdf_df.drop(['tf_idf', 'zscore'], axis=1)
     tfdf_df.to_csv(out_file, header=False)
 
