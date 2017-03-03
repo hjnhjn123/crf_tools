@@ -158,8 +158,8 @@ def feed_crf_trainer(in_data, conf):
     :param conf_f:
     :return:
     """
-    features = (sent2features(s, conf) for s in in_data)
-    labels = (sent2labels(s) for s in in_data)
+    features = [sent2features(s, conf) for s in in_data]
+    labels = [sent2labels(s) for s in in_data]
     return features, labels
 
 

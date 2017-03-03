@@ -88,8 +88,7 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
 
 
 def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
-                       country_f,
-                       name_f):
+                       country_f, name_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
                                                                                       com_single_f, com_suffix_f,
@@ -107,28 +106,6 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     print(get_now(), 'predict')
     jl.dump(crf, model_f)
     return crf, result, details
-
-
-def pipeline_crf_cv(train_f, test_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f, country_f,
-                    name_f, cv, iteration):
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
-                                                                                      com_single_f, com_suffix_f,
-                                                                                      country_f, name_f, tfdf_f,
-                                                                                      tfidf_f, 'train')
-    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'converted')
-    X_train, y_train = feed_crf_trainer(train_sents, conf)
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
-    crf = train_crf(X_train, y_train)
-    labels = show_crf_label(crf)
-    params_space = make_param_space()
-    f1_scorer = make_f1_scorer(labels)
-    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    print('best params:', rs_cv.best_params_)
-    print('best CV score:', rs_cv.best_score_)
-    return crf, rs_cv
 
 
 def pipeline_train_best_predict(train_f, test_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
