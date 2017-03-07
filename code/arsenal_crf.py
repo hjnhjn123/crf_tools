@@ -138,10 +138,6 @@ def sent2labels(line):
     return [i[2] for i in line]  # Use the right column
 
 
-def sent2tokens(line):
-    return [token for token, postag, label in line]
-
-
 ##############################################################################
 
 
