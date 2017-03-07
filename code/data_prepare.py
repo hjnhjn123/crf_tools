@@ -161,12 +161,16 @@ def process_techcrunch(in_file, out_file, cols, pieces=10):
 
 # Evaluation
 
-def compare_difference(fixed_f, bug_f, out_f, header, new_header):
+def compare_difference(fixed_f, bug_f, out_f, fp_f, header, new_header):
     fixed = pd.read_csv(fixed_f, header=header, sep=',', engine='c', quoting=0)
     bug = pd.read_csv(bug_f, header=header, sep=',', engine='c', quoting=0)
+    print('fixed: ', len(fixed), 'bug: ', len(bug))
     fixed.columns = new_header if header == None else header
     bug.columns = new_header if header == None else header
     merged = pd.concat([bug.Token, bug.NER, fixed.NER], axis=1)
     merged.columns = ['Token', 'bugged_NER', 'fixed_NER']
     difference = merged[merged['bugged_NER'] != merged['fixed_NER']]
     difference.to_csv(out_f, index=False)
+    false_positive = difference[difference['fixed_NER'] == 'O']
+    false_positive.to_csv(fp_f, index=False)
+
