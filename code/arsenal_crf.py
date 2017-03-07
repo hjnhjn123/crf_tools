@@ -45,9 +45,6 @@ def process_annotated(in_file):
     return sents
 
 
-
-
-
 def add_one_features_list(sent, feature_set):
     """
     :param sent: [(word, pos, ner)]
@@ -107,7 +104,6 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
         conf_switch + '_country': country,
         conf_switch + '_tfidf': tfidf,
         conf_switch + '_tfdf': tfdf,
-        conf_switch + '_1:word.lower()': word.lower(),
     }
     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
 
