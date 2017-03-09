@@ -85,7 +85,7 @@ def spacy_batch_processing(data, switches, label, col, header):
     """
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
-    # result = result.apply(extract_ner_candidate)
+    result = result.apply(extract_ner_candidate)
     result = result.apply(spacy_pos_text_list)  # POS tagging
     return result
 

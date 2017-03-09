@@ -90,10 +90,8 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
 def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
                        country_f, name_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
-                                                                                      com_single_f, com_suffix_f,
-                                                                                      country_f, name_f, tfdf_f,
-                                                                                      tfidf_f, 'train')
+    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, 'train')
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
@@ -111,10 +109,8 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f,
                                 com_suffix_f, country_f, name_f, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
-                                                                                      com_single_f, com_suffix_f,
-                                                                                      country_f, name_f, tfdf_f,
-                                                                                      tfidf_f, 'train')
+    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, 'train')
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
@@ -134,10 +130,8 @@ def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfi
 
 def pipeline_pos_crf(in_file, out_f, crf_f, conf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
                      tfidf_f, switch, cols, pieces=10):
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(conf_f, crf_f, city_f,
-                                                                                        com_single_f, com_suffix_f,
-                                                                                        country_f, name_f, tfdf_f,
-                                                                                        tfidf_f, switch)
+    loads = batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, switch)
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     data = json2pd(in_file, cols, lines=True)
     data = data.drop_duplicates()
     data = random_rows(data, pieces, 'content')
@@ -158,10 +152,8 @@ def pipeline_pos_crf(in_file, out_f, crf_f, conf_f, city_f, com_single_f, com_su
 def pipeline_crf_test(test_f, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
                       tfidf_f, switch):
     test_data = process_annotated(test_f)
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(conf_f, crf_f, city_f,
-                                                                                        com_single_f, com_suffix_f,
-                                                                                        country_f, name_f, tfdf_f,
-                                                                                        tfidf_f, switch)
+    loads = batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, switch)
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
@@ -171,11 +163,9 @@ def pipeline_crf_test(test_f, conf_f, crf_f, city_f, com_single_f, com_suffix_f,
 
 
 def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
-                              name_f, tfdf_f, tfidf_f, swtich):
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(conf_f, crf_f, city_f,
-                                                                                        com_single_f, com_suffix_f,
-                                                                                        country_f, name_f, tfdf_f,
-                                                                                        tfidf_f, swtich)
+                              name_f, tfdf_f, tfidf_f, switch):
+    loads = batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, switch)
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
         json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
@@ -184,11 +174,9 @@ def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_
 
 
 def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
-                             tfdf_f, tfidf_f, swtich):
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, crf_f, city_f,
-                                                                                        com_single_f, com_suffix_f,
-                                                                                        country_f, name_f, tfdf_f,
-                                                                                        tfidf_f, swtich)
+                             tfdf_f, tfidf_f, switch):
+    loads = batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, switch)
+    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     r_address, r_port, r_db, r_key = OrderedDict(load_yaml_conf(redis_conf)['test_read']).values()
     w_address, w_port, w_db, w_key = OrderedDict(load_yaml_conf(redis_conf)['test_write']).values()
 
