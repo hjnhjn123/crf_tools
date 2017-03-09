@@ -109,8 +109,7 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
 
 
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f,
-                                com_suffix_f,
-                                country_f, name_f, cv, iteration):
+                                com_suffix_f, country_f, name_f, cv, iteration):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(dict_conf, '', city_f,
                                                                                       com_single_f, com_suffix_f,
@@ -156,8 +155,8 @@ def pipeline_pos_crf(in_file, out_f, crf_f, conf_f, city_f, com_single_f, com_su
     return crf, result
 
 
-def pipeline_crf_predict(test_f, out_f, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
-                         tfidf_f, switch):
+def pipeline_crf_test(test_f, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
+                      tfidf_f, switch):
     test_data = process_annotated(test_f)
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = batch_loading(conf_f, crf_f, city_f,
                                                                                         com_single_f, com_suffix_f,
@@ -167,11 +166,8 @@ def pipeline_crf_predict(test_f, out_f, conf_f, crf_f, city_f, com_single_f, com
     print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf_f)
     print(get_now(), 'feed')
-    result = crf_predict(crf, test_data, X_test)
-    print(get_now(), 'predict')
-    out = pd.DataFrame(result)
-    out.to_csv(out_f, header=False, index=False)
-    return result
+    result, details = test_crf_prediction(crf, X_test, y_test)
+    return result, details
 
 
 def pipeline_streaming_folder(in_folder, out_folder, conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f,
