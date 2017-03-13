@@ -85,7 +85,7 @@ def spacy_pos_dep_list(text_list):
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    result = (spacy_parser(i, 'pos+dep', '') + [('##END', '###', '###', 'O')] for i in text_list)
+    result = (spacy_parser(i, 'dep', '') + [('##END', '###')] for i in text_list)
     result = (i for i in result if len(i) > 1)
     return chain.from_iterable(result)
 
