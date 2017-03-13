@@ -58,10 +58,11 @@ def spacy_parser(text, switches, label):
                  'dep': (i.dep_ for i in nlp_result)
                  }
     result = {'pos': spacy_dic['pos'],
-              'crf': [i + ('O', ) for i in zip(spacy_dic['txt'], spacy_dic['pos'])],
-              'dep': [i for i in zip(spacy_dic['txt'], spacy_dic['dep'])]
+              'chk': spacy_dic['chk'],
+              'crf': (i + ('O', ) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
+              'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep']))
               }
-    return result[switches]
+    return list(result[switches])
 
 
 def spacy_pos_text_list(text_list):
@@ -96,7 +97,7 @@ def extract_ner_candidate(sents):
     return result
 
 
-def spacy_batch_processing(data, switches, label, col, header):
+def spacy_batch_processing(data, label, col, header):
     """
     :param switches: set switches for spacy_parser
     :param label: set label for spacy_parser
@@ -105,8 +106,8 @@ def spacy_batch_processing(data, switches, label, col, header):
     :return:
     """
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
-    result = data[col].apply(spacy_parser, args=(switches, label))  # Chunking
-    result = result.apply(extract_ner_candidate)
+    result = data[col].apply(spacy_parser, args=('chk', label))  # Chunking
+    # result = result.apply(extract_ner_candidate)
     result = result.apply(spacy_pos_text_list)  # POS tagging
     return result
 
