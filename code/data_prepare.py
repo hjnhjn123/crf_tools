@@ -151,7 +151,7 @@ def process_techcrunch(in_file, out_file, cols, pieces=10):
     data = json2pd(in_file, cols, lines=True)
     data = data.dropna()
     random_data = random_rows(data, pieces, 'content')
-    parsed_data = spacy_batch_processing(random_data, ['chk'], '', 'content', ['content'])
+    parsed_data = spacy_batch_processing(random_data, 'chk', '', 'content', ['content'])
     parsed_data = reduce(add, parsed_data)
     pd.DataFrame(parsed_data, columns=['TOKEN', 'POS', 'NER']).to_csv(out_file, header=False, index=False)
 

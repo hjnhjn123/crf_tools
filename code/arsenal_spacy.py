@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import random
-from collections import OrderedDict
 from itertools import chain
 
 import pandas as pd
@@ -24,6 +23,25 @@ HEADER_TC = ['"ID"', '"TITLE"', '"CONTENT"', '"TIME"']
 
 # Applying
 
+#
+# def spacy_parser(text, switches, label):
+#     """
+#     :param text: a sentence or a doc
+#     :param switch: a list of switches: chk for sentence chunking, pos for pos tagging, and ner for NER,
+#     crf for crf pre-processing
+#     :param label: filtering the NER labels
+#     :return:
+#     """
+#     nlp_result = NLP(text)
+#     spacy_dic = {'chk': [i.text for i in nlp_result.sents],
+#                  'pos': [(i.text, i.pos_) for i in nlp_result],
+#                  'crf': [(i.text, i.pos_, 'O') for i in nlp_result],
+#                  'ner': OrderedDict(
+#                      [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label]),
+#                  'dep': [(i.text, i.dep_) for i in nlp_result]
+#                  }
+#     return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
+#
 
 def spacy_parser(text, switches, label):
     """
@@ -35,13 +53,15 @@ def spacy_parser(text, switches, label):
     """
     nlp_result = NLP(text)
     spacy_dic = {'chk': [i.text for i in nlp_result.sents],
-                 'pos': [(i.text, i.pos_) for i in nlp_result],
-                 'crf': [(i.text, i.pos_, 'O') for i in nlp_result],
-                 'ner': OrderedDict(
-                     [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label]),
-                 'dep': [(i.text, i.dep_) for i in nlp_result]
+                 'txt': (i.text for i in nlp_result),
+                 'pos': (i.pos_ for i in nlp_result),
+                 'dep': (i.dep_ for i in nlp_result)
                  }
-    return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
+    result = {'pos': spacy_dic['pos'],
+              'crf': [i + ('O', ) for i in zip(spacy_dic['txt'], spacy_dic['pos'])],
+              'dep': [i for i in zip(spacy_dic['txt'], spacy_dic['dep'])]
+              }
+    return result[switches]
 
 
 def spacy_pos_text_list(text_list):
@@ -51,7 +71,7 @@ def spacy_pos_text_list(text_list):
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    result = (spacy_parser(i, ['crf'], '') + [('##END', '###', 'O')] for i in text_list)
+    result = (spacy_parser(i, 'crf', '') + [('##END', '###', 'O')] for i in text_list)
     result = (i for i in result if len(i) > 1)
     return chain.from_iterable(result)
 
