@@ -48,22 +48,35 @@ def crf_result2list(crf_result):
     return text_list, ner_list, ner_result
 
 
-def crf_dep_result2list(crf_result):
-    text_list, ner_list, dep_list = [i[0] for i in crf_result], [i[2] for i in crf_result], [i[3] for i in crf_result]
-    ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
+def crf_dep_result2list(crf_result, dep_data):
+    text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
+    ner_candidate = [(token, ner, index) for index, (token, _, ner) in enumerate(crf_result) if ner[0] != 'O']
     # Remove non NER words
-    ner_index = (i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
+    ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     # Fetch the index of the ending of an NER
     new_index = (a + b for a, b in enumerate(ner_index))
     # Generate a new index
     for i in new_index:
-        ner_candidate[i + 1:i + 1] = [('##split', '##split')]
+        ner_candidate[i + 1:i + 1] = [('##split', '##split', -1)]
     # Add the split to each NER phrases
     ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
     # Split each NER phrases
     ner_result = list(set(i.strip() for i in ner_result if i))
     # Clean up
+    root_index = [i for i in range(len(dep_data)) if dep_data[i][1] == 'ROOT']
+    sent_index = [i for i in range(len(dep_data)) if dep_data[i][1] == '###']
+    sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i+1]) for i in range(len(sent_index)-1)]
+    new_sen_index = (a + b for a, b in enumerate(sent_index))
+    rel_candidate = ner_candidate
+    for i in new_sen_index:
+        for j in range(len(ner_candidate)-2):
+            if not str(ner_candidate[j][2]).startswith('-1') and not str(ner_candidate[j + 2]).startswith('-1'):
+                if int(ner_candidate[j][2]) < i < int(ner_candidate[j + 2][2]):
+                    rel_candidate[j + 1: j + 1] = [('##Sent', '##Sent', -1)]
+
     return text_list, ner_list, ner_result
+
+
 
 
 def batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
@@ -111,7 +124,9 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
-    text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    dep_data = list(chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'dep')))
+
+    text_list, ner_complete, ner_phrase = crf_dep_result2list(crf_result, dep_data)
 
     raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
