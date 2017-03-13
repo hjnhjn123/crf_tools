@@ -61,7 +61,7 @@ def spacy_parser(text, switches, label):
               'chk': spacy_dic['chk'],
               'crf': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
               'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep'])),
-              'pos+dep': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep']))
+              'pos+dep': (i[:2] + ('O',) + (i[2],) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep']))
               }
     return list(result[switches])
 
