@@ -59,13 +59,14 @@ def spacy_parser(text, switches, label):
                  }
     result = {'pos': spacy_dic['pos'],
               'chk': spacy_dic['chk'],
-              'crf': (i + ('O', ) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
-              'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep']))
+              'crf': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
+              'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep'])),
+              'pos+dep': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep']))
               }
     return list(result[switches])
 
 
-def spacy_pos_text_list(text_list):
+def spacy_pos_list(text_list):
     """
     | use spacy pos tagger to annotate each chunk
     | add end_label to the end of each chunk
@@ -73,6 +74,18 @@ def spacy_pos_text_list(text_list):
     :return: a list of POS result
     """
     result = (spacy_parser(i, 'crf', '') + [('##END', '###', 'O')] for i in text_list)
+    result = (i for i in result if len(i) > 1)
+    return chain.from_iterable(result)
+
+
+def spacy_pos_dep_list(text_list):
+    """
+    | use spacy pos tagger to annotate each chunk
+    | add end_label to the end of each chunk
+    :param text_list: a list of sentences
+    :return: a list of POS result
+    """
+    result = (spacy_parser(i, 'pos+dep', '') + [('##END', '###', '###', 'O')] for i in text_list)
     result = (i for i in result if len(i) > 1)
     return chain.from_iterable(result)
 
@@ -97,7 +110,7 @@ def extract_ner_candidate(sents):
     return result
 
 
-def spacy_batch_processing(data, label, col, header):
+def spacy_batch_processing(data, label, col, header, switch):
     """
     :param switches: set switches for spacy_parser
     :param label: set label for spacy_parser
@@ -108,8 +121,11 @@ def spacy_batch_processing(data, label, col, header):
     data = data[data[col] != "\\N"]  # Only containing EOL = Empty line
     result = data[col].apply(spacy_parser, args=('chk', label))  # Chunking
     # result = result.apply(extract_ner_candidate)
-    result = result.apply(spacy_pos_text_list)  # POS tagging
-    return result
+    result_dic = {'crf': result.apply(spacy_pos_list),
+                  'dep': result.apply(spacy_pos_dep_list)
+                  }
+
+    return result_dic[switch]
 
 
 ##############################################################################################

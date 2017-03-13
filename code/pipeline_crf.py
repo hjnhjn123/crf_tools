@@ -66,7 +66,7 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
 
-    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content']))
+    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
     prepared_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     test_sents = batch_add_features(prepared_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
 
@@ -139,7 +139,7 @@ def pipeline_pos_crf(in_file, out_f, crf_f, dict_conf, city_f, com_single_f, com
     data = data.drop_duplicates()
     data = random_rows(data, pieces, 'content')
     data = data.dropna()
-    parsed_data = spacy_batch_processing(data, '', 'content', ['content'])
+    parsed_data = spacy_batch_processing(data, '', 'content', ['content'], 'crf')
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
