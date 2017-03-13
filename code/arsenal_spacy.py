@@ -38,7 +38,8 @@ def spacy_parser(text, switches, label):
                  'pos': [(i.text, i.pos_) for i in nlp_result],
                  'crf': [(i.text, i.pos_, 'O') for i in nlp_result],
                  'ner': OrderedDict(
-                     [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label])
+                     [(i.text, (i.start, i.end, i.label_)) for i in nlp_result.ents if i.label_ in label]),
+                 'dep': [(i.text, i.dep_) for i in nlp_result]
                  }
     return spacy_dic[''.join(switches)] if len(switches) == 1 else [spacy_dic[i] for i in switches]
 
