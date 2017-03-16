@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from copy import deepcopy
 from math import modf
 from os import listdir, path
+from collections import Counter
 
 import joblib as jl
 import redis
@@ -43,14 +45,15 @@ def crf_result2list(crf_result):
     # Add the split to each NER phrases
     ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
     # Split each NER phrases
-    ner_result = list(set(i.strip() for i in ner_result if i))
+    ner_result = Counter(i.strip() for i in ner_result if i)
     # Clean up
     return text_list, ner_list, ner_result
 
 
 def crf_dep_result2list(crf_result, dep_data):
     text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
-    ner_candidate = [(token, ner, index) for index, (token, _, ner) in enumerate(crf_result) if ner[0] != 'O']
+    ner_candidate = [(token, ner, index) for index, (token, _, ner) in enumerate(crf_result) if
+                     ner != 'O' and not ner.endswith('DAT') and not ner.endswith('MON')]
     # Remove non NER words
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     # Fetch the index of the ending of an NER
@@ -63,24 +66,23 @@ def crf_dep_result2list(crf_result, dep_data):
     # Split each NER phrases
     ner_result = list(set(i.strip() for i in ner_result if i))
     # Clean up
-    root_index = [i for i in range(len(dep_data)) if dep_data[i][1] == 'ROOT']
     sent_index = [i for i in range(len(dep_data)) if dep_data[i][1] == '###']
-    sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i+1]) for i in range(len(sent_index)-1)]
+    sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i + 1]) for i in range(len(sent_index) - 1)]
     new_sen_index = (a + b for a, b in enumerate(sent_index))
-    rel_candidate = ner_candidate
+    rel_candidate = deepcopy(ner_candidate)
     for i in new_sen_index:
-        for j in range(len(ner_candidate)-2):
+        for j in range(len(ner_candidate) - 2):
             if not str(ner_candidate[j][2]).startswith('-1') and not str(ner_candidate[j + 2]).startswith('-1'):
                 if int(ner_candidate[j][2]) < i < int(ner_candidate[j + 2][2]):
                     rel_candidate[j + 1: j + 1] = [('##Sent', '##Sent', -1)]
 
+    root_dic = [(i[1][0], i[0]) for i in enumerate(dep_data) if i[1][1] == 'ROOT']
+
     return text_list, ner_list, ner_result
 
 
-
-
-def batch_loading(conf_f, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
-    conf = load_yaml_conf(conf_f)
+def batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
+    conf = load_yaml_conf(dict_conf)
     crf = jl.load(crf_f) if swtich == 'test' else None
     features = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f)
     tfdf, tfidf, city, com_single, com_suffix, country, name = features
@@ -133,6 +135,7 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
     json_result = raw_df.to_json(orient='records', lines=True)
 
     return json_result
+
 
 ##############################################################################
 
