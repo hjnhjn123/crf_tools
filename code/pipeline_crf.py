@@ -33,12 +33,11 @@ def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, coun
 
 
 def crf_result2list(crf_result):
-    text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
     ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
     ner_index = (i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
     new_index = (a + b for a, b in enumerate(ner_index))
     ner_result = extract_ner_result(ner_candidate, new_index)
-    return text_list, ner_list, ner_result
+    return ner_result
 
 
 def extract_ner_result(ner_candidate, new_index):
@@ -53,21 +52,15 @@ def extract_ner_result(ner_candidate, new_index):
 
 
 def crf_dep_result2list(crf_result, dep_data):
-    text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
     ner_candidate = [(token, ner, index) for index, (token, _, ner) in enumerate(crf_result) if
                      ner != 'O' and not ner.endswith('DAT') and not ner.endswith('MON')]
-    # Remove non NER words
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
-    # Fetch the index of the ending of an NER
     new_index = (a + b for a, b in enumerate(ner_index))
-    # Generate a new index
     for i in new_index:
         ner_candidate[i + 1:i + 1] = [('##split', '##split', -1)]
-    # Add the split to each NER phrases
     ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
-    # Split each NER phrases
     ner_result = list(set(i.strip() for i in ner_result if i))
-    # Clean up
+
     sent_index = [i for i in range(len(dep_data)) if dep_data[i][1] == '###']
     sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i + 1]) for i in range(len(sent_index) - 1)]
     new_sen_index = (a + b for a, b in enumerate(sent_index))
@@ -80,7 +73,7 @@ def crf_dep_result2list(crf_result, dep_data):
 
     root_dic = [(i[1][0], i[0]) for i in enumerate(dep_data) if i[1][1] == 'ROOT']
 
-    return text_list, ner_list, ner_result
+    return ner_result
 
 
 def batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
@@ -107,7 +100,7 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
-    text_list, ner_complete, ner_phrase = crf_result2list(crf_result)
+    ner_phrase = crf_result2list(crf_result)
 
     raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
@@ -121,18 +114,18 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
 
     # parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'dep'))
-    parsed_data = list(chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'dep')))
+    parsed_data = list(chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf')))
 
-    prepared_data = [list(x[1]) for x in groupby(parsed_data, lambda x: x == ('##END', '###', '###', 'O')) if not x[0]]
+    prepared_data = [list(x[1]) for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O', 'O')) if not x[0]]
     test_sents = batch_add_features(prepared_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
     dep_data = list(chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'dep')))
 
-    text_list, ner_complete, ner_phrase = crf_dep_result2list(crf_result, dep_data)
+    ner_phrases = crf_dep_result2list(crf_result, dep_data)
 
-    raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
+    raw_df.result.to_dict()[0]['ner_phrases'] = ner_phrases
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
 
@@ -232,8 +225,8 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
         json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-        # with open(path.join(out_folder, taskid + '.json'), 'w') as out:
-        #     out.write(json_result)
+        with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
+            out.write(json_result)
 
 
 def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,

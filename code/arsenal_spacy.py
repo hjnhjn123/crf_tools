@@ -32,11 +32,11 @@ def spacy_parser(text, switches, label):
     :param label: filtering the NER labels
     :return:
     """
-    nlp_result = NLP(text)
-    spacy_dic = {'chk': [i.text for i in nlp_result.sents],
-                 'txt': (i.text for i in nlp_result),
-                 'pos': (i.pos_ for i in nlp_result),
-                 'dep': (i.dep_ for i in nlp_result)
+    spacy_result = NLP(text)
+    spacy_dic = {'chk': [i.text for i in spacy_result.sents],
+                 'txt': (i.text for i in spacy_result),
+                 'pos': (i.pos_ for i in spacy_result),
+                 'dep': (i.dep_ for i in spacy_result)
                  }
     result = {'pos': spacy_dic['pos'],
               'chk': spacy_dic['chk'],
@@ -59,14 +59,14 @@ def spacy_pos_list(text_list):
     return chain.from_iterable(result)
 
 
-def spacy_pos_dep_list(text_list):
+def spacy_dep_list(text_list):
     """
     | use spacy pos tagger to annotate each chunk
     | add end_label to the end of each chunk
     :param text_list: a list of sentences
     :return: a list of POS result
     """
-    result = (spacy_parser(i, 'dep', '') + [('##END', '###')] for i in text_list)
+    result = (spacy_parser(i, 'dep', '') + [('##END', '###', '###')] for i in text_list)
     result = (i for i in result if len(i) > 1)
     return chain.from_iterable(result)
 
@@ -103,7 +103,7 @@ def spacy_batch_processing(data, label, col, header, switch):
     result = data[col].apply(spacy_parser, args=('chk', label))  # Chunking
     # result = result.apply(extract_ner_candidate)
     result_dic = {'crf': result.apply(spacy_pos_list),
-                  'dep': result.apply(spacy_pos_dep_list)
+                  'dep': result.apply(spacy_dep_list)
                   }
 
     return result_dic[switch]
