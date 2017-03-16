@@ -35,19 +35,21 @@ def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, coun
 def crf_result2list(crf_result):
     text_list, ner_list = [i[0] for i in crf_result], [i[2] for i in crf_result]
     ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
-    # Remove non NER words
     ner_index = (i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
-    # Fetch the index of the ending of an NER
     new_index = (a + b for a, b in enumerate(ner_index))
-    # Generate a new index
-    for i in new_index:
-        ner_candidate[i + 1:i + 1] = [('##split', '##split')]
-    # Add the split to each NER phrases
-    ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
-    # Split each NER phrases
-    ner_result = Counter(i.strip() for i in ner_result if i)
-    # Clean up
+    ner_result = extract_ner_result(ner_candidate, new_index)
     return text_list, ner_list, ner_result
+
+
+def extract_ner_result(ner_candidate, new_index):
+    new_candidate = deepcopy(ner_candidate)
+    for i in new_index:
+        new_candidate[i + 1:i + 1] = [('##split', '##split')]
+    ner_result = (' '.join([(i[0].strip() + '##' + i[1].strip()) for i in new_candidate if i[1]]).split('##split'))
+    ner_result = ([i.strip(' ') for i in ner_result if i and i != '##'])
+    ner_result = ((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]) for tt in ner_result)
+    ner_result = sort_dic(Counter(i for i in ner_result if i), sort_key=1, rev=True)
+    return ner_result
 
 
 def crf_dep_result2list(crf_result, dep_data):
