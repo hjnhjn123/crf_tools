@@ -32,7 +32,7 @@ def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, coun
     return result
 
 
-def crf_result2list(crf_result):
+def crf_result2dict(crf_result):
     ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
     ner_index = (i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
     new_index = (a + b for a, b in enumerate(ner_index))
@@ -51,16 +51,18 @@ def extract_ner_result(ner_candidate, new_index):
     return ner_result
 
 
-def crf_dep_result2list(crf_result, dep_data):
+def crf_dep_result2dict(crf_result, dep_data):
     ner_candidate = [(token, ner, index) for index, (token, _, ner) in enumerate(crf_result) if
                      ner != 'O' and not ner.endswith('DAT') and not ner.endswith('MON')]
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = (a + b for a, b in enumerate(ner_index))
-    for i in new_index:
-        ner_candidate[i + 1:i + 1] = [('##split', '##split', -1)]
-    ner_result = (' '.join([i[0].strip() for i in ner_candidate]).split(' ##split'))
-    ner_result = list(set(i.strip() for i in ner_result if i))
+    ner_result = extract_ner_result(ner_candidate, new_index)
+    rep_result = extract_dep_result(dep_data, ner_candidate)
+    return ner_result, rep_result
 
+
+def extract_dep_result(dep_data, ner_candidate, tfidf):
+    dep_tfidf = add_one_feature_dict(dep_data, tfidf)
     sent_index = [i for i in range(len(dep_data)) if dep_data[i][1] == '###']
     sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i + 1]) for i in range(len(sent_index) - 1)]
     new_sen_index = (a + b for a, b in enumerate(sent_index))
@@ -70,11 +72,8 @@ def crf_dep_result2list(crf_result, dep_data):
             if not str(ner_candidate[j][2]).startswith('-1') and not str(ner_candidate[j + 2]).startswith('-1'):
                 if int(ner_candidate[j][2]) < i < int(ner_candidate[j + 2][2]):
                     rel_candidate[j + 1: j + 1] = [('##Sent', '##Sent', -1)]
-
-    root_dic = [(i[1][0], i[0]) for i in enumerate(dep_data) if i[1][1] == 'ROOT']
-
-    return ner_result
-
+    root_dic = [(i[1][0], i[1][2], i[0]) for i in enumerate(dep_tfidf) if i[1][1] == 'ROOT']
+    return root_dic
 
 def batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
     conf = load_yaml_conf(dict_conf)
@@ -100,7 +99,7 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
-    ner_phrase = crf_result2list(crf_result)
+    ner_phrase = crf_result2dict(crf_result)
 
     raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
@@ -123,7 +122,7 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
     crf_result = crf_predict(crf, prepared_data, X_test)
     dep_data = list(chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'dep')))
 
-    ner_phrases = crf_dep_result2list(crf_result, dep_data)
+    ner_phrases = crf_dep_result2dict(crf_result, dep_data)
 
     raw_df.result.to_dict()[0]['ner_phrases'] = ner_phrases
     raw_df = raw_df.drop(['content'], axis=1)
