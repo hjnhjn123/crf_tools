@@ -108,25 +108,25 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
 
 
-# def word2features(sent, i, feature_conf):
-#     word, postag, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
-#     features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single, tfidf, tfdf)
-#     if i > 0:
-#         word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
-#         features.update(
-#             feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1, com_single1, tfidf1, tfdf1))
-#     else:
-#         features['BOS'] = True
-#
-#     if i < len(sent) - 1:
-#         word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
-#         features.update(
-#             feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1, com_single1, tfidf1, tfdf1))
-#     else:
-#         features['EOS'] = True
-#     return features
-
 def word2features(sent, i, feature_conf):
+    word, postag, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
+    features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single, tfidf, tfdf)
+    if i > 0:
+        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
+        features.update(
+            feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1, com_single1, tfidf1, tfdf1))
+    else:
+        features['BOS'] = True
+
+    if i < len(sent) - 1:
+        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
+        features.update(
+            feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1, com_single1, tfidf1, tfdf1))
+    else:
+        features['EOS'] = True
+    return features
+
+def word2features_(sent, i, feature_conf):
     word, postag, _, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
     features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single, tfidf, tfdf)
     if i > 0:
