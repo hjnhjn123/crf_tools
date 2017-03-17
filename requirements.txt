@@ -1,9 +1,14 @@
 # Add your requirements here like:
+# collections
+# copy
+# joblib
+# math
 # numpy
 # scipy
 # sklearn
 # pandas
 # spacy
+# sklearn
 # sklearn_crfsuite
-
+# zhon
 
