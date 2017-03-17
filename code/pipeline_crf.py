@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from collections import Counter
 from copy import deepcopy
 from math import modf
 from os import listdir, path
-from collections import Counter
 
 import joblib as jl
 import redis
@@ -12,6 +12,7 @@ from .arsenal_crf import *
 from .arsenal_spacy import *
 from .arsenal_stats import *
 
+STOP_ROOTS = {'is', 'are', 'was', 'were', 'been', 'be'}
 
 def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
     name, country = line_file2set(name_f), line_file2set(country_f)
@@ -46,23 +47,25 @@ def extract_ner_result(ner_candidate, new_index):
         new_candidate[i + 1:i + 1] = [('##split', '##split')]
     ner_result = (' '.join([(i[0].strip() + '##' + i[1].strip()) for i in new_candidate if i[1]]).split('##split'))
     ner_result = ([i.strip(' ') for i in ner_result if i and i != '##'])
-    ner_result = ((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]) for tt in ner_result)
+    # ner_result = ((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]) for tt in ner_result)
+    ner_result = ('##'.join((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:])) for tt in ner_result)
     ner_result = sort_dic(Counter(i for i in ner_result if i), sort_key=1, rev=True)
     return ner_result
 
 
-def crf_dep_result2dict(crf_result, dep_data):
+def crf_dep_result2dict(crf_result, dep_data, tfidf):
     ner_candidate = [(token, ner, index) for index, (token, _, ner) in enumerate(crf_result) if
                      ner != 'O' and not ner.endswith('DAT') and not ner.endswith('MON')]
     ner_index = [i for i in range(len(ner_candidate)) if ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = (a + b for a, b in enumerate(ner_index))
     ner_result = extract_ner_result(ner_candidate, new_index)
-    rep_result = extract_dep_result(dep_data, ner_candidate)
-    return ner_result, rep_result
+    root_result = extract_dep_result(dep_data, ner_candidate, tfidf)
+    return ner_result, root_result
 
 
 def extract_dep_result(dep_data, ner_candidate, tfidf):
-    dep_tfidf = add_one_feature_dict(dep_data, tfidf)
+    dep_lower = [(m[0].lower(), m[1])for m in dep_data]
+    dep_tfidf = add_one_feature_dict(dep_lower, tfidf)
     sent_index = [i for i in range(len(dep_data)) if dep_data[i][1] == '###']
     sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i + 1]) for i in range(len(sent_index) - 1)]
     new_sen_index = (a + b for a, b in enumerate(sent_index))
@@ -72,8 +75,10 @@ def extract_dep_result(dep_data, ner_candidate, tfidf):
             if not str(ner_candidate[j][2]).startswith('-1') and not str(ner_candidate[j + 2]).startswith('-1'):
                 if int(ner_candidate[j][2]) < i < int(ner_candidate[j + 2][2]):
                     rel_candidate[j + 1: j + 1] = [('##Sent', '##Sent', -1)]
-    root_dic = [(i[1][0], i[1][2], i[0]) for i in enumerate(dep_tfidf) if i[1][1] == 'ROOT']
-    return root_dic
+    root_tuple = [(i[1][0], i[1][2], i[0]) for i in enumerate(dep_tfidf) if i[1][1] == 'ROOT' and i[1][2] != '0' and i[1][0] not in STOP_ROOTS]
+    root_result = Counter(i[0] for i in root_tuple)
+    return root_result
+
 
 def batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
     conf = load_yaml_conf(dict_conf)
@@ -122,13 +127,13 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
     crf_result = crf_predict(crf, prepared_data, X_test)
     dep_data = list(chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'dep')))
 
-    ner_phrases = crf_dep_result2dict(crf_result, dep_data)
+    ner_phrases, root_result = crf_dep_result2dict(crf_result, dep_data, tfidf)
 
-    raw_df.result.to_dict()[0]['ner_phrases'] = ner_phrases
-    raw_df = raw_df.drop(['content'], axis=1)
-    json_result = raw_df.to_json(orient='records', lines=True)
+    # raw_df.result.to_dict()[0]['ner_phrases'] = ner_phrases
+    # raw_df = raw_df.drop(['content'], axis=1)
+    # json_result = raw_df.to_json(orient='records', lines=True)
 
-    return json_result
+    return root_result
 
 
 ##############################################################################
@@ -221,11 +226,26 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
     loads = batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           switch)
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
+    i = 0
+    root_dic = defaultdict()
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
-        json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-        with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
-            out.write(json_result)
+        # json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        # i += 1
+        # if modf(i / 100)[0] == 0.0:
+        #     print(get_now(), i)
+        # with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
+        #     out.write(json_result)
+        root_result = streaming_pos_dep_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        root_dic.update(root_result)
+        i += 1
+        if modf(i / 100)[0] == 0.0:
+            print(get_now(), i)
+    result = pd.DataFrame.from_dict(root_dic, orient='index').reset_index()
+    result.columns = ['Token', 'Freq']
+    result = result.sort_values(by='Freq', ascending=False)
+    result.to_csv(out_folder, header=None, index=False)
+
 
 
 def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
