@@ -36,10 +36,12 @@ def spacy_parser(text, switches, label):
     spacy_dic = {'chk': [i.text for i in spacy_result.sents],
                  'txt': (i.text for i in spacy_result),
                  'pos': (i.pos_ for i in spacy_result),
-                 'dep': (i.dep_ for i in spacy_result)
+                 'dep': (i.dep_ for i in spacy_result),
+                 'vec': (i.vector for i in spacy_result)
                  }
     result = {'pos': spacy_dic['pos'],
               'chk': spacy_dic['chk'],
+              'vec': spacy_dic['vec'],
               'crf': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
               'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep'])),
               'pos+dep': (i[:2] + ('O',) + (i[2],) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep']))
