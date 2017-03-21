@@ -45,7 +45,7 @@ def process_annotated(in_file):
     return sents
 
 
-def add_one_features_list(sent, feature_set):
+def add_feature_str(sent, feature_set):
     """
     :param sent: [(word, pos, ner)]
     :param feature_set: {feature1, feature2}
