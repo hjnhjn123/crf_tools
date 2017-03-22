@@ -3,13 +3,12 @@
 from itertools import groupby, chain
 from re import findall, compile
 
+import pandas as pd
 import scipy.stats as sstats
 import sklearn_crfsuite
 from sklearn.grid_search import RandomizedSearchCV
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import metrics
-
-from .arsenal_stats import *
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
@@ -110,18 +109,21 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
 
 def word2features(sent, i, feature_conf):
     word, postag, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
-    features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single, tfidf, tfdf)
+    features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single,
+                                tfidf, tfdf)
     if i > 0:
         word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
         features.update(
-            feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1, com_single1, tfidf1, tfdf1))
+            feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1,
+                             com_single1, tfidf1, tfdf1))
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
         word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
         features.update(
-            feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1, com_single1, tfidf1, tfdf1))
+            feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1, com_single1,
+                             tfidf1, tfdf1))
     else:
         features['EOS'] = True
     return features
