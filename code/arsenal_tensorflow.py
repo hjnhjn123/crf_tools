@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import tensorflow as tf
-from tensorflow.contrib import rnn
 import re
+
 from .pipeline_crf import *
 
-
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
-
 
 LEARNING_RATE = 0.001
 TRAINING_ITERS = 100000
@@ -19,6 +16,7 @@ MAX_DOCUMENT_LENGTH = 30
 MAX_WORD_LENGTH = 15
 num_classes = 5
 BASE_DIR = "ner"  # path to coNLL data set
+
 
 ##############################################################################
 
@@ -74,7 +72,6 @@ def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
     return np.asarray(result)
 
 
-
 def process_annotated_rnn(in_file):
     """
     | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
@@ -89,6 +86,7 @@ def process_annotated_rnn(in_file):
     sents = (list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0])
     sents = [i for i in sents if i != []]
     return sents
+
 
 ##############################################################################
 
@@ -108,7 +106,6 @@ def get_pos(tag):
     else:
         onehot[5] = 1
     return onehot
-
 
 
 PRE_EMBEDDING = defaultdict()
@@ -206,8 +203,6 @@ def convert_tag(line):
     return tag
 
 
-
-
 ##############################################################################
 
 
@@ -217,7 +212,8 @@ def pipeline_rnn_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     loads = batch_rnn_loading(dict_conf, city_f, com_single_f, com_suffix_f, country_f, name_f)
     conf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features_rnn(train_data, city, com_single, com_suffix, country, name)
-    test_sents = [batch_add_features_rnn(n[0], city, com_single, com_suffix, country, name) for m in test_data for n in m]
+    test_sents = batch_add_features_rnn(test_data, city, com_single, com_suffix, country, name)
+
 
 
 
