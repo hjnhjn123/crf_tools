@@ -137,6 +137,9 @@ def sent2labels(line):
     return [i[2] for i in line]  # Use the correct column
 
 
+def sent2label_spfc(line, label):
+    return [i[2] if i[2].endswith(label) else '0' for i in line]
+
 ##############################################################################
 
 
@@ -151,6 +154,17 @@ def feed_crf_trainer(in_data, conf):
     """
     features = [sent2features(s, conf) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
+    return features, labels
+
+
+def feed_crf_trainer_spfc(in_data, conf, label):
+    """
+    :param in_data:
+    :param conf_f:
+    :return:
+    """
+    features = [sent2features(s, conf) for s in in_data]
+    labels = [sent2label_spfc(s, label) for s in in_data]
     return features, labels
 
 
@@ -207,33 +221,33 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
 def test_crf_prediction(crf, X_test, y_test):
     labels = show_crf_label(crf)
     y_pred = crf.predict(X_test)
-    # result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
-    # details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
+    result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
+    details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
 
-    y_pred_converted = []
-    for sent in y_pred:
-        pred_result = []
-        for tag in sent:
-            if tag == 'O':
-                pred_result.append('0')
-            else:
-                pred_result.append('1')
-        y_pred_converted.append(pred_result)
-
-    y_test_converted = []
-    for sent in y_test:
-        test_result = []
-        for tag in sent:
-            if tag == 'O':
-                test_result.append('0')
-            else:
-                test_result.append('1')
-        y_test_converted.append(test_result)
-
-    result = metrics.flat_f1_score(y_test_converted, y_pred_converted, average='weighted', labels=['1'])
-
-    # y_test_converted = [ '0' if j =='O' else '1' for i in y_test for j in i]
-    details = metrics.flat_classification_report(y_test_converted, y_pred_converted, digits=3, labels=['1'])
+    # y_pred_converted = []
+    # for sent in y_pred:
+    #     pred_result = []
+    #     for tag in sent:
+    #         if tag == 'O':
+    #             pred_result.append('0')
+    #         else:
+    #             pred_result.append('1')
+    #     y_pred_converted.append(pred_result)
+    #
+    # y_test_converted = []
+    # for sent in y_test:
+    #     test_result = []
+    #     for tag in sent:
+    #         if tag == 'O':
+    #             test_result.append('0')
+    #         else:
+    #             test_result.append('1')
+    #     y_test_converted.append(test_result)
+    #
+    # result = metrics.flat_f1_score(y_test_converted, y_pred_converted, average='weighted', labels=['1'])
+    #
+    # # y_test_converted = [ '0' if j =='O' else '1' for i in y_test for j in i]
+    # details = metrics.flat_classification_report(y_test_converted, y_pred_converted, digits=3, labels=['1'])
 
     details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
     details = pd.DataFrame(details, columns=HEADER_CRF)
