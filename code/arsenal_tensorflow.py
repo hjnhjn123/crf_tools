@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import numpy as np
 
 from .pipeline_crf import *
 
@@ -62,36 +63,6 @@ def add_features_rnn(token, city, com_single, com_suffix, country, name):
     return np.append(onehot, vector)
 
 
-def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
-    feature_result, tag_result = [], []
-    for sent in sents:
-        sent_vec = [add_features_rnn(token, city, com_single, com_suffix, country, name) for token, pos, ner in sent]
-        pos_vec = [convert_pos(pos) for token, pos, ner in sent]
-        final_vec = np.asarray([np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)])
-        ner_vec = [convert_ner(ner) for token, pos, ner in sent]
-        feature_result.append(final_vec), tag_result.append(ner_vec)
-    return np.asarray(feature_result), np.asarray(tag_result)
-
-
-def process_annotated_rnn(in_file):
-    """
-    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
-    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
-    :param in_file: CSV file: TOKEN, POS, NER
-    :return: [[sent]]
-    """
-    data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
-    data.columns = HEADER_ANNOTATION
-    data = data.dropna()
-    sents = (tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist()))
-    sents = (list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0])
-    sents = [i for i in sents if i != []]
-    return sents
-
-
-##############################################################################
-
-
 def convert_pos(tag):
     onehot = np.zeros(6)
     if tag == 'NOUN':
@@ -130,34 +101,6 @@ def convert_ner(ner):
     return onehot
 
 
-# def convert_ner(line):
-#     """
-#     Eight classes: 0-None, 1-Company, 2-Date, 3-Event, 4-Location, 5-Money, 6-Product, 7-People
-#     :param line:
-#     :return:
-#     """
-#     ner = line.split()[2]
-#     tag = []
-#     if ner.endswith('O'):
-#         tag.append(np.asarray([1, 0, 0, 0, 0, 0, 0, 0]))
-#     elif ner.endswith('COM'):
-#         tag.append(np.asarray([0, 1, 0, 0, 0, 0, 0, 0]))
-#     elif ner.endswith('DAT'):
-#         tag.append(np.asarray([0, 0, 1, 0, 0, 0, 0, 0]))
-#     elif ner.endswith('EVT'):
-#         tag.append(np.asarray([0, 0, 0, 1, 0, 0, 0, 0]))
-#     elif ner.endswith('GPE'):
-#         tag.append(np.asarray([0, 0, 0, 0, 1, 0, 0, 0]))
-#     elif ner.endswith('MON'):
-#         tag.append(np.asarray([0, 0, 0, 0, 0, 1, 0, 0]))
-#     elif ner.endswith('PDT'):
-#         tag.append(np.asarray([0, 0, 0, 0, 0, 0, 1, 0]))
-#     elif ner.endswith('PPL'):
-#         tag.append(np.asarray([0, 0, 0, 0, 0, 0, 0, 1]))
-#     else:
-#         print("error in input" + str(ner))
-#     return tag
-
 
 PRE_EMBEDDING = defaultdict()
 for line in open('/Users/acepor/Work/patsnap/code/pat360ner/data/myvectors.txt'):
@@ -187,44 +130,18 @@ def get_embedding(token):
     return np.asarray(arr) if len(arr) > 0 else randV
 
 
-def get_input(FILE_NAME):
-    word = []
-    sentence, sentence_tag = [], []
-
-    # get max words in sentence
-    max_sentence_length = MAX_DOCUMENT_LENGTH  # findMaxLenght(FILE_NAME)
-    sentence_length = 0
-
-    print("max sentence size is : " + str(max_sentence_length))
-
-    for line in open(FILE_NAME, 'r'):
-        if line in ['\n', '\r\n']:
-            # print("aa"+str(sentence_length) )
-            for _ in range(max_sentence_length - sentence_length):
-                temp = get_embedding("~#~")
-                word.append(temp)
-
-            sentence.append(word)
-            # print(len(word))
-            sentence_tag.append(np.asarray(tag))
-
-            sentence_length = 0
-            word = []
-            tag = []
+##############################################################################
 
 
-        else:
-            if sentence_length >= max_sentence_length:
-                continue
-            sentence_length += 1
-            temp = get_embedding(line.split()[0])
-            temp = np.append(temp, convert_pos(line.split()[1]))  # adding pos embeddings
-            word.append(temp)
-            convert_ner(line)
-
-    return np.asarray(sentence), sentence_tag
-
-
+def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
+    feature_result, tag_result = [], []
+    for sent in sents:
+        sent_vec = [add_features_rnn(token, city, com_single, com_suffix, country, name) for token, pos, ner in sent]
+        pos_vec = [convert_pos(pos) for token, pos, ner in sent]
+        final_vec = np.asarray([np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)]) # Merge two vectors
+        ner_vec = [convert_ner(ner) for token, pos, ner in sent] # Convert annotated tags
+        feature_result.append(final_vec), tag_result.append(ner_vec)
+    return np.asarray(feature_result), np.asarray(tag_result)
 
 
 ##############################################################################
@@ -232,9 +149,10 @@ def get_input(FILE_NAME):
 
 def pipeline_rnn_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
                        country_f, name_f):
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_rnn_loading(dict_conf, city_f, com_single_f, com_suffix_f, country_f, name_f)
     conf, city, com_single, com_suffix, country, name = loads
+
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     X_train, y_train = batch_add_features_rnn(train_data, city, com_single, com_suffix, country, name)
     X_test, y_test = batch_add_features_rnn(test_data, city, com_single, com_suffix, country, name)
 
