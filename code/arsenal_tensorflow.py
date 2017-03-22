@@ -2,8 +2,11 @@
 
 import re
 import numpy as np
-
+import tflearn
 from .pipeline_crf import *
+from tensorflow.contrib.rnn import MultiRNNCell, GRUCell, static_bidirectional_rnn
+import tensorflow as tf
+
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 
@@ -101,6 +104,45 @@ def convert_ner(ner):
     return onehot
 
 
+##############################################################################
+
+
+def length(target):
+    used = tf.sign(tf.reduce_max(tf.abs(target), reduction_indices=2))
+    length = tf.reduce_sum(used, reduction_indices=1)
+    length = tf.cast(length, tf.int32)
+    return length
+
+
+def cost(prediction, target):
+    target = tf.reshape(target, [-1, MAX_DOCUMENT_LENGTH, num_classes])
+    prediction = tf.reshape(prediction, [-1, MAX_DOCUMENT_LENGTH, num_classes])
+    cross_entropy = target * tf.log(prediction)
+    cross_entropy = -tf.reduce_sum(cross_entropy, reduction_indices=2)
+    mask = tf.sign(tf.reduce_max(tf.abs(target), reduction_indices=2))
+    cross_entropy *= mask
+    cross_entropy = tf.reduce_sum(cross_entropy, reduction_indices=1)
+    cross_entropy /= tf.cast(length(target), tf.float32)
+    return tf.reduce_mean(cross_entropy)
+
+
+def build_rnn():
+    net = tflearn.input_data([None, MAX_DOCUMENT_LENGTH, EMBEDDING_SIZE])
+    net = static_bidirectional_rnn(MultiRNNCell([GRUCell(256)] * 3), MultiRNNCell([GRUCell(256)] * 3),
+                                   tf.unstack(tf.transpose(net, perm=[1, 0, 2])),
+                                   dtype=tf.float32)  # 256=num_hidden, 3=num_layers
+    net = tflearn.dropout(net[0], 0.5)
+    net = tf.transpose(tf.stack(net), perm=[1, 0, 2])
+
+    net = tflearn.fully_connected(net, MAX_DOCUMENT_LENGTH * num_classes, activation='softmax')
+    net = tflearn.regression(net, optimizer='adam', loss=cost)
+
+    model = tflearn.DNN(net, clip_gradients=0., tensorboard_verbose=0)
+    return  model
+
+
+##############################################################################
+
 
 PRE_EMBEDDING = defaultdict()
 for line in open('/Users/acepor/Work/patsnap/code/pat360ner/data/myvectors.txt'):
@@ -134,14 +176,17 @@ def get_embedding(token):
 
 
 def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
-    feature_result, tag_result = [], []
+    feature_result, ner_result, token_result = [], [], []
     for sent in sents:
-        sent_vec = [add_features_rnn(token, city, com_single, com_suffix, country, name) for token, pos, ner in sent]
-        pos_vec = [convert_pos(pos) for token, pos, ner in sent]
+        sent_vec, pos_vec, ner_vec, feature_vec, token_vec = [], [], [], [], []
+        for token, pos, ner in sent:
+            token_vec.append(token), pos_vec.append(convert_pos(pos)), ner_vec.append(convert_ner(ner))
+            sent_vec.append(add_features_rnn(token, city, com_single, com_suffix, country, name))
+
         final_vec = np.asarray([np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)]) # Merge two vectors
-        ner_vec = [convert_ner(ner) for token, pos, ner in sent] # Convert annotated tags
-        feature_result.append(final_vec), tag_result.append(ner_vec)
-    return np.asarray(feature_result), np.asarray(tag_result)
+        feature_result.append(final_vec), ner_result.append(ner_vec)
+        token_result.append(token_vec)
+    return np.asarray(feature_result), np.asarray(ner_result), token_result
 
 
 ##############################################################################
@@ -153,13 +198,6 @@ def pipeline_rnn_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     conf, city, com_single, com_suffix, country, name = loads
 
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    X_train, y_train = batch_add_features_rnn(train_data, city, com_single, com_suffix, country, name)
-    X_test, y_test = batch_add_features_rnn(test_data, city, com_single, com_suffix, country, name)
+    X_train, y_train, token_train = batch_add_features_rnn(train_data, city, com_single, com_suffix, country, name)
+    X_test, y_test, token_test = batch_add_features_rnn(test_data, city, com_single, com_suffix, country, name)
 
-
-
-
-    # result, details = test_crf_prediction(crf, X_test, y_test)
-    # print(get_now(), 'predict')
-    # jl.dump(crf, model_f)
-    # return crf, result, details
