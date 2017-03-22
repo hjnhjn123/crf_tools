@@ -63,13 +63,14 @@ def add_features_rnn(token, city, com_single, com_suffix, country, name):
 
 
 def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
-    result = []
+    feature_result, tag_result = [], []
     for sent in sents:
         sent_vec = [add_features_rnn(token, city, com_single, com_suffix, country, name) for token, pos, ner in sent]
-        pos_vec = [get_pos(pos) for token, pos, ner in sent]
+        pos_vec = [convert_pos(pos) for token, pos, ner in sent]
         final_vec = np.asarray([np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)])
-        result.append(final_vec)
-    return np.asarray(result)
+        ner_vec = [convert_ner(ner) for token, pos, ner in sent]
+        feature_result.append(final_vec), tag_result.append(ner_vec)
+    return np.asarray(feature_result), np.asarray(tag_result)
 
 
 def process_annotated_rnn(in_file):
@@ -91,7 +92,7 @@ def process_annotated_rnn(in_file):
 ##############################################################################
 
 
-def get_pos(tag):
+def convert_pos(tag):
     onehot = np.zeros(6)
     if tag == 'NOUN':
         onehot[0] = 1
@@ -106,6 +107,56 @@ def get_pos(tag):
     else:
         onehot[5] = 1
     return onehot
+
+
+def convert_ner(ner):
+    onehot = np.zeros(8)
+    if ner.endswith('O'):
+        onehot[0] = 1
+    elif ner.endswith('COM'):
+        onehot[1] = 1
+    elif ner.endswith('DAT'):
+        onehot[2] = 1
+    elif ner.endswith('EVT'):
+        onehot[3] = 1
+    elif ner.endswith('GPE'):
+        onehot[4] = 1
+    elif ner.endswith('MON'):
+        onehot[5] = 1
+    elif ner.endswith('PDT'):
+        onehot[6] = 1
+    elif ner.endswith('PPL'):
+        onehot[7] = 1
+    return onehot
+
+
+# def convert_ner(line):
+#     """
+#     Eight classes: 0-None, 1-Company, 2-Date, 3-Event, 4-Location, 5-Money, 6-Product, 7-People
+#     :param line:
+#     :return:
+#     """
+#     ner = line.split()[2]
+#     tag = []
+#     if ner.endswith('O'):
+#         tag.append(np.asarray([1, 0, 0, 0, 0, 0, 0, 0]))
+#     elif ner.endswith('COM'):
+#         tag.append(np.asarray([0, 1, 0, 0, 0, 0, 0, 0]))
+#     elif ner.endswith('DAT'):
+#         tag.append(np.asarray([0, 0, 1, 0, 0, 0, 0, 0]))
+#     elif ner.endswith('EVT'):
+#         tag.append(np.asarray([0, 0, 0, 1, 0, 0, 0, 0]))
+#     elif ner.endswith('GPE'):
+#         tag.append(np.asarray([0, 0, 0, 0, 1, 0, 0, 0]))
+#     elif ner.endswith('MON'):
+#         tag.append(np.asarray([0, 0, 0, 0, 0, 1, 0, 0]))
+#     elif ner.endswith('PDT'):
+#         tag.append(np.asarray([0, 0, 0, 0, 0, 0, 1, 0]))
+#     elif ner.endswith('PPL'):
+#         tag.append(np.asarray([0, 0, 0, 0, 0, 0, 0, 1]))
+#     else:
+#         print("error in input" + str(ner))
+#     return tag
 
 
 PRE_EMBEDDING = defaultdict()
@@ -167,40 +218,13 @@ def get_input(FILE_NAME):
                 continue
             sentence_length += 1
             temp = get_embedding(line.split()[0])
-            temp = np.append(temp, get_pos(line.split()[1]))  # adding pos embeddings
+            temp = np.append(temp, convert_pos(line.split()[1]))  # adding pos embeddings
             word.append(temp)
-            convert_tag(line)
+            convert_ner(line)
 
     return np.asarray(sentence), sentence_tag
 
 
-def convert_tag(line):
-    """
-    Eight classes: 0-None, 1-Company, 2-Date, 3-Event, 4-Location, 5-Money, 6-Product, 7-People
-    :param line:
-    :return:
-    """
-    tag = []
-    ner = line.split()[2]
-    if ner.endswith('O'):
-        tag.append(np.asarray([1, 0, 0, 0, 0, 0, 0, 0]))
-    elif ner.endswith('COM'):
-        tag.append(np.asarray([0, 1, 0, 0, 0, 0, 0, 0]))
-    elif ner.endswith('DAT'):
-        tag.append(np.asarray([0, 0, 1, 0, 0, 0, 0, 0]))
-    elif ner.endswith('EVT'):
-        tag.append(np.asarray([0, 0, 0, 1, 0, 0, 0, 0]))
-    elif ner.endswith('GPE'):
-        tag.append(np.asarray([0, 0, 0, 0, 1, 0, 0, 0]))
-    elif ner.endswith('MON'):
-        tag.append(np.asarray([0, 0, 0, 0, 0, 1, 0, 0]))
-    elif ner.endswith('PDT'):
-        tag.append(np.asarray([0, 0, 0, 0, 0, 0, 1, 0]))
-    elif ner.endswith('PPL'):
-        tag.append(np.asarray([0, 0, 0, 0, 0, 0, 0, 1]))
-    else:
-        print("error in input" + str(ner))
-    return tag
 
 
 ##############################################################################
@@ -211,8 +235,8 @@ def pipeline_rnn_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_rnn_loading(dict_conf, city_f, com_single_f, com_suffix_f, country_f, name_f)
     conf, city, com_single, com_suffix, country, name = loads
-    train_sents = batch_add_features_rnn(train_data, city, com_single, com_suffix, country, name)
-    test_sents = batch_add_features_rnn(test_data, city, com_single, com_suffix, country, name)
+    X_train, y_train = batch_add_features_rnn(train_data, city, com_single, com_suffix, country, name)
+    X_test, y_test = batch_add_features_rnn(test_data, city, com_single, com_suffix, country, name)
 
 
 
