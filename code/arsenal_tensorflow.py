@@ -141,6 +141,10 @@ def build_rnn():
     return  model
 
 
+def fill_zeros(vec, length, dim):
+    return vec.append(np.zeros(dim)) if len(vec) < length else vec
+
+
 ##############################################################################
 
 
@@ -177,12 +181,13 @@ def get_embedding(token):
 
 def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
     feature_result, ner_result, token_result = [], [], []
+    max_length = max(len(sent) for sent in sents)
     for sent in sents:
         sent_vec, pos_vec, ner_vec, feature_vec, token_vec = [], [], [], [], []
         for token, pos, ner in sent:
             token_vec.append(token), pos_vec.append(convert_pos(pos)), ner_vec.append(convert_ner(ner))
             sent_vec.append(add_features_rnn(token, city, com_single, com_suffix, country, name))
-
+            token_vec = fill_zeros(token_vec, max_length, len(token[0]))
         final_vec = np.asarray([np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)]) # Merge two vectors
         feature_result.append(final_vec), ner_result.append(ner_vec)
         token_result.append(token_vec)
