@@ -14,6 +14,7 @@ from .arsenal_stats import *
 
 STOP_ROOTS = {'is', 'are', 'was', 'were', 'been', 'be'}
 
+
 def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
     name, country = line_file2set(name_f), line_file2set(country_f)
     city, com_single = line_file2set(city_f), line_file2set(com_single_f)
@@ -64,10 +65,10 @@ def crf_dep_result2dict(crf_result, dep_data, tfidf):
 
 
 def extract_dep_result(dep_data, ner_candidate, tfidf):
-    dep_lower = [(m[0].lower(), m[1])for m in dep_data]
+    dep_lower = [(m[0].lower(), m[1]) for m in dep_data]
     dep_tfidf = add_one_feature_dict(dep_lower, tfidf)
     sent_index = [i for i in range(len(dep_data)) if dep_data[i][1] == '###']
-    sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i + 1]) for i in range(len(sent_index) - 1)]
+    # sent_boundaries = [(0, sent_index[0])] + [(sent_index[i], sent_index[i + 1]) for i in range(len(sent_index) - 1)]
     new_sen_index = (a + b for a, b in enumerate(sent_index))
     rel_candidate = deepcopy(ner_candidate)
     for i in new_sen_index:
@@ -75,7 +76,8 @@ def extract_dep_result(dep_data, ner_candidate, tfidf):
             if not str(ner_candidate[j][2]).startswith('-1') and not str(ner_candidate[j + 2]).startswith('-1'):
                 if int(ner_candidate[j][2]) < i < int(ner_candidate[j + 2][2]):
                     rel_candidate[j + 1: j + 1] = [('##Sent', '##Sent', -1)]
-    root_tuple = [(i[1][0], i[1][2], i[0]) for i in enumerate(dep_tfidf) if i[1][1] == 'ROOT' and i[1][2] != '0' and i[1][0] not in STOP_ROOTS]
+    root_tuple = [(i[1][0], i[1][2], i[0]) for i in enumerate(dep_tfidf) if
+                  i[1][1] == 'ROOT' and i[1][2] != '0' and i[1][0] not in STOP_ROOTS]
     root_result = Counter(i[0] for i in root_tuple)
     return root_result
 
@@ -163,7 +165,7 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
 
 
 def pipeline_crf_train_evt(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
-                       country_f, name_f):
+                           country_f, name_f):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           'train')
@@ -250,14 +252,14 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
     root_dic = defaultdict()
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
-        # json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-        # i += 1
-        # if modf(i / 100)[0] == 0.0:
-        #     print(get_now(), i)
-        # with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
-        #     out.write(json_result)
-        root_result = streaming_pos_dep_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-        root_dic.update(root_result)
+        json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        i += 1
+        if modf(i / 100)[0] == 0.0:
+            print(get_now(), i)
+        with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
+            out.write(json_result)
+        # root_result = streaming_pos_dep_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        # root_dic.update(root_result)
         i += 1
         if modf(i / 100)[0] == 0.0:
             print(get_now(), i)
@@ -265,7 +267,6 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
     result.columns = ['Token', 'Freq']
     result = result.sort_values(by='Freq', ascending=False)
     result.to_csv(out_folder, header=None, index=False)
-
 
 
 def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
