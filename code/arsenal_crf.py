@@ -126,6 +126,7 @@ def word2features(sent, i, feature_conf):
                              tfidf1, tfdf1))
     else:
         features['EOS'] = True
+
     return features
 
 
@@ -139,6 +140,7 @@ def sent2labels(line):
 
 def sent2label_spfc(line, label):
     return [i[2] if i[2].endswith(label) else '0' for i in line]
+
 
 ##############################################################################
 
