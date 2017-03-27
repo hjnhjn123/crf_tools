@@ -39,3 +39,27 @@ next:
   - next_country
   - next_tfidf
   - next_tfdf
+previous2:
+  - previous2_word.lower()
+  - previous2_word.istitle()
+  - previous2_word.isupper()
+  - previous2_postag
+  - previous2_name
+  - previous2_com_suffix
+  - previous2_com_single
+  - previous2_city
+  - previous2_country
+  - previous2_tfidf
+  - previous2_tfdf
+next2:
+  - next2_word.lower()
+  - next2_word.istitle()
+  - next2_word.isupper()
+  - next2_postag
+  - next2_name
+  - next2_com_suffix
+  - next2_com_single
+  - next2_city
+  - next2_country
+  - next2_tfidf
+  - next2_tfdf
