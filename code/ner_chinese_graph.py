@@ -9,141 +9,9 @@ import joblib as jl
 from fysom import Fysom
 
 
-# from arsenal_stats import *
-
-
-def seq_to_sen(seq):
-    stop_set = set(u'。！？.!?')
-    stop_set.update({u'……', u'…'})
-    spliter_set = set(u'()（）【】“”')
-    sen = []
-
-    for item in seq:
-        try:
-            word, tag = item
-            if word in spliter_set:
-                continue
-            sen.append((word, tag))
-            if word in stop_set and tag == 'PU':
-                yield sen
-                sen = []
-        except ValueError:
-            print("ValueError", item)
-    if sen:
-        yield sen
-
-
-def seq_to_events(seq):
-    sens = list(seq_to_sen(seq))
-    elements = []
-    for sen in sens:
-        # print " ".join("%s:%s"%(w, t) for w,t in sen)
-        seq = trans_tag(sen)
-        fsm_1 = Seq_L1_FSM()
-        fsm_1.read_seq(seq)
-        # fsm_1.print_result()
-        elements.append(fsm_1.result)
-
-    names = [[w for w, t in ele if t == 'NN'] for ele in elements]
-    core_names = value_names(names)
-    core_index = reverse_index(core_names)  # core_index: noun phrase -> name
-    core_sent = {}  # {sen_num: [cores, ]}
-    core_value_sent = Counter()
-    for i, ns in enumerate(names):
-        a = {core_index[n] for n in ns if n in core_index}  # 逐句计算句子中的cores
-        if a:
-            core_sent[i] = a  # 第i句中的cores的集合 （a）
-            core_value_sent.update(a)
-    sens_num = len(elements)
-    core_value = {c: 1.0 * core_value_sent[c] * len(core_names[c]) / sens_num for c in core_value_sent}
-    core_rank = sorted(core_value.items(), key=itemgetter(1), reverse=True)
-    core3 = {c for c, i in filter(lambda item: len(item[0]) > 1, core_rank)[:3]}
-    print("!!!" + " ".join(core3))
-    result = []
-    for ci in core_sent:
-        cod = core3.intersection(core_sent[ci])
-        if len(cod) <= 1: continue
-        events = L2_elements_to_events(elements[ci], core3)
-
-        if events:
-            for e in events:
-                result.append((sens[ci], e))
-    print("result:", len(result))
-
-    return result
-
-
-def value_names(names):
-    '''
-    take noun phrase as super edge in supergraph, a keyword is a star core in a star.
-    get as many as keywords.
-    names ＝》 ［［ns, ns , ..],［］，］  ns => （noun, noun, ..) tuple represents a noun phrase.
-    '''
-    nouns = Counter()
-    for ns in set(chain.from_iterable(names)):
-        nouns.update(ns)
-    cores = {a for a in nouns if nouns[a] > 1}
-    # print "cores:", " ".join(c for c in cores)
-
-    core_index = defaultdict(set)
-    for ns in chain.from_iterable(names):
-        a = cores.intersection(ns)
-        for n in a:
-            core_index[n].add(tuple(ns))
-    # print "core_index:\n", "\n".join("==%s:%s"%(_n, ns_list_str(_s)) for _n, _s in core_index.items())
-
-    core_point = defaultdict(int)
-    for k, ns_li in core_index.items():
-        # core_point[k] += len(ns_li)
-        for ns in ns_li:
-            core_point[k] += len(ns) - 1  # most important approvement @March.
-            a = cores.intersection(ns)
-            if len(a) > 1: core_point[k] -= (len(a) - 1)
-    # print "core_point:\n", "\n".join("---%s:%s"%(_k, _v) for _k, _v in core_point.items())
-
-    c_point = sorted(core_point.items(), key=itemgetter(1), reverse=False)
-    used_ns = set()
-    result = {}
-    for n, point in c_point:
-        if point <= 0: continue
-        t = core_index[n].difference(used_ns)
-        if t and len(t) > 1:
-            result[n] = t
-            used_ns.update(t)
-    return result
-
-
-def reverse_index(name_index):
-    '''
-    @param name_index: 关键词 －>  出现关键词的词组集合
-    @return 词组－> 关键词
-    '''
-    index = defaultdict(lambda: None)
-    for k, ns in name_index.items():
-        for n in ns:
-            index[n] = k
-    return index
-
-
-def L2_elements_to_events(seq, cores):
-    # seq = parse_txt(sen)
-    # print " ".join("%s:%s"%(w,tag) for w,tag in seq)
-
-    # seq = trans_tag(seq)
-    #
-    # fsm = Seq_L1_FSM()
-    # fsm.read_seq(seq)
-    # fsm.print_result()
-
-    fsm2 = Seq_L2_FSM()
-    fsm2.read_seq(seq)
-    # fsm2.print_result()
-
-    fsm3 = Seq_L3_FSM(cores)
-    fsm3.read_seq(fsm2.result)
-    # fsm3.print_result()
-
-    return fsm3.result
+STOP_SET = set(u'。！？.!?')
+STOP_SET.update({u'……', u'…'})
+SPLIT_SET = set(u'()（）【】“”')
 
 
 class Ab_Seq_FSM(object):
@@ -347,6 +215,135 @@ class Seq_L3_FSM(Ab_Seq_FSM):
     def print_result(self):
         for event in self.result:
             print(" ".join(event))
+
+def seq_to_sen(seq):
+    sen = []
+    for item in seq:
+        try:
+            word, tag = item
+            if word in SPLIT_SET:
+                continue
+            sen.append((word, tag))
+            if word in STOP_SET and tag == 'PU':
+                yield sen
+                sen = []
+        except ValueError:
+            print("ValueError", item)
+    if sen:
+        yield sen
+
+
+def seq_to_events(seq):
+    sens = list(seq_to_sen(seq))
+    elements = []
+    for sen in sens:
+        # print " ".join("%s:%s"%(w, t) for w,t in sen)
+        seq = trans_tag(sen)
+        fsm_1 = Seq_L1_FSM()
+        fsm_1.read_seq(seq)
+        # fsm_1.print_result()
+        elements.append(fsm_1.result)
+
+    names = [[w for w, t in ele if t == 'NN'] for ele in elements]
+    core_names = value_names(names)
+    core_index = reverse_index(core_names)  # core_index: noun phrase -> name
+    core_sent = {}  # {sen_num: [cores, ]}
+    core_value_sent = Counter()
+    for i, ns in enumerate(names):
+        a = {core_index[n] for n in ns if n in core_index}  # 逐句计算句子中的cores
+        if a:
+            core_sent[i] = a  # 第i句中的cores的集合 （a）
+            core_value_sent.update(a)
+    sens_num = len(elements)
+    core_value = {c: 1.0 * core_value_sent[c] * len(core_names[c]) / sens_num for c in core_value_sent}
+    core_rank = sorted(core_value.items(), key=itemgetter(1), reverse=True)
+    core3 = {c for c, i in filter(lambda item: len(item[0]) > 1, core_rank)[:3]}
+    print("!!!" + " ".join(core3))
+    result = []
+    for ci in core_sent:
+        cod = core3.intersection(core_sent[ci])
+        if len(cod) <= 1: continue
+        events = L2_elements_to_events(elements[ci], core3)
+
+        if events:
+            for e in events:
+                result.append((sens[ci], e))
+    print("result:", len(result))
+
+    return result
+
+
+def value_names(names):
+    '''
+    take noun phrase as super edge in supergraph, a keyword is a star core in a star.
+    get as many as keywords.
+    names ＝》 ［［ns, ns , ..],［］，］  ns => （noun, noun, ..) tuple represents a noun phrase.
+    '''
+    nouns = Counter()
+    for ns in set(chain.from_iterable(names)):
+        nouns.update(ns)
+    cores = {a for a in nouns if nouns[a] > 1}
+    # print "cores:", " ".join(c for c in cores)
+
+    core_index = defaultdict(set)
+    for ns in chain.from_iterable(names):
+        a = cores.intersection(ns)
+        for n in a:
+            core_index[n].add(tuple(ns))
+    # print "core_index:\n", "\n".join("==%s:%s"%(_n, ns_list_str(_s)) for _n, _s in core_index.items())
+
+    core_point = defaultdict(int)
+    for k, ns_li in core_index.items():
+        # core_point[k] += len(ns_li)
+        for ns in ns_li:
+            core_point[k] += len(ns) - 1  # the most important improvement @March.
+            a = cores.intersection(ns)
+            if len(a) > 1: core_point[k] -= (len(a) - 1)
+    # print "core_point:\n", "\n".join("---%s:%s"%(_k, _v) for _k, _v in core_point.items())
+
+    c_point = sorted(core_point.items(), key=itemgetter(1), reverse=False)
+    used_ns = set()
+    result = {}
+    for n, point in c_point:
+        if point <= 0: continue
+        t = core_index[n].difference(used_ns)
+        if t and len(t) > 1:
+            result[n] = t
+            used_ns.update(t)
+    return result
+
+
+def reverse_index(name_index):
+    '''
+    @param name_index: 关键词 －>  出现关键词的词组集合
+    @return 词组－> 关键词
+    '''
+    index = defaultdict(lambda: None)
+    for k, ns in name_index.items():
+        for n in ns:
+            index[n] = k
+    return index
+
+
+def L2_elements_to_events(seq, cores):
+    # seq = parse_txt(sen)
+    # print " ".join("%s:%s"%(w,tag) for w,tag in seq)
+
+    # seq = trans_tag(seq)
+    #
+    # fsm = Seq_L1_FSM()
+    # fsm.read_seq(seq)
+    # fsm.print_result()
+
+    fsm2 = Seq_L2_FSM()
+    fsm2.read_seq(seq)
+    # fsm2.print_result()
+
+    fsm3 = Seq_L3_FSM(cores)
+    fsm3.read_seq(fsm2.result)
+    # fsm3.print_result()
+
+    return fsm3.result
 
 
 L1_trans_dict = {'NT': 'noun', 'NR': 'noun', 'NN': 'noun', 'VA': 'verb', 'VC': 'verb', 'VE': 'verb', 'VV': 'verb'}
