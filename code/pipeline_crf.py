@@ -106,12 +106,15 @@ def streaming_pos_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_suffix
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
-    ner_phrase = crf_result2dict(crf_result)
 
+    return crf_result, raw_df
+
+
+def convert_crf_result_json(crf_result, raw_df):
+    ner_phrase = crf_result2dict(crf_result)
     raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
-
     return json_result
 
 
@@ -252,14 +255,18 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
     root_dic = defaultdict()
     for in_f in listdir(in_folder):
         ff = path.join(in_folder, in_f)
-        json_result = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        crf_result, raw_df = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
+        # json_result = convert_crf_result_json(crf_result, raw_df)
         i += 1
         if modf(i / 100)[0] == 0.0:
             print(get_now(), i)
-        with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
-            out.write(json_result)
-        # root_result = streaming_pos_dep_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-        # root_dic.update(root_result)
+        # with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
+        with open(path.join(out_folder, str(in_f) + '.csv'), 'w') as out:
+
+            # out.write(json_result)
+            for line in crf_result:
+                out.write(','.join(line) + '\n')
+
         i += 1
         if modf(i / 100)[0] == 0.0:
             print(get_now(), i)
