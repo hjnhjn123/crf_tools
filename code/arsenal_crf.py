@@ -247,8 +247,8 @@ def test_crf_prediction(crf, X_test, y_test):
     #     y_test_converted.append(test_result)
     #
     # result = metrics.flat_f1_score(y_test_converted, y_pred_converted, average='weighted', labels=['1'])
-    #
-    # # y_test_converted = [ '0' if j =='O' else '1' for i in y_test for j in i]
+
+    # y_test_converted = [ '0' if j =='O' else '1' for i in y_test for j in i]
     # details = metrics.flat_classification_report(y_test_converted, y_pred_converted, digits=3, labels=['1'])
 
     details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
