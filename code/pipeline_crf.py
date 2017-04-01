@@ -257,15 +257,13 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
         ff = path.join(in_folder, in_f)
         crf_result, raw_df = streaming_pos_crf(ff, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
         # json_result = convert_crf_result_json(crf_result, raw_df)
-        i += 1
         if modf(i / 100)[0] == 0.0:
             print(get_now(), i)
         # with open(path.join(out_folder, str(in_f) + '.json'), 'w') as out:
         with open(path.join(out_folder, str(in_f) + '.csv'), 'w') as out:
 
             # out.write(json_result)
-            for line in crf_result:
-                out.write(','.join(line) + '\n')
+            pd.DataFrame(crf_result).to_csv(out, index=None,  header=None)
 
         i += 1
         if modf(i / 100)[0] == 0.0:

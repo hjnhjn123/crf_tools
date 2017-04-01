@@ -6,6 +6,7 @@ import tflearn
 from .pipeline_crf import *
 from tensorflow.contrib.rnn import MultiRNNCell, GRUCell, static_bidirectional_rnn
 import tensorflow as tf
+from copy import deepcopy
 
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
@@ -61,8 +62,8 @@ def add_features_rnn(token, city, com_single, com_suffix, country, name):
         onehot[3] = 1
     elif token in name:
         onehot[4] = 1
-    # vector = get_embedding(token)
-    vector = spacy_parser(token, 'vec', '')
+    vector = get_embedding(token)
+    # vector = spacy_parser(token, 'vec', '')
     return np.append(onehot, vector)
 
 
@@ -107,7 +108,7 @@ def convert_ner(ner):
 ##############################################################################
 
 
-def length(target):
+def convert_length(target):
     used = tf.sign(tf.reduce_max(tf.abs(target), reduction_indices=2))
     length = tf.reduce_sum(used, reduction_indices=1)
     length = tf.cast(length, tf.int32)
@@ -122,7 +123,7 @@ def cost(prediction, target):
     mask = tf.sign(tf.reduce_max(tf.abs(target), reduction_indices=2))
     cross_entropy *= mask
     cross_entropy = tf.reduce_sum(cross_entropy, reduction_indices=1)
-    cross_entropy /= tf.cast(length(target), tf.float32)
+    cross_entropy /= tf.cast(convert_length(target), tf.float32)
     return tf.reduce_mean(cross_entropy)
 
 
@@ -142,7 +143,10 @@ def build_rnn():
 
 
 def fill_zeros(vec, length, dim):
-    return vec.append(np.zeros(dim)) if len(vec) < length else vec
+    result = deepcopy(vec)
+    diff = length - len(result)
+    print(diff)
+    return result.append(np.zeros(dim) * diff) if diff > 0 else result
 
 
 ##############################################################################
@@ -183,12 +187,17 @@ def batch_add_features_rnn(sents, city, com_single, com_suffix, country, name):
     feature_result, ner_result, token_result = [], [], []
     max_length = max(len(sent) for sent in sents)
     for sent in sents:
+        diff = max_length - len(sent)  # get the max length for filing
+        sent = sent + [('0', '0', '0') for i in range(diff)] if diff > 0 else sent  # filling according to max length
         sent_vec, pos_vec, ner_vec, feature_vec, token_vec = [], [], [], [], []
         for token, pos, ner in sent:
-            token_vec.append(token), pos_vec.append(convert_pos(pos)), ner_vec.append(convert_ner(ner))
+            # print(get_now(), 'start')
+            token_vec.append(token)
+            pos_vec.append(convert_pos(pos)), ner_vec.append(convert_ner(ner))
+            # print(get_now(), 'end')
             sent_vec.append(add_features_rnn(token, city, com_single, com_suffix, country, name))
-            token_vec = fill_zeros(token_vec, max_length, len(token[0]))
-        final_vec = np.asarray([np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)]) # Merge two vectors
+            # print(get_now(), 'final')
+        final_vec = [np.asarray(np.append(m, n)) for m, n in zip(sent_vec, pos_vec)] # Merge two vectors
         feature_result.append(final_vec), ner_result.append(ner_vec)
         token_result.append(token_vec)
     return np.asarray(feature_result), np.asarray(ner_result), token_result

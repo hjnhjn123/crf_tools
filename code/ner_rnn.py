@@ -236,7 +236,7 @@ del pre_emb
 print("Network building")
 
 net = tflearn.input_data([None, MAX_DOCUMENT_LENGTH, EMBEDDING_SIZE])
-# net = tflearn.embedding(net, input_dim=n_words, output_dim=EMBEDDING_SIZE,trainable=True, name="EmbeddingLayer")
+net = tflearn.embedding(net, input_dim=n_words, output_dim=EMBEDDING_SIZE,trainable=True, name="EmbeddingLayer")
 net = static_bidirectional_rnn(MultiRNNCell([GRUCell(256)] * 3), MultiRNNCell([GRUCell(256)] * 3),
                             tf.unstack(tf.transpose(net, perm=[1, 0, 2])),
                             dtype=tf.float32)  # 256=num_hidden, 3=num_layers
@@ -249,7 +249,7 @@ net = tflearn.regression(net, optimizer='adam', loss=cost)
 model = tflearn.DNN(net, clip_gradients=0., tensorboard_verbose=0)
 print("Training")
 
-# embeddingWeights = tflearn.get_layer_variables_by_name('EmbeddingLayer')[0]
+embeddingWeights = tflearn.get_layer_variables_by_name('EmbeddingLayer')[0]
 # model.set_weights(embeddingWeights, initW)
 gc.collect()
 while True:

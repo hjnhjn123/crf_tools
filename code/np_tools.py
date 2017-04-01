@@ -1,32 +1,31 @@
 #! /usr/bin/python
 # -*- coding: utf-8 -*-
-
+import gc
+import operator
+import re
+import time
+from bisect import *
+from collections import defaultdict
+from datetime import date, datetime, timedelta
+from functools import reduce
+from itertools import *
 from math import log
 from operator import itemgetter
-from pickle import load, dump
 from os.path import exists
-from datetime import date, datetime, timedelta
-import operator
-from itertools import *
-from collections import defaultdict
+from pickle import load, dump
 from random import *
-from bisect import *
-import time
-import re
-import gc
 
-RE_URL_HEAD = re.compile("^/([^/]+)/")
-RE_FM_URL = re.compile('^/fm')
-RE_ID = re.compile("\S+/([0-9]+)")
+url_head_re = re.compile("^/([^/]+)/")
+fm_url_re = re.compile('^/fm')
 
 
 def get_url_head(url):
-    url_head_match = RE_URL_HEAD.match(url)
+    url_head_match = url_head_re.match(url)
     return url_head_match.group(1) if url_head_match else ('homepage' if url == '/' else 'unknown')
 
 
 def is_fm_url(url):
-    m = RE_FM_URL.match(url)
+    m = fm_url_re.match(url)
     return m is not None
 
 
@@ -74,10 +73,16 @@ def curry(x, argc=None):
     return p
 
 
+# example
+# @curry
+# def myfun(a,b,c):
+#     print '%d-%d-%d' % (a,b,c)
+
+ID_re = re.compile("\S+/([0-9]+)")
 
 
 def get_digit_id_from_url(url):
-    url_match = RE_ID.match(url)
+    url_match = ID_re.match(url)
     return int(url_match.group(1)) if url_match else 0
 
 
@@ -174,7 +179,8 @@ class Printer_and_Writer(object):
 
     def output(self, line):
         self.f.write("%s\n" % line)
-        print(line)
+        print
+        line
 
     def close(self):
         self.f.flush()
@@ -546,7 +552,7 @@ def str2_double_dict(str, firstkey=int):
 
 
 def invert_dict(dic):
-    return dict(zip(dic.values(), dic.keys()))
+    return dict(zip(dic.itervalues(), dic.iterkeys()))
 
 
 def invert_dict_2_keyset(dic):
@@ -626,6 +632,10 @@ def _sql2key_list(kf, vf, dbq, sql):
 sql2key_list_int_int = _sql2key_list(int, int)
 
 
+def union_all(seq):
+    return reduce(lambda x, y: x.union(y), (set(a) for a in seq))
+
+
 def col2dict2(rows, ktype=int, vtype=int, return_defaultdict=True):
     """rows:[(k,v)]-> {k:[v1,v2],...}"""
     a = defaultdict(list)
@@ -667,6 +677,17 @@ def dict_add(d1, d2, func=operator.add):
         d1[k] = func(d1[k], d2[k]) if k in d1 else d2[k]
 
 
+def sum_on_dict(dict, s=None):
+    a = dict.values() if s is None else [dict[i] for i in s if i in dict]
+    return reduce(operator.add, a, 0)
+
+
+def sumx_on_dict(dict, s=None, t=0.5):
+    a = dict.values() if s is None else [dict[i] for i in s if i in dict]
+    aa = [x ** t for x in a]
+    return reduce(operator.add, aa, 0)
+
+
 def gen_batches_(start, end, step):
     """smallest step is 0.01, from start DOWNTO end"""
 
@@ -687,7 +708,8 @@ def gen_batches(start, end, step):
 def print_distribution(dicts, min=0, max=2, step=0.1):
     ba = gen_batches_(min, max, step)
     for min, max in ba:
-        print(min, max, ":", len([x for x in dicts if max > dicts[x] >= min]))
+        print
+        min, max, ":", len([x for x in dicts if max > dicts[x] >= min])
 
 
 def timer(test_f):
@@ -698,7 +720,8 @@ def timer(test_f):
         r = test_f(*args, **kw)
         t2 = datetime.now()
         delta = t2 - t1
-        print("%s cost %s sec, %s ms" % (test_f.__name__, delta.seconds, delta.microseconds))
+        print
+        "%s cost %s sec, %s ms" % (test_f.__name__, delta.seconds, delta.microseconds)
         return r
 
     return _timer
@@ -803,7 +826,7 @@ class GroupCount(dict):
         self[a] = self.setdefault(a, 0) + 1
 
     def iter_validkey(self, threshold):
-        for x in self.keys():
+        for x in self.iterkeys():
             if self[x] > threshold: yield x
 
     def get_validkeys(self, threshold):
@@ -816,9 +839,9 @@ class CDF_Grouper(dict):
         for value in seq:
             k = key(value)
             a[k] = a.setdefault(k, 0) + 1
-        self.total = sum(a.values())
+        self.total = sum(a.itervalues())
         b = 0
-        for k in sorted(a.keys()):
+        for k in sorted(a.iterkeys()):
             b += a[k]
             self[k] = 1.0 * b / self.total
 
@@ -861,6 +884,60 @@ def index_of(li):
 
 def sub_dict(somedict, somekeys, default=None):
     return dict([(k, somedict.get(k, default)) for k in somekeys])
+
+
+def get_avg_std(li, n=0):
+    """return average and standard deviation of list. when li is an iterator, you need set n."""
+    if n == 1: return li.next(), 1
+    li1, li2 = tee(li)
+    sum = reduce(operator.add, li1, 0)
+    if n == 0: n = len(li)
+    avg = float(sum) / n
+    sqr_li = map(lambda x: (float(x) - avg) ** 2, li2)
+    sqr_sum = reduce(operator.add, sqr_li, 0)
+    std = (sqr_sum / (n - 1)) ** 0.5
+    return (avg, std) if std > 0 else (avg, None)
+
+
+def col_avg_std_median(rows):
+    row_n = len(rows)
+    col_n = len(rows[0])
+
+    results = [0] * col_n
+    for i in range(col_n):
+        col_i = map(lambda x: x[i], rows)
+        c1, c2 = tee(col_i)
+        avg_i, std_i = get_avg_std(c1, n=row_n)
+        s_i = sorted(c2)
+        median_i = s_i[row_n / 2]
+        results[i] = avg_i, std_i, median_i
+    return results
+
+
+def get_col_normalization(rows, key=0, col=1):
+    row_n = len(rows)
+    col_i = map(lambda x: x[col], rows)
+    avg, std = get_avg_std(col_i, n=row_n)
+    normalized = [(row[key], float(row[col] - avg) / std) for row in rows]
+    for row in rows:
+        normalized.append((row[key], (float(row[col]) - avg) / std))
+    return dict(normalized)
+
+
+def normalization(rows):
+    row_n = len(rows)  # row num
+    col_n = len(rows[0])  # column num
+
+    new_rows = [[0] * col_n for _ in range(row_n)]
+    col_avg_std = [0] * col_n
+    for i in range(col_n):
+        col_i = map(lambda x: x[i], rows)
+        avg_i, std_i = get_avg_std(col_i, n=row_n)
+        col_avg_std[i] = avg_i, std_i
+        for j in range(row_n):
+            new_rows[j][i] = (float(rows[j][i]) - avg_i) / std_i
+
+    return new_rows, col_avg_std
 
 
 def normalize(feature, col_avg_std):
@@ -1191,11 +1268,13 @@ class Counter_in_iteration(object):
         self.ct += 1
         if self.ct % self.it == 0:
             self.f()
-            print(self.ct, now_str())
+            print
+            self.ct, now_str()
 
     def end_count(self):
         self.f()
-        print(self.ct, now_str())
+        print
+        self.ct, now_str()
 
     def __repr__(self):
         return "%s" % self.ct
@@ -1291,17 +1370,17 @@ def cal_GI(cate_word_DF, cate_docs, min_word_docs=0):
     @param cate_word_DF: cate_word_DF = cate-> (words-> DF)
     @param cate_docs: cate_docs = cate -> (docs in cat)
     """
-    total_doc = sum(cate_docs.values())
+    total_doc = sum(cate_docs.itervalues())
     cate_prob = dict((c, 1.0 * d / total_doc) for c, d in cate_docs.items())  # 每一类的基准概率。
     E_doc = -1.0 * sum(cate_prob[c] * log(cate_prob[c], 2) for c in cate_prob)
     total_words = set()
-    for w in cate_word_DF.values():
-        total_words.update(w.keys())
+    for w in cate_word_DF.itervalues():
+        total_words.update(w.iterkeys())
 
     word_GI = []
     for w in total_words:
-        wDF = dict((c, cate_word_DF.setdefault(c, {}).setdefault(w, 0)) for c in cate_word_DF.keys())
-        w_docs = sum(wDF.values())
+        wDF = dict((c, cate_word_DF.setdefault(c, {}).setdefault(w, 0)) for c in cate_word_DF.iterkeys())
+        w_docs = sum(wDF.itervalues())
         if w_docs < min_word_docs: continue  # wf太少的词忽略。
         p_word = 1.0 * w_docs / total_doc
         np_word = 1.0 - p_word
@@ -1315,5 +1394,7 @@ def cal_GI(cate_word_DF, cate_docs, min_word_docs=0):
 
 
 if __name__ == "__main__":
-    print("hello")
-
+    print
+    "hello"
+    # id = get_min_user_id(2012, 4, 10)
+    # print id
