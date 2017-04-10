@@ -8,7 +8,6 @@ from operator import itemgetter
 import joblib as jl
 from fysom import Fysom
 
-
 STOP_SET = set(u'。！？.!?')
 STOP_SET.update({u'……', u'…'})
 SPLIT_SET = set(u'()（）【】“”')
@@ -216,6 +215,7 @@ class Seq_L3_FSM(Ab_Seq_FSM):
         for event in self.result:
             print(" ".join(event))
 
+
 def seq_to_sen(seq):
     sen = []
     for item in seq:
@@ -257,7 +257,9 @@ def seq_to_events(seq):
     sens_num = len(elements)
     core_value = {c: 1.0 * core_value_sent[c] * len(core_names[c]) / sens_num for c in core_value_sent}
     core_rank = sorted(core_value.items(), key=itemgetter(1), reverse=True)
-    core3 = {c for c, i in filter(lambda item: len(item[0]) > 1, core_rank)[:3]}
+    # core3 = {c for c, i in filter(lambda item: len(item[0]) > 1, core_rank)[:3]}
+    core3 = {c for c, i in filter(lambda item: len(item[0]) > 1, core_rank)}
+
     print("!!!" + " ".join(core3))
     result = []
     for ci in core_sent:
@@ -270,7 +272,8 @@ def seq_to_events(seq):
                 result.append((sens[ci], e))
     print("result:", len(result))
 
-    return result
+    # return result
+    return core3
 
 
 def value_names(names):
@@ -364,6 +367,8 @@ def trans_tag(seq, tag_dic=L1_trans_dict):
 def read_tagged_txt(txt):
     def split_w(wt):
         a = wt.rindex('#')
+        # a = wt.rindex('/')
+
         return (wt[:a], wt[(a + 1):])
 
     with open(txt, 'r') as f:
@@ -377,13 +382,13 @@ if __name__ == '__main__':
 
     result_set = []
     n = 0
-    for seq in read_tagged_txt('./qq.txt.tagged'):
+    for seq in read_tagged_txt('/Users/acepor/Work/patsnap/data/caijing/caijing_business_pos_100.txt'):
         n += 1
         print(n)
         r = seq_to_events(seq)
         result_set.extend(r)
 
         if n % 100 == 0: gc.collect()
-        # raw_input()
 
-    jl.dump(result_set, 'events_result.joblib')
+
+    jl.dump(result_set, '/Users/acepor/Work/patsnap/data/caijing/caijing_result.joblib')
