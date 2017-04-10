@@ -307,13 +307,9 @@ def pipeline_streaming_sqs(sqs_conf, dict_conf, crf_f, city_f, com_single_f, com
     sqs = boto3.resource('sqs')
     queue = sqs.get_queue_by_name(QueueName='')
 
-    i = 0
 
     while True:
         json_result = streaming_pos_crf(queue, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-        i += 1
-        if modf(i / 10)[0] == 0.0:
-            print(get_now(), i)
 
 
 if __name__ == "__main__":
