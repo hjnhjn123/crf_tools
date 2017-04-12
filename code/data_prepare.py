@@ -81,6 +81,13 @@ def extract_factset_short_names(in_file, out_single, out_multi):
 
 
 def output_tfidf(in_file, out_file, cols, col_name):
+    """
+    :param in_file: 
+    :param out_file: 
+    :param cols: a list of column names
+    :param col_name: the specific column
+    :return: 
+    """
     out = open(out_file, 'w')
     data = json2pd(in_file, cols, lines=True)
     data = data[col_name].apply(remove_punc)
@@ -91,6 +98,13 @@ def output_tfidf(in_file, out_file, cols, col_name):
 
 
 def output_tfdf(in_file, out_file, cols, col_name):
+    """
+    :param in_file: 
+    :param out_file: 
+    :param cols: a list of column names
+    :param col_name: the specific column
+    :return: 
+    """
     out = open(out_file, 'w')
     data = json2pd(in_file, cols, lines=True)
     data = data[col_name].apply(remove_punc)
