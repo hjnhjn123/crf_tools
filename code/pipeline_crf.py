@@ -4,9 +4,7 @@ from collections import Counter
 from copy import deepcopy
 from math import modf
 from os import listdir, path
-from sys import argv
 
-import boto3
 import joblib as jl
 import redis
 
@@ -160,26 +158,6 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     print(get_now(), 'converted')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-    print(get_now(), 'feed')
-    crf = train_crf(X_train, y_train)
-    print(get_now(), 'train')
-    result, details = test_crf_prediction(crf, X_test, y_test)
-    print(get_now(), 'predict')
-    jl.dump(crf, model_f)
-    return crf, result, details
-
-
-def pipeline_crf_train_evt(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
-                           country_f, name_f):
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
-                          'train')
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
-    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'converted')
-    X_train, y_train = feed_crf_trainer_spfc(train_sents, conf, 'COM')
-    X_test, y_test = feed_crf_trainer_spfc(test_sents, conf, 'COM')
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
