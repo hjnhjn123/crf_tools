@@ -296,34 +296,3 @@ def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, city_f, com_single_f,
         i += 1
         if modf(i / 10)[0] == 0.0:
             print(get_now(), i)
-
-
-def pipeline_streaming_sqs(sqs_conf, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f,
-                           tfdf_f, tfidf_f, switch):
-    loads = batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
-                          switch)
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
-
-    sqs = boto3.resource('sqs')
-    queue = sqs.get_queue_by_name(QueueName='')
-
-
-    while True:
-        json_result = streaming_pos_crf(queue, crf, conf, tfdf, tfidf, city, com_single, com_suffix, country, name)
-
-
-if __name__ == "__main__":
-    if argv[1] == 'aws':
-        SQS_CONF = ''
-        DICT_CONT = ''
-        CRF_F = ''
-        CITY_F = ''
-        COM_SINGLE_F = ''
-        COM_SUFFIX_F = ''
-        COUNTRY_F = ''
-        NAME_F = ''
-        TFDF_F = ''
-        TFIDF_F = ''
-        SWITCH = ''
-        pipeline_streaming_sqs(SQS_CONF, DICT_CONT, CRF_F, CITY_F, COM_SINGLE_F, COM_SUFFIX_F, COUNTRY_F, NAME_F,
-                               TFDF_F, TFIDF_F, SWITCH)
