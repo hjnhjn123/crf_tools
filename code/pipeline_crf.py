@@ -10,9 +10,9 @@ import boto3
 import joblib as jl
 import redis
 
-from .arsenal_crf import *
-from .arsenal_spacy import *
-from .arsenal_stats import *
+from arsenal_crf import *
+from arsenal_spacy import *
+from arsenal_stats import *
 
 STOP_ROOTS = {'is', 'are', 'was', 'were', 'been', 'be'}
 

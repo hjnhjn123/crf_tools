@@ -2,8 +2,8 @@
 
 from scipy import stats
 
-from .arsenal_nlp import *
-from .arsenal_spacy import *
+from arsenal_nlp import *
+from arsenal_spacy import *
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
