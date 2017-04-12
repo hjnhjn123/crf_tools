@@ -148,7 +148,7 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
 
 
 def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
-                       country_f, name_f):
+                       country_f, name_f, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           'train')
@@ -161,14 +161,14 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     print(get_now(), 'feed')
     crf = train_crf(X_train, y_train)
     print(get_now(), 'train')
-    result, details = test_crf_prediction(crf, X_test, y_test)
+    result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
     print(get_now(), 'predict')
     jl.dump(crf, model_f)
     return crf, result, details
 
 
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f,
-                                com_suffix_f, country_f, name_f, cv, iteration):
+                                com_suffix_f, country_f, name_f, cv, iteration, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           'train')
@@ -185,7 +185,7 @@ def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfi
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     print(get_now(), 'predict')
     best_predictor = rs_cv.best_estimator_
-    best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test)
+    best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test, test_switch)
     jl.dump(best_predictor, model_f)
     return crf, best_predictor, rs_cv, best_result, best_details
 
@@ -213,7 +213,7 @@ def pipeline_pos_crf(in_file, out_f, crf_f, dict_conf, city_f, com_single_f, com
 
 
 def pipeline_crf_test(test_f, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
-                      tfidf_f, switch):
+                      tfidf_f, switch, test_switch):
     test_data = process_annotated(test_f)
     loads = batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           switch)
@@ -222,7 +222,7 @@ def pipeline_crf_test(test_f, dict_conf, crf_f, city_f, com_single_f, com_suffix
     print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     print(get_now(), 'feed')
-    result, details = test_crf_prediction(crf, X_test, y_test)
+    result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
     return result, details
 
 
