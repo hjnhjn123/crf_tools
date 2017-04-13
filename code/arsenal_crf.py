@@ -6,7 +6,8 @@ from re import findall, compile
 import pandas as pd
 import scipy.stats as sstats
 import sklearn_crfsuite
-from sklearn.grid_search import RandomizedSearchCV
+# from sklearn.grid_search import RandomizedSearchCV
+from sklearn.model_selection import RandomizedSearchCV
 from sklearn.metrics import make_scorer
 from sklearn_crfsuite import metrics
 
@@ -227,6 +228,9 @@ def test_crf_prediction(crf, X_test, y_test, test_switch):
         labels = show_crf_label(crf)
         result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
         details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
+        details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
+        details = pd.DataFrame(details, columns=HEADER_CRF)
+        return result, details
 
     elif test_switch == 'all':
         y_pred_converted = []
@@ -254,9 +258,10 @@ def test_crf_prediction(crf, X_test, y_test, test_switch):
         y_test_converted = [ '0' if j =='O' else '1' for i in y_test for j in i]
         details = metrics.flat_classification_report(y_test_converted, y_pred_converted, digits=3, labels=['1'])
 
-    details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
-    details = pd.DataFrame(details, columns=HEADER_CRF)
-    return result, details
+        details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
+        details = pd.DataFrame(details, columns=HEADER_CRF)
+
+        return result, details
 
 
 def crf_predict(crf, new_data, processed_data):
