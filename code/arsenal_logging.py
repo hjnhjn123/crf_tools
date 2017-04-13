@@ -18,3 +18,8 @@ def setup_logging(path='logging.yaml', level=logging.INFO, env_key='LOG_CFG'):
         config.dictConfig(conf)
     else:
         logging.basicConfig(level=level)
+
+
+def basic_logging(msg, format = '%(asctime)s %(name)s - %(levelname)s - %(message)s', level = logging.INFO):
+    logging.basicConfig(format=format, level=level)
+    return logging.info(msg)

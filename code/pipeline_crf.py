@@ -11,6 +11,7 @@ import redis
 from arsenal_crf import *
 from arsenal_spacy import *
 from arsenal_stats import *
+from arsenal_logging import *
 
 STOP_ROOTS = {'is', 'are', 'was', 'were', 'been', 'be'}
 
@@ -155,14 +156,14 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'converted')
+    basic_logging('Adding features ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-    print(get_now(), 'feed')
+    basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
-    print(get_now(), 'train')
+    basic_logging('Training ends')
     result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
-    print(get_now(), 'predict')
+    basic_logging('Testing ends')
     jl.dump(crf, model_f)
     return crf, result, details
 
@@ -175,17 +176,19 @@ def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfi
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'converted')
+    basic_logging('Adding features ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
+    basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    print(get_now(), 'predict')
+    basic_logging('Training ends')
     best_predictor = rs_cv.best_estimator_
     best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test, test_switch)
+    basic_logging('Testing ends')
     jl.dump(best_predictor, model_f)
     return crf, best_predictor, rs_cv, best_result, best_details
 
