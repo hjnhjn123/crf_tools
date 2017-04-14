@@ -193,26 +193,35 @@ def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfi
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_pos_crf(in_file, out_f, crf_f, dict_conf, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
+def pipeline_pos_crf(in_f, out_f, crf_f, dict_conf, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
                      tfidf_f, switch, cols, pieces=10):
     loads = batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           switch)
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
-    data = json2pd(in_file, cols, lines=True)
-    data = data.drop_duplicates()
-    data = random_rows(data, pieces, 'content')
+    # data = json2pd(in_file, cols, lines=True)
+    raw_df = pd.read_json(in_f, lines=True)
+    basic_logging('Reading ends')
+    data = pd.DataFrame(raw_df.result.values.tolist())['content'].reset_index()
+    data['content'] = data['content'].drop_duplicates()
+    # data = random_rows(data, pieces, 'content')
     data = data.dropna()
+    basic_logging('Cleaning ends')
+
     parsed_data = spacy_batch_processing(data, '', 'content', ['content'], 'crf')
+    basic_logging('Spacy ends')
+
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
+
     test_sents = batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    basic_logging('Adding features ends')
+
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-    print(get_now(), 'feed')
+    basic_logging('Conversion ends')
     result = crf_predict(crf, pos_data, X_test)
-    print(get_now(), 'predict')
+    basic_logging('Predicting ends')
     out = pd.DataFrame(result)
     out.to_csv(out_f, header=False, index=False)
-    return crf, result
 
 
 def pipeline_crf_test(test_f, dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f,
@@ -222,9 +231,8 @@ def pipeline_crf_test(test_f, dict_conf, crf_f, city_f, com_single_f, com_suffix
                           switch)
     conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    print(get_now(), 'converted')
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-    print(get_now(), 'feed')
+    basic_logging('Conversion ends')
     result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
     return result, details
 
@@ -250,7 +258,7 @@ def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, city_f, c
 
         i += 1
         if modf(i / 100)[0] == 0.0:
-            print(get_now(), i)
+            basic_logging('%d pieces have been processed', i)
     result = pd.DataFrame.from_dict(root_dic, orient='index').reset_index()
     result.columns = ['Token', 'Freq']
     result = result.sort_values(by='Freq', ascending=False)
