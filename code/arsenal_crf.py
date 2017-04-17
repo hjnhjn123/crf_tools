@@ -221,7 +221,7 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
 # CRF testing and predicting
 
 
-def test_crf_prediction(crf, X_test, y_test, test_switch):
+def test_crf_prediction(crf, X_test, y_test, test_switch='all'):
     y_pred = crf.predict(X_test)
 
     if test_switch == 'spc':
@@ -230,6 +230,8 @@ def test_crf_prediction(crf, X_test, y_test, test_switch):
         details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
         details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
         details = pd.DataFrame(details, columns=HEADER_CRF)
+        details = details.sort_values('f1', ascending=False)
+
         return result, details
 
     elif test_switch == 'all':
@@ -260,7 +262,7 @@ def test_crf_prediction(crf, X_test, y_test, test_switch):
 
         details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
         details = pd.DataFrame(details, columns=HEADER_CRF)
-
+        details = details.sort_values('f1', ascending=False)
         return result, details
 
 

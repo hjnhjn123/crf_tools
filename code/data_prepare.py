@@ -9,6 +9,7 @@ HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
+HEADER_EXTRACTED =['Count', 'Token', 'POS', 'NER']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
@@ -187,4 +188,34 @@ def compare_difference(fixed_f, bug_f, out_f, fp_f, header, new_header):
     difference.to_csv(out_f, index=False)
     false_positive = difference[difference['fixed_NER'] == 'O']
     false_positive.to_csv(fp_f, index=False)
+
+
+def extract_outliers(in_f, out_aca, out_com, out_dat, out_eve, out_gpe, out_gov, out_mon, out_pdt, out_ppl, threshold=10):
+    data = pd.read_csv(in_f, engine='c')
+    data.columns = HEADER_EXTRACTED
+    data = data[data['Count'] > threshold]
+
+    data_aca = data[data['NER'].str.endswith('ACA')]
+    data_com = data[data['NER'].str.endswith('COM')]
+    data_dat = data[data['NER'].str.endswith('DAT')]
+    data_eve = data[data['NER'].str.endswith('EVE')]
+    data_gpe = data[data['NER'].str.endswith('GPE')]
+    data_gov = data[data['NER'].str.endswith('GOV')]
+    data_mon = data[data['NER'].str.endswith('MON')]
+    data_pdt = data[data['NER'].str.endswith('PDT')]
+    data_ppl = data[data['NER'].str.endswith('PPL')]
+
+    data_aca.to_csv(out_aca, mode='a')
+    data_com.to_csv(out_com, mode='a')
+    data_dat.to_csv(out_dat, mode='a')
+    data_eve.to_csv(out_eve, mode='a')
+    data_gpe.to_csv(out_gpe, mode='a')
+    data_gov.to_csv(out_gov, mode='a')
+    data_mon.to_csv(out_mon, mode='a')
+    data_pdt.to_csv(out_pdt, mode='a')
+    data_ppl.to_csv(out_ppl, mode='a')
+
+
+
+
 
