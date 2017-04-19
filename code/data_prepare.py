@@ -227,4 +227,46 @@ def get_distribution(in_f, out_f):
     tt.sort_values('Count', ascending=False).to_csv(out_f, index=False)
 
 
+def extract_mutual(in_f1, in_f2, out_f1, out_f2):
+    data1 = pd.read_csv(in_f1, engine='c', header=None)
+    data2 = pd.read_csv(in_f2, engine='c', header=None)
+    data1.columns = HEADER_EXTRACTED
+    data2.columns = HEADER_EXTRACTED
+    data1 = data1[data1['Token'].notnull()]
+    data2 = data2[data2['Token'].notnull()]
+
+
+    data1 = data1.drop(['POS'], axis=1)
+    data2 = data2.drop(['POS'], axis=1)
+    data1 = data1[data1['Token'].str.isalnum()]
+    data2 = data2[data2['Token'].str.isalnum()]
+
+    dd1 = data1.groupby(['Token', 'NER'])
+    dd2 = data2.groupby(['Token', 'NER'])
+    dd1 = dd1.sum().reset_index()
+    dd2 = dd2.sum().reset_index()
+
+    mutual = pd.DataFrame.merge(dd1, dd2, on = ['Token'], how = 'inner')
+    mutual['Ratio'] = mutual['Count_x'] / mutual['Count_y']
+    mutual = mutual.sort_values('Ratio')
+    mutual_tail =  mutual[mutual['Ratio'] > mutual['Ratio'].quantile(0.75)]
+    mutual_head =  mutual[mutual['Ratio'] < mutual['Ratio'].quantile(0.25)]
+
+
+    data1_exl = pd.DataFrame.merge(dd1, dd2, on=['Token'], how='left')
+    data1_exl = data1_exl[data1_exl['Count_y'].isnull()]
+
+    data2_exl = pd.DataFrame.merge(dd1, dd2, on=['Token'], how='right')
+    data2_exl = data2_exl[data2_exl['Count_x'].isnull()]
+
+    df_out1 = pd.concat([mutual_tail, data1_exl], axis=0)
+    df_out1 = df_out1[df_out1['Count_x'] > df_out1['Count_x'].quantile(0.75)]
+    df_out1 = pd.DataFrame(df_out1['Token'])
+
+    df_out2 = pd.concat([mutual_head, data2_exl], axis=0)
+    df_out2 = df_out2[df_out2['Count_y'] > df_out2['Count_y'].quantile(0.75)]
+    df_out2 = pd.DataFrame(df_out2['Token'])
+
+    df_out1.to_csv(out_f1, index=False, header=False)
+    df_out2.to_csv(out_f2, index=False, header=False)
 
