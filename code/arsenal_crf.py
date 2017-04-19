@@ -262,8 +262,8 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='all'):
 
         details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
         details = pd.DataFrame(details, columns=HEADER_CRF)
-        details = details.sort_values('f1', ascending=False)
-        return result, details
+
+        return result, details.sort_values('f1', ascending=False)
 
 
 def crf_predict(crf, new_data, processed_data):
