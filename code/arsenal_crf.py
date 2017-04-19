@@ -6,9 +6,9 @@ from re import findall, compile
 import pandas as pd
 import scipy.stats as sstats
 import sklearn_crfsuite
+from sklearn.metrics import make_scorer
 # from sklearn.grid_search import RandomizedSearchCV
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn.metrics import make_scorer
 from sklearn_crfsuite import metrics
 
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
@@ -71,7 +71,8 @@ def add_one_feature_dict(sent, feature_dic):
 # Feature extraction
 
 
-def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, country, city, com_single, tfidf, tfdf):
+def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, country, city, com_single, product,
+                     tfidf, tfdf):
     """
     Set the feature dict here
     :param word: word itself
@@ -102,6 +103,7 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
         conf_switch + '_com_single': com_single,
         conf_switch + '_city': city,
         conf_switch + '_country': country,
+        conf_switch + '_product': product,
         conf_switch + '_tfidf': tfidf,
         conf_switch + '_tfdf': tfdf,
     }
@@ -109,22 +111,22 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
 
 
 def word2features(sent, i, feature_conf):
-    word, postag, _, name, comp_suffix, city, country, com_single, tfidf, tfdf = sent[i]
+    word, postag, _, name, comp_suffix, city, country, com_single, product, tfidf, tfdf = sent[i]
     features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single,
-                                tfidf, tfdf)
+                                product, tfidf, tfdf)
     if i > 0:
-        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i - 1]
+        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, product1, tfidf1, tfdf1 = sent[i - 1]
         features.update(
             feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1,
-                             com_single1, tfidf1, tfdf1))
+                             com_single1, product1, tfidf1, tfdf1))
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, tfidf1, tfdf1 = sent[i + 1]
+        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, product1, tfidf1, tfdf1 = sent[i + 1]
         features.update(
             feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1, com_single1,
-                             tfidf1, tfdf1))
+                             product1, tfidf1, tfdf1))
     else:
         features['EOS'] = True
 
@@ -257,7 +259,7 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='all'):
 
         result = metrics.flat_f1_score(y_test_converted, y_pred_converted, average='weighted', labels=['1'])
 
-        y_test_converted = [ '0' if j =='O' else '1' for i in y_test for j in i]
+        y_test_converted = ['0' if j == 'O' else '1' for i in y_test for j in i]
         details = metrics.flat_classification_report(y_test_converted, y_pred_converted, digits=3, labels=['1'])
 
         details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]

@@ -13,6 +13,7 @@ current:
   - current_com_single
   - current_city
   - current_country
+  - current_product
   - current_tfidf
   - current_tfdf
 previous:
@@ -25,6 +26,7 @@ previous:
   - previous_com_single
   - previous_city
   - previous_country
+  - previous_product
   - previous_tfidf
   - previous_tfdf
 next:
@@ -37,5 +39,6 @@ next:
   - next_com_single
   - next_city
   - next_country
+  - next_product
   - next_tfidf
   - next_tfdf

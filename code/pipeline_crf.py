@@ -16,21 +16,22 @@ from arsenal_logging import *
 STOP_ROOTS = {'is', 'are', 'was', 'were', 'been', 'be'}
 
 
-def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f):
+def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, product_f, tfdf_f, tfidf_f):
     name, country = line_file2set(name_f), line_file2set(country_f)
-    city, com_single = line_file2set(city_f), line_file2set(com_single_f)
+    city, com_single, product = line_file2set(city_f), line_file2set(com_single_f), line_file2set(product_f)
     com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
     tfidf, tfdf = line_file2dict(tfidf_f), line_file2dict(tfdf_f)
-    return tfdf, tfidf, city, com_single, com_suffix, country, name
+    return tfdf, tfidf, city, com_single, com_suffix, country, name, product
 
 
-def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name):
+def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product):
     added_name = (add_feature_str(chunk, name) for chunk in pos_data)
     added_city = (add_feature_str(chunk, city) for chunk in added_name)
     added_country = (add_feature_str(chunk, country) for chunk in added_city)
     added_com_suffix = (add_feature_str(chunk, com_suffix) for chunk in added_country)
     added_com_single = (add_feature_str(chunk, com_single) for chunk in added_com_suffix)
-    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_com_single)
+    added_com_product = (add_feature_str(chunk, product) for chunk in added_com_single)
+    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_com_product)
     result = [add_one_feature_dict(chunk, tfdf) for chunk in added_tfidf]
     return result
 
@@ -83,12 +84,12 @@ def extract_dep_result(dep_data, ner_candidate, tfidf):
     return root_result
 
 
-def batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f, swtich):
+def batch_loading(dict_conf, crf_f, city_f, com_single_f, com_suffix_f, country_f, name_f, product_f, tfdf_f, tfidf_f, swtich):
     conf = load_yaml_conf(dict_conf)
     crf = jl.load(crf_f) if swtich == 'test' else None
-    features = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f)
-    tfdf, tfidf, city, com_single, com_suffix, country, name = features
-    return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name
+    features = prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, product_f, tfdf_f, tfidf_f)
+    tfdf, tfidf, city, com_single, com_suffix, country, name, product = features
+    return conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name, product
 
 
 ##############################################################################
@@ -149,13 +150,13 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
 
 
 def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f, com_suffix_f,
-                       country_f, name_f, test_switch):
+                       country_f, name_f, product_f, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
-                          'train')
-    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
-    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, product_f, tfdf_f,
+                          tfidf_f, 'train')
+    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name, product = loads
+    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product)
+    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product)
     basic_logging('Adding features ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
@@ -169,14 +170,14 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
 
 
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f,
-                                com_suffix_f, country_f, name_f, cv, iteration, test_switch):
+                                com_suffix_f, country_f, name_f, product_f, cv, iteration, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
 
-    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
-                          'train')
-    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
-    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
-    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
+    loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, product_f, tfdf_f,
+                          tfidf_f, 'train')
+    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name, product = loads
+    train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product)
+    test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product)
     basic_logging('Adding features ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
