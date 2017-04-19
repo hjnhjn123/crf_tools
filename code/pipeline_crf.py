@@ -153,7 +153,7 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           'train')
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
+    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     basic_logging('Adding features ends')
@@ -171,9 +171,10 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, cit
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, tfdf_f, tfidf_f, city_f, com_single_f,
                                 com_suffix_f, country_f, name_f, cv, iteration, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
+
     loads = batch_loading(dict_conf, '', city_f, com_single_f, com_suffix_f, country_f, name_f, tfdf_f, tfidf_f,
                           'train')
-    conf, crf, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
+    conf, _, tfdf, tfidf, city, com_single, com_suffix, country, name = loads
     train_sents = batch_add_features(train_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     test_sents = batch_add_features(test_data, tfdf, tfidf, city, com_single, com_suffix, country, name)
     basic_logging('Adding features ends')

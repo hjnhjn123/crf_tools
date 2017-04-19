@@ -10,6 +10,8 @@ HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
 HEADER_EXTRACTED =['Count', 'Token', 'POS', 'NER']
+HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
+
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
@@ -190,7 +192,7 @@ def compare_difference(fixed_f, bug_f, out_f, fp_f, header, new_header):
     false_positive.to_csv(fp_f, index=False)
 
 
-def extract_outliers(in_f, out_aca, out_com, out_dat, out_eve, out_gpe, out_gov, out_mon, out_pdt, out_ppl, threshold=10):
+def extract_outliers(in_f, out_aca, out_com, out_dat, out_evt, out_gpe, out_gov, out_mon, out_pdt, out_ppl, threshold=10):
     data = pd.read_csv(in_f, engine='c')
     data.columns = HEADER_EXTRACTED
     data = data[data['Count'] > threshold]
@@ -198,7 +200,7 @@ def extract_outliers(in_f, out_aca, out_com, out_dat, out_eve, out_gpe, out_gov,
     data_aca = data[data['NER'].str.endswith('ACA')]
     data_com = data[data['NER'].str.endswith('COM')]
     data_dat = data[data['NER'].str.endswith('DAT')]
-    data_eve = data[data['NER'].str.endswith('EVE')]
+    data_evt = data[data['NER'].str.endswith('EVT')]
     data_gpe = data[data['NER'].str.endswith('GPE')]
     data_gov = data[data['NER'].str.endswith('GOV')]
     data_mon = data[data['NER'].str.endswith('MON')]
@@ -208,7 +210,7 @@ def extract_outliers(in_f, out_aca, out_com, out_dat, out_eve, out_gpe, out_gov,
     data_aca.to_csv(out_aca, mode='a')
     data_com.to_csv(out_com, mode='a')
     data_dat.to_csv(out_dat, mode='a')
-    data_eve.to_csv(out_eve, mode='a')
+    data_evt.to_csv(out_evt, mode='a')
     data_gpe.to_csv(out_gpe, mode='a')
     data_gov.to_csv(out_gov, mode='a')
     data_mon.to_csv(out_mon, mode='a')
@@ -216,6 +218,13 @@ def extract_outliers(in_f, out_aca, out_com, out_dat, out_eve, out_gpe, out_gov,
     data_ppl.to_csv(out_ppl, mode='a')
 
 
+def get_distribution(in_f, out_f):
+    tt = pd.read_csv(in_f, engine='c')
+    tt.columns = HEADER_ANNOTATION
+    tt = tt.groupby('NER').size().reset_index()
+    tt.columns = ['NER', 'Count']
+    tt['Percentage'] = np.round(tt.Count / sum(tt.Count) * 100, 3)
+    tt.sort_values('Count', ascending=False).to_csv(out_f, index=False)
 
 
 
