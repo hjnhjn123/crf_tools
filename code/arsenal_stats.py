@@ -79,24 +79,30 @@ def get_last_files(base, time_range):
     return [''.join((base, ''.join(i.split('-')), '.csv')) for i in time_range]
 
 
-def choose_csv(in_file, time_format, day, header, sep, engine):
+########################################################################################################################
+
+
+## HDF5 Processing
+
+
+def df2hdf(dfs, out_hdf, hdf_keys, mode='a'):
     """
-    :param in_file: the file DIR
-    :param time_format: set time category
-    :param day: set date
-    :param header: set header for extraction
-    :param sep: set separator for extraction
-    :return: a concated DF
+    Store single or multiple dfs to one hdf5 file
+    :param dfs: single of multiple dfs
+    :param out_hdf: the output file
+    :param hdf_keys: [key for hdf]
     """
-    if time_format == 'daily':
-        in_file = in_file + day + '.csv'
-        return csv2pd(open(in_file, 'r'), get_header(in_file, sep), header, sep=sep, engine=engine)
-    elif time_format == 'weekly':
-        return pd.concat([csv2pd(open(i, 'r'), get_header(i, sep), header, sep=sep, engine=engine) for i in
-                          get_last_files(in_file, get_past_week(day))])
-    elif time_format == 'monthly':
-        return pd.concat([csv2pd(open(i, 'r'), get_header(i, sep), header, sep=sep, engine=engine) for i in
-                          get_last_files(in_file, get_past_month(day))])
+    for j, k in zip(dfs, hdf_keys):
+        j.to_hdf(out_hdf, k, table= True, mode=mode)
+
+
+def hdf2single_df(in_df, hdf_keys):
+    """
+    Read a hdf5 file and return all dfs
+    :param in_df: a hdf5 file 
+    :param hdf_keys: 
+    """
+    return [pd.read_hdf(in_df, i) for i in hdf_keys]
 
 
 ########################################################################################################################
