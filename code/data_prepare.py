@@ -4,15 +4,14 @@ from scipy import stats
 
 from arsenal_nlp import *
 from arsenal_spacy import *
-from arsenal_stats import  *
+from arsenal_stats import *
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
-HEADER_EXTRACTED =['Count', 'Token', 'POS', 'NER']
+HEADER_EXTRACTED = ['Count', 'Token', 'POS', 'NER']
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
-
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
@@ -193,32 +192,6 @@ def compare_difference(fixed_f, bug_f, out_f, fp_f, header, new_header):
     false_positive.to_csv(fp_f, index=False)
 
 
-def extract_outliers(in_f, out_aca, out_com, out_dat, out_evt, out_gpe, out_gov, out_mon, out_pdt, out_ppl, threshold=10):
-    data = pd.read_csv(in_f, engine='c')
-    data.columns = HEADER_EXTRACTED
-    data = data[data['Count'] > threshold]
-
-    data_aca = data[data['NER'].str.endswith('ACA')]
-    data_com = data[data['NER'].str.endswith('COM')]
-    data_dat = data[data['NER'].str.endswith('DAT')]
-    data_evt = data[data['NER'].str.endswith('EVT')]
-    data_gpe = data[data['NER'].str.endswith('GPE')]
-    data_gov = data[data['NER'].str.endswith('GOV')]
-    data_mon = data[data['NER'].str.endswith('MON')]
-    data_pdt = data[data['NER'].str.endswith('PDT')]
-    data_ppl = data[data['NER'].str.endswith('PPL')]
-
-    data_aca.to_csv(out_aca, mode='a')
-    data_com.to_csv(out_com, mode='a')
-    data_dat.to_csv(out_dat, mode='a')
-    data_evt.to_csv(out_evt, mode='a')
-    data_gpe.to_csv(out_gpe, mode='a')
-    data_gov.to_csv(out_gov, mode='a')
-    data_mon.to_csv(out_mon, mode='a')
-    data_pdt.to_csv(out_pdt, mode='a')
-    data_ppl.to_csv(out_ppl, mode='a')
-
-
 def get_distribution(in_f, out_f):
     tt = pd.read_csv(in_f, engine='c')
     tt.columns = HEADER_ANNOTATION
@@ -236,7 +209,6 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
     data1 = data1[data1['Token'].notnull()]
     data2 = data2[data2['Token'].notnull()]
 
-
     data1 = data1.drop(['POS'], axis=1)
     data2 = data2.drop(['POS'], axis=1)
     data1 = data1[data1['Token'].str.isalnum()]
@@ -247,12 +219,11 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
     dd1 = dd1.sum().reset_index()
     dd2 = dd2.sum().reset_index()
 
-    mutual = pd.DataFrame.merge(dd1, dd2, on = ['Token'], how = 'inner')
+    mutual = pd.DataFrame.merge(dd1, dd2, on=['Token'], how='inner')
     mutual['Ratio'] = mutual['Count_x'] / mutual['Count_y']
     mutual = mutual.sort_values('Ratio')
-    mutual_tail =  mutual[mutual['Ratio'] > mutual['Ratio'].quantile(0.75)]
-    mutual_head =  mutual[mutual['Ratio'] < mutual['Ratio'].quantile(0.25)]
-
+    mutual_tail = mutual[mutual['Ratio'] > mutual['Ratio'].quantile(0.75)]
+    mutual_head = mutual[mutual['Ratio'] < mutual['Ratio'].quantile(0.25)]
 
     data1_exl = pd.DataFrame.merge(dd1, dd2, on=['Token'], how='left')
     data1_exl = data1_exl[data1_exl['Count_y'].isnull()]
