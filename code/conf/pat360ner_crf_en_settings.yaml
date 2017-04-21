@@ -14,6 +14,7 @@ current:
   - current_city
   - current_country
   - current_product
+  - current_event
   - current_tfidf
   - current_tfdf
 previous:
@@ -27,6 +28,7 @@ previous:
   - previous_city
   - previous_country
   - previous_product
+  - previous_event
   - previous_tfidf
   - previous_tfdf
 next:
@@ -40,5 +42,6 @@ next:
   - next_city
   - next_country
   - next_product
+  - next_event
   - next_tfidf
   - next_tfdf

@@ -4,6 +4,7 @@ from scipy import stats
 
 from arsenal_nlp import *
 from arsenal_spacy import *
+from arsenal_stats import  *
 
 HEADER_FS = ['fact', 'entity_proper_name', 'entity_type']
 HEADER_SN = ['factset_entity_id', 'short_name']
@@ -270,3 +271,10 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
     df_out1.to_csv(out_f1, index=False, header=False)
     df_out2.to_csv(out_f2, index=False, header=False)
 
+
+##############################################################################
+
+
+def prepare_feature_hdf(output_f, f_names, *files, mode='a'):
+    datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
+    df2hdf(output_f, datas, f_names, mode)
