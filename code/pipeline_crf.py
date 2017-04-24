@@ -32,15 +32,13 @@ def prepare_features(city_df, com_single_df, com_suffix_df, country_df, name_df,
     return tfdf, tfidf, city, com_single, com_suffix, country, name,
 
 
-def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product, event):
+def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name):
     added_name = (add_feature_str(chunk, name) for chunk in pos_data)
     added_city = (add_feature_str(chunk, city) for chunk in added_name)
     added_country = (add_feature_str(chunk, country) for chunk in added_city)
     added_com_suffix = (add_feature_str(chunk, com_suffix) for chunk in added_country)
     added_com_single = (add_feature_str(chunk, com_single) for chunk in added_com_suffix)
-    added_com_product = (add_feature_str(chunk, product) for chunk in added_com_single)
-    added_com_event = (add_feature_str(chunk, event) for chunk in added_com_product)
-    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_com_event)
+    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_com_single)
     result = [add_one_feature_dict(chunk, tfdf) for chunk in added_tfidf]
     return result
 
