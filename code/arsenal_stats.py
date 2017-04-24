@@ -96,7 +96,7 @@ def df2hdf(out_hdf, dfs, hdf_keys, mode='a'):
         return j.to_hdf(out_hdf, k, table= True, mode=mode)
 
 
-def hdf2single_df(in_df, hdf_keys):
+def hdf2df(in_df, hdf_keys):
     """
     Read a hdf5 file and return all dfs
     :param in_df: a hdf5 file 
