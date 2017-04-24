@@ -248,4 +248,4 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
 
 def prepare_feature_hdf(output_f, f_names, *files, mode='a'):
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
-    df2hdf(output_f, datas, f_names, mode)
+    return df2hdf(output_f, datas, f_names, mode)

@@ -93,7 +93,7 @@ def df2hdf(out_hdf, dfs, hdf_keys, mode='a'):
     :param hdf_keys: [key for hdf]
     """
     for j, k in zip(dfs, hdf_keys):
-        j.to_hdf(out_hdf, k, table= True, mode=mode)
+        return j.to_hdf(out_hdf, k, table= True, mode=mode)
 
 
 def hdf2single_df(in_df, hdf_keys):
