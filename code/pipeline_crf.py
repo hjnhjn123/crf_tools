@@ -24,6 +24,14 @@ def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, 
     return tfdf, tfidf, city, com_single, com_suffix, country, name, product, event
 
 
+def prepare_features(city_df, com_single_df, com_suffix_df, country_df, name_df, tfdf_df, tfidf_df):
+    name, country = name_df.as_matrix(), country_df.as_matrix(),
+    city, com_single = city_df.as_matrix(), com_single_df.as_matrix()
+    com_suffix = {i.title() for i in com_suffix_df.as_matrix()}
+    tfidf, tfdf = line_file2dict(tfidf_df), line_file2dict(tfdf_df)
+    return tfdf, tfidf, city, com_single, com_suffix, country, name,
+
+
 def batch_add_features(pos_data, tfdf, tfidf, city, com_single, com_suffix, country, name, product, event):
     added_name = (add_feature_str(chunk, name) for chunk in pos_data)
     added_city = (add_feature_str(chunk, city) for chunk in added_name)
