@@ -184,9 +184,9 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_key
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys, cv, iteration, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
-    conf, _, city, com_single, com_suffix, country, name, tfdf, tfidf = loads
-    train_sents = batch_add_features(train_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
-    test_sents = batch_add_features(test_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
+    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
+    train_sents = batch_add_features(train_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
+    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
