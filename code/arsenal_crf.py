@@ -71,8 +71,7 @@ def add_one_feature_dict(sent, feature_dic):
 # Feature extraction
 
 
-def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, country, city, com_single, product,
-                     event, tfidf, tfdf):
+def feature_selector(word, feature_conf, conf_switch, postag, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf):
     """
     Set the feature dict here
     :param word: word itself
@@ -98,7 +97,7 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
         conf_switch + '_word.isdigit()': word.isdigit(),
         conf_switch + '_word.islower()': word.islower(),
         conf_switch + '_postag': postag,
-        conf_switch + '_com_aca': com_aca,        
+        conf_switch + '_aca': aca,        
         conf_switch + '_com_single': com_single,
         conf_switch + '_com_suffix': com_suffix,
         conf_switch + '_location': location,
@@ -111,6 +110,7 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
 
 
 def word2features(sent, i, feature_conf):
+
     word, postag, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = sent[i]
     features = feature_selector(word, feature_conf, 'current', postag, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     if i > 0:
