@@ -14,7 +14,8 @@ from arsenal_spacy import *
 from arsenal_stats import *
 
 STOP_ROOTS = {'is', 'are', 'was', 'were', 'been', 'be'}
-HDF_KEYS = ['city', 'com_single', 'com_suffix', 'country', 'name', 'tfdf', 'tfidf']
+# HDF_KEYS = ['city', 'com_single', 'com_suffix', 'country', 'name', 'tfdf', 'tfidf']
+HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
 
 
 def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, product_f, event_f, tfdf_f, tfidf_f):
@@ -25,21 +26,24 @@ def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, 
     return tfdf, tfidf, city, com_single, com_suffix, country, name, product, event
 
 
-def prepare_features(city_df, com_single_df, com_suffix_df, country_df, name_df, tfdf_df, tfidf_df):
-    name, country = name_df.as_matrix(), country_df.as_matrix(),
-    city, com_single = city_df.as_matrix(), com_single_df.as_matrix()
-    com_suffix = {i.title() for i in com_suffix_df.as_matrix()}
-    tfidf, tfdf = line_file2dict(tfidf_df), line_file2dict(tfdf_df)
-    return tfdf, tfidf, city, com_single, com_suffix, country, name,
+def prepare_features(aca_df, com_single_df, com_suffix_df, location_df, name_df, ticker_df, tfdf_df, tfidf_df):
+    aca, com_single = df2set(aca_df), df2set(com_single_df)
+    name, location = df2set(name_df), df2set(location_df)
+    ticker = df2set(ticker_df)
+    com_suffix = {i.title() for i in df2set(com_suffix_df)}
+    tfdf = {k: v for (k, v) in zip(tfdf_df.Token, tfdf_df.Value)}
+    tfidf = {k: v for (k, v) in zip(tfidf_df.Token, tfidf_df.Value)}
+    return aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf
 
 
-def batch_add_features(pos_data, city, com_single, com_suffix, country, name, tfdf, tfidf):
-    added_name = (add_feature_str(chunk, name) for chunk in pos_data)
-    added_city = (add_feature_str(chunk, city) for chunk in added_name)
-    added_country = (add_feature_str(chunk, country) for chunk in added_city)
-    added_com_suffix = (add_feature_str(chunk, com_suffix) for chunk in added_country)
-    added_com_single = (add_feature_str(chunk, com_single) for chunk in added_com_suffix)
-    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_com_single)
+def batch_add_features(pos_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf):
+    added_aca = (add_feature_str(chunk, aca) for chunk in pos_data)
+    added_com_single = (add_feature_str(chunk, com_single) for chunk in added_aca)
+    added_com_suffix = (add_feature_str(chunk, com_suffix) for chunk in added_com_single)
+    added_location  = (add_feature_str(chunk, location) for chunk in added_com_suffix)
+    added_name  = (add_feature_str(chunk, name) for chunk in added_location)
+    added_ticker  = (add_feature_str(chunk, name) for chunk in added_name)
+    added_tfidf = (add_one_feature_dict(chunk, tfidf) for chunk in added_ticker)
     result = [add_one_feature_dict(chunk, tfdf) for chunk in added_tfidf]
     return result
 
@@ -92,14 +96,14 @@ def extract_dep_result(dep_data, ner_candidate, tfidf):
     return root_result
 
 
-def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, swtich):
+def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
     conf = load_yaml_conf(dict_conf)
-    crf = jl.load(crf_f) if swtich == 'test' else None
+    crf = jl.load(crf_f) if switch == 'test' else None
     loads = hdf2df(feature_hdf, hdf_keys)
-    city_df, com_single_df, com_suffix_df, country_df, name_df, tfdf_df, tfidf_df = loads
-    features = prepare_features(city_df, com_single_df, com_suffix_df, country_df, name_df, tfdf_df, tfidf_df)
-    city, com_single, com_suffix, country, name, tfdf, tfidf = features
-    return conf, crf, city, com_single, com_suffix, country, name, tfdf, tfidf
+    aca_df, com_single_df, com_suffix_df, location_df, name_df, ticker_df, tfdf_df, tfidf_df = loads
+    features = prepare_features(aca_df, com_single_df, com_suffix_df, location_df, name_df, ticker_df, tfdf_df, tfidf_df)
+    aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = features
+    return conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf
 
 
 ##############################################################################
@@ -162,9 +166,9 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
 def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
-    conf, _, city, com_single, com_suffix, country, name, tfdf, tfidf = loads
-    train_sents = batch_add_features(train_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
-    test_sents = batch_add_features(test_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
+    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
+    train_sents = batch_add_features(train_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
+    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
@@ -180,7 +184,7 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_key
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys, cv, iteration, test_switch):
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
-    conf, '', city, com_single, com_suffix, country, name, tfdf, tfidf = loads
+    conf, _, city, com_single, com_suffix, country, name, tfdf, tfidf = loads
     train_sents = batch_add_features(train_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
     test_sents = batch_add_features(test_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
     basic_logging('Adding features ends')
