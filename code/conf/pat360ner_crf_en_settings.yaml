@@ -8,13 +8,12 @@ current:
   - current_word.isdigit()
   - current_word.islower()
   - current_postag
-  - current_name
-  - current_comp_suffix
+  - current_aca
   - current_com_single
-  - current_city
-  - current_country
-  - current_product
-  - current_event
+  - current_comp_suffix
+  - current_location
+  - current_name
+  - current_ticker
   - current_tfidf
   - current_tfdf
 previous:
@@ -22,13 +21,12 @@ previous:
   - previous_word.istitle()
   - previous_word.isupper()
   - previous_postag
-  - previous_name
-  - previous_com_suffix
+  - previous_aca
   - previous_com_single
-  - previous_city
-  - previous_country
-  - previous_product
-  - previous_event
+  - previous_com_suffix  
+  - previous_location
+  - previous_name  
+  - previous_ticker
   - previous_tfidf
   - previous_tfdf
 next:
@@ -36,12 +34,11 @@ next:
   - next_word.istitle()
   - next_word.isupper()
   - next_postag
-  - next_name
+  - next_aca
+  - next_com_single  
   - next_com_suffix
-  - next_com_single
-  - next_city
-  - next_country
-  - next_product
-  - next_event
+  - next_location  
+  - next_name
+  - next_ticker
   - next_tfidf
   - next_tfdf
