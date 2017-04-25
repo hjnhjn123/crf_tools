@@ -23,14 +23,6 @@ import hashlib
 # CSV processing
 
 
-def pd2csv(pandas_df, out_file):
-    """
-    write a pandas DataFrame to a file
-    """
-    oo = open(out_file, 'w')
-    pd.DataFrame.to_csv(pandas_df, oo)
-
-
 def get_column_index(column, col_list):
     """
     :param column: the COLUMN_CHAT constant
@@ -474,6 +466,15 @@ def line_file2dict(in_file):
             line = i.split(',')
             result[line[0]] = line[1].strip('\r\n')
         return result
+
+
+def df2set(df):
+    return {i for j in df.as_matrix() for i in j}
+
+
+def df2list(df):
+    return [i for j in df.as_matrix() for i in j]
+
 ########################################################################################################################
 
 
