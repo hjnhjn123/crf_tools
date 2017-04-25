@@ -258,6 +258,6 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
 ##############################################################################
 
 
-def prepare_feature_hdf(output_f, group_names, *files, mode='a'):
+def prepare_feature_hdf(output_f, hdf_kesys, *files, mode='a'):
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
-    df2hdf(output_f, datas, group_names, mode)
+    df2hdf(output_f, datas, hdf_kesys, mode)
