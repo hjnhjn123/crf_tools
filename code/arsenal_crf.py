@@ -98,13 +98,12 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
         conf_switch + '_word.isdigit()': word.isdigit(),
         conf_switch + '_word.islower()': word.islower(),
         conf_switch + '_postag': postag,
-        conf_switch + '_name': name,
-        conf_switch + '_comp_suffix': com_suffix,
+        conf_switch + '_com_aca': com_aca,        
         conf_switch + '_com_single': com_single,
-        conf_switch + '_city': city,
-        conf_switch + '_country': country,
-        conf_switch + '_product': product,
-        conf_switch + '_event': event,
+        conf_switch + '_com_suffix': com_suffix,
+        conf_switch + '_location': location,
+        conf_switch + '_name': name,
+        conf_switch + '_ticker': ticker,
         conf_switch + '_tfidf': tfidf,
         conf_switch + '_tfdf': tfdf,
     }
@@ -112,22 +111,19 @@ def feature_selector(word, feature_conf, conf_switch, postag, name, com_suffix, 
 
 
 def word2features(sent, i, feature_conf):
-    word, postag, _, name, comp_suffix, city, country, com_single, product, event, tfidf, tfdf = sent[i]
-    features = feature_selector(word, feature_conf, 'current', postag, name, comp_suffix, country, city, com_single,
-                                product, tfidf, tfdf, event)
+    word, postag, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = sent[i]
+    features = feature_selector(word, feature_conf, 'current', postag, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     if i > 0:
-        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, product1, event1, tfidf1, tfdf1 = sent[i - 1]
+        word1, postag1, _, aca1, com_single1, com_suffix1, location1, name1, ticker1, tfidf1, tfdf1 = sent[i - 1]
         features.update(
-            feature_selector(word1, feature_conf, 'previous', postag1, name1, comp_suffix1, country1, city1,
-                             com_single1, product1, event1, tfidf1, tfdf1))
+            feature_selector(word1, feature_conf, 'previous', postag1, aca1, com_single1, com_suffix1, location1, name1, ticker1, tfidf1, tfdf1))
     else:
         features['BOS'] = True
 
     if i < len(sent) - 1:
-        word1, postag1, _, name1, comp_suffix1, city1, country1, com_single1, product1, event1, tfidf1, tfdf1 = sent[i + 1]
+        word1, postag1, _, aca1, com_single1, com_suffix1, location1, name1, ticker1, tfidf1, tfdf1 = sent[i + 1]
         features.update(
-            feature_selector(word1, feature_conf, 'next', postag1, name1, comp_suffix1, country1, city1, com_single1,
-                             product1, event1, tfidf1, tfdf1))
+            feature_selector(word1, feature_conf, 'next', postag1, aca1, com_single1, com_suffix1, location1, name1, ticker1, tfidf1, tfdf1))
     else:
         features['EOS'] = True
 
