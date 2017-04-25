@@ -19,6 +19,8 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
 LABEL_ANS = ['category', 'nname_en']
 
 
+HDF_GROUP_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
+
 ##############################################################################
 
 
@@ -78,6 +80,16 @@ def extract_factset_short_names(in_file, out_single, out_multi):
     multi_name = multi_name.drop(['entity_proper_name', 'entity_type', 'factset_entity_id'], axis=1)
     single_name.to_csv(out_single, index=False)
     multi_name.to_csv(out_multi, index=False)
+
+
+def extract_institute(institute_json, out_csv):
+    grid = pd.read_json('/Users/acepor/Downloads/grid.json', orient='institutes')
+    gg = [i['acronyms'] for i in grid['institutes'].values.tolist() if i['status'] != 'redirected' and i['status'] != 'obsolete']
+    ii = sorted(list(set(i for j in gg for i in j if len(i.split()) == 1)))
+    pd.DataFrame(ii).to_csv(out_csv, index=False, header=None)
+
+
+
 
 
 ##############################################################################
@@ -246,6 +258,6 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
 ##############################################################################
 
 
-def prepare_feature_hdf(output_f, f_names, *files, mode='a'):
+def prepare_feature_hdf(output_f, group_names, *files, mode='a'):
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
-    return df2hdf(output_f, datas, f_names, mode)
+    return df2hdf(output_f, datas, group_names, mode)
