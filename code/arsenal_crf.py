@@ -61,7 +61,7 @@ def add_one_feature_dict(sent, feature_dic):
     :param feature_set: {feature1:value1, feature2:value2}
     :return: [(word, pos, ner, other_features)]
     """
-    feature_list = [str(feature_dic.get(line[0])) if line[0] in feature_dic.keys() else '0' for line in sent]
+    feature_list = [str(feature_dic.get(line[0].lower())) if line[0].lower() in feature_dic.keys() else '0' for line in sent]
     return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
 
 
