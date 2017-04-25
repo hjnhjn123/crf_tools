@@ -19,7 +19,7 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
 LABEL_ANS = ['category', 'nname_en']
 
 
-HDF_GROUP_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
+HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
 
 ##############################################################################
 
@@ -260,4 +260,4 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
 
 def prepare_feature_hdf(output_f, group_names, *files, mode='a'):
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
-    return df2hdf(output_f, datas, group_names, mode)
+    df2hdf(output_f, datas, group_names, mode)
