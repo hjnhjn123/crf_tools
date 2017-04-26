@@ -205,8 +205,8 @@ def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, feature_hdf
 
 
 def pipeline_pos_crf(in_f, out_f, crf_f, dict_conf, feature_hdf, hdf_keys, switch, cols, pieces=10):
-    loads = batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, 'train')
-    conf, crf, city, com_single, com_suffix, country, name, tfdf, tfidf = loads
+    loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'test')
+    conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads   
     raw_df = pd.read_json(in_f, lines=True)
     basic_logging('Reading ends')
     data = pd.DataFrame(raw_df.result.values.tolist())['content'].reset_index()
@@ -221,7 +221,7 @@ def pipeline_pos_crf(in_f, out_f, crf_f, dict_conf, feature_hdf, hdf_keys, switc
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
-    test_sents = batch_add_features(pos_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
+    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
@@ -233,10 +233,10 @@ def pipeline_pos_crf(in_f, out_f, crf_f, dict_conf, feature_hdf, hdf_keys, switc
 
 
 def pipeline_crf_test(test_f, dict_conf, crf_f, feature_hdf, hdf_keys, switch, test_switch):
-    test_data = process_annotated(test_f)
-    loads = batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch)
-    conf, crf, city, com_single, com_suffix, country, name, tfdf, tfidf = loads
-    test_sents = batch_add_features(test_data, city, com_single, com_suffix, country, name, tfdf, tfidf)
+    loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'test')
+    conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads 
+    test_data = process_annotated(test_f)    
+    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     basic_logging('Conversion ends')
     result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
