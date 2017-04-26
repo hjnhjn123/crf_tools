@@ -164,9 +164,9 @@ def streaming_pos_dep_crf(in_f, crf, conf, tfdf, tfidf, city, com_single, com_su
 
 
 def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys, test_switch):
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
-    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
+    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads       
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
@@ -182,9 +182,9 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_key
 
 
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys, cv, iteration, test_switch):
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
-    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
+    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads    
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
     train_sents = batch_add_features(train_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
