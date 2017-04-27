@@ -261,3 +261,62 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
 def prepare_feature_hdf(output_f, hdf_kesys, *files, mode='a'):
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
     df2hdf(output_f, datas, hdf_kesys, mode)
+
+
+##############################################################################
+
+
+def extract_labeled_ner(text):
+    ner_text = [i for i in spacy_parser(text, 'chk', '') if '##' in i]
+
+
+
+
+def convert_html2ner_(sent):
+    """sent = 'The |||Obama||person||| administration work
+     ed for years to bring the Trans-Pacific Partnership
+     to life, or close to it. |||Donald Trump||person||| 
+     erased that with the sweep |||of a pen||person|||.'
+     """
+    sent_list = spacy_parser(sent, 'txt', '')
+    clean_list = [i.replace('|||', '').replace('||person', '').replace('||company', '') for i in sent.split()]
+
+    
+    # sent_list = spacy_parser(sent, 'txt', '')
+    
+
+    ner_list = ['O' for i in range(len(text))]
+    for i in range(len(sent_list)):
+        if sent_list[i].startswith('|||') and sent_list[i].endswith('person|||'):
+            ner_list[i] = 'U-PPL'
+            # clean_list[i] = clean_list[i].replace('||person##', '').replace('##', '')
+        elif sent_list[i].startswith('|||') and sent_list[i].endswith('company|||'):
+            ner_list[i] = 'U-COM'
+            # clean_list[i] = clean_list[i].replace('||company##', '').replace('##', '')
+        elif sent_list[i].endswith('person|||'):
+            ner_list[i] = 'L-PPL'
+            # clean_list[i] = clean_list[i].replace('||person##', '')          
+        elif sent_list[i].endswith('company|||'):
+            ner_list[i] = 'L-COM'
+            # clean_list[i] = clean_list[i].replace('||company##', '')                      
+        elif sent_list[i].startswith('|||'):
+            ner_list[i] = 'B'
+            # clean_list[i] = clean_list[i].replace('##', '')                      
+
+    for i in range(-1, -len(ner_list)-1, -1):
+        if ner_list[i] == 'L-PPL':
+            if ner_list[i-1] == 'B':
+                ner_list[i-1] = 'B-PPL'
+            elif ner_list[i-2] == 'B':
+                ner_list[i-1] = 'I-PPL'
+                ner_list[i-2] = 'B-PPL'
+        elif ner_list[i] == 'L-COM':
+            if ner_list[i-1] == 'B':
+                ner_list[i-1] = 'B-COM'
+            elif ner_listner[i-2] == 'B':
+                ner_lister[i-1] = 'I-COM'
+                ner_list[i-2] = 'B-COM'
+    pos_text = spacy_parser(' '.join(clean_list), 'txt+pos', '')
+    crf_text = [m + (n,) for m, n in zip(pos_text, ner_list)]
+    return crf_text
+
