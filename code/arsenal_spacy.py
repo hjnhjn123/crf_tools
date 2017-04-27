@@ -44,7 +44,8 @@ def spacy_parser(text, switches, label):
               'vec': spacy_dic['vec'],
               'crf': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
               'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep'])),
-              'pos+dep': (i[:2] + ('O',) + (i[2],) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep']))
+              'pos+dep': (i[:2] + ('O',) + (i[2],) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep'])),
+              'txt+pos': (i for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
               }
     return list(result[switches])
 
