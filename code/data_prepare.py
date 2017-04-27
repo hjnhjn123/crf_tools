@@ -273,35 +273,25 @@ def extract_labeled_ner(text):
 
 
 def convert_html2ner_(sent):
-    """sent = 'The |||Obama||person||| administration work
-     ed for years to bring the Trans-Pacific Partnership
-     to life, or close to it. |||Donald Trump||person||| 
-     erased that with the sweep |||of a pen||person|||.'
+    """
+    sent = 'The |||Obama||person||| administration worked for years to bring the Trans-Pacific Partnership
+     to life, or close to it. |||Donald Trump||person||| erased that with the sweep |||of a pen||person|||.'
      """
     sent_list = spacy_parser(sent, 'txt', '')
     clean_list = [i.replace('|||', '').replace('||person', '').replace('||company', '') for i in sent.split()]
-
-    
-    # sent_list = spacy_parser(sent, 'txt', '')
-    
 
     ner_list = ['O' for i in range(len(text))]
     for i in range(len(sent_list)):
         if sent_list[i].startswith('|||') and sent_list[i].endswith('person|||'):
             ner_list[i] = 'U-PPL'
-            # clean_list[i] = clean_list[i].replace('||person##', '').replace('##', '')
         elif sent_list[i].startswith('|||') and sent_list[i].endswith('company|||'):
             ner_list[i] = 'U-COM'
-            # clean_list[i] = clean_list[i].replace('||company##', '').replace('##', '')
         elif sent_list[i].endswith('person|||'):
             ner_list[i] = 'L-PPL'
-            # clean_list[i] = clean_list[i].replace('||person##', '')          
         elif sent_list[i].endswith('company|||'):
             ner_list[i] = 'L-COM'
-            # clean_list[i] = clean_list[i].replace('||company##', '')                      
         elif sent_list[i].startswith('|||'):
-            ner_list[i] = 'B'
-            # clean_list[i] = clean_list[i].replace('##', '')                      
+            ner_list[i] = 'B'            
 
     for i in range(-1, -len(ner_list)-1, -1):
         if ner_list[i] == 'L-PPL':
