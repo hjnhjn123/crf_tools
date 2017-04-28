@@ -267,12 +267,12 @@ def prepare_feature_hdf(output_f, hdf_kesys, *files, mode='a'):
 
 
 def extract_labeled_ner(text):
-    ner_text = [i for i in spacy_parser(text, 'chk', '') if '##' in i]
+    ner_text = (i for i in spacy_parser(text, 'chk', '') if '##' in i)
+    crf_texts = [convert_html2ner(sent) for sent in ner_text]
+    return crf_texts
+    
 
-
-
-
-def convert_html2ner_(sent):
+def convert_html2ner(sent):
     """
     sent = 'The |||Obama||person||| administration worked for years to bring the Trans-Pacific Partnership
      to life, or close to it. |||Donald Trump||person||| erased that with the sweep |||of a pen||person|||.'
