@@ -89,7 +89,7 @@ def streaming_pos_crf(in_f, crf, conf, aca, com_single, com_suffix, location, na
 
     parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
     prepared_data = [list(x[1]) for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
+    test_sents = batch_add_features(prepared_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
@@ -118,8 +118,10 @@ def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_key
     train_sents = batch_add_features(train_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
-    X_train, y_train = feed_crf_trainer(train_sents, conf)
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
+    X_train, y_train = feed_crf_trainer_(train_sents, conf)
+    X_train, y_train = feed_crf_trainer_(train_sents, conf)
+    
+    X_test, y_test = feed_crf_trainer_(test_sents, [aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf])
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     basic_logging('Training ends')
@@ -169,7 +171,7 @@ def pipeline_pos_crf(in_f, out_f, crf_f, dict_conf, feature_hdf, hdf_keys, switc
     parsed_data = chain.from_iterable(parsed_data)
     pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
-    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
+    test_sents = batch_add_features(pos_data, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf)
     basic_logging('Adding features ends')
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
