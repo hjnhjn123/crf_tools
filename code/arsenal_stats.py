@@ -3,7 +3,6 @@ from __future__ import (unicode_literals, print_function, division)
 
 import random
 from collections import OrderedDict, defaultdict
-from configparser import ConfigParser
 from datetime import date, datetime
 from functools import reduce
 from itertools import islice
@@ -259,19 +258,6 @@ def rename_series(df, old_col, new_col):
     :return: a pd with new column name
     """
     return df.rename(columns={old_col: new_col})
-
-
-def prepare_keywords(keywords, in_file):
-    """
-    :param keywords:  set the keyword items here
-    :param in_file: a keyword CONF file
-    :return: [{keywords}]
-    """
-    config = ConfigParser()
-    config.read(in_file)
-    # keyword_lists = [{to_uni(i) for i in config.get('CONF', keyword).split(',')} for keyword in keywords]
-    keyword_dic = {keyword: {i for i in config.get('CONF', keyword).split(',')} for keyword in keywords}
-    return keyword_dic
 
 
 ########################################################################################################################
