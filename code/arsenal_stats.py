@@ -468,12 +468,22 @@ def line_file2dict(in_file):
         return result
 
 
-def df2set(df):
-    return {i for j in df.as_matrix() for i in j}
+def df2set(df, title=False):
+    return {i for j in df.as_matrix() for i in j} if title==False else \
+        {i.title() for j in df.as_matrix() for i in j}
 
 
 def df2list(df):
     return [i for j in df.as_matrix() for i in j]
+
+
+def df2dic(df):
+    """
+    use pd.DataFrame.iloc to extract specific columns or rows
+    :param df: 
+    :return: 
+    """
+    return {k: v for (k, v) in zip(df.iloc[:,0], df.iloc[:,1])}
 
 ########################################################################################################################
 
