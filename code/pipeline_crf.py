@@ -44,18 +44,6 @@ def process_annotated(in_file):
     return sents
 
 
-def prepare_feature_dict(city_f, com_single_f, com_suffix_f, country_f, name_f, product_f,
-                         event_f,
-                         tfdf_f, tfidf_f):
-    name, country, event = line_file2set(name_f), line_file2set(country_f), line_file2set(
-        event_f)
-    city, com_single, product = line_file2set(city_f), line_file2set(
-        com_single_f), line_file2set(product_f)
-    com_suffix = {i.title() for i in line_file2set(com_suffix_f)}
-    tfidf, tfdf = line_file2dict(tfidf_f), line_file2dict(tfdf_f)
-    return tfdf, tfidf, city, com_single, com_suffix, country, name, product, event
-
-
 def prepare_features(aca_df, com_single_df, com_suffix_df, location_df, name_df,
                      ticker_df, tfdf_df, tfidf_df):
     aca, com_single = df2set(aca_df), df2set(com_single_df)
