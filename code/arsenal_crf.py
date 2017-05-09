@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from itertools import chain
+from collections import Counter, OrderedDict
+from operator import itemgetter
 from re import findall, compile
+from copy import deepcopy
 
 import pandas as pd
 import scipy.stats as sstats
@@ -355,27 +358,6 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
         return result, details
 
 
-# def test_crf(crf, y_pred, y_test, test_switch):
-#     if test_switch == 'spc':
-#         labels = show_crf_label(crf)
-#         show_crf_label(crf)
-#         result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
-#
-#     elif test_switch == 'bin':
-#         labels = ['1']
-#         y_pred = convert_tags(y_pred)
-#         y_test = convert_tags(y_test)
-#
-#         result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
-#         y_test = ['0' if j == 'O' else '1' for i in y_test for j in i]
-#
-#     details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
-#     details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
-#     details = pd.DataFrame(details, columns=HEADER_CRF)
-#     details = details.sort_values('f1', ascending=False)
-#     return details, result
-
-
 def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
     length = len(list(new_data))
@@ -384,3 +366,41 @@ def crf_predict(crf, new_data, processed_data):
     range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
+
+
+##############################################################################
+
+
+def crf_result2dict(crf_result):
+    ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
+    ner_index = (i for i in range(len(ner_candidate)) if
+                 ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
+    new_index = (a + b for a, b in enumerate(ner_index))
+    ner_result = extract_ner_result(ner_candidate, new_index)
+    return ner_result
+
+
+def sort_dic(dic, sort_key=0, rev=False):
+    """
+    :param dic:
+    :param sort_key: 0: sort by key, 1: sort by value
+    :param rev: false by default
+    :return: sorted {(k, v)}
+    """
+    return OrderedDict(sorted(iter(dic.items()), key=itemgetter(sort_key), reverse=rev))
+
+
+def extract_ner_result(ner_candidate, new_index):
+    new_candidate = deepcopy(ner_candidate)
+    for i in new_index:
+        new_candidate[i + 1:i + 1] = [('##split', '##split')]
+    ner_result = (
+        ' '.join(
+            [(i[0].strip() + '##' + i[1].strip()) for i in new_candidate if i[1]]).split(
+            '##split'))
+    ner_result = ([i.strip(' ') for i in ner_result if i and i != '##'])
+    ner_result = ('##'.join((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]))
+                  for tt in
+                  ner_result)
+    ner_result = sort_dic(Counter(i for i in ner_result if i), sort_key=1, rev=True)
+    return ner_result
