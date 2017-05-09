@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import (unicode_literals, print_function, division)
 
+import hashlib
 import random
 from collections import OrderedDict, defaultdict
 from datetime import date, datetime
@@ -8,15 +9,14 @@ from functools import reduce
 from itertools import islice
 from json import loads
 from operator import itemgetter
-from yaml import load
 
 import numpy as np
 import pandas as pd
 from pandas import ExcelWriter
-import hashlib
+from yaml import load
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # CSV processing
@@ -43,7 +43,8 @@ def csv2pd(in_file, needed_columns, sep=",", quote=3, engine='c'):
     :param engine: choose engine for reading data
     :return: a trimmed pandas table
     """
-    return pd.read_csv(in_file, usecols=needed_columns, sep=sep, quoting=quote, engine=engine)
+    return pd.read_csv(in_file, usecols=needed_columns, sep=sep, quoting=quote,
+                       engine=engine)
 
 
 def get_header(in_file, sep=","):
@@ -61,16 +62,7 @@ def quickest_read_csv(in_file, column_names):
     return data
 
 
-def get_last_files(base, time_range):
-    """
-    :param base: e.g.: '/Users/acepor/Work/gemii_data/datapool/input/wechat_wyeth_RoomMsgInfo_raw_'
-    :param time_range: get_past_week() or get_past_month()
-    :return: [file_paths]
-    """
-    return [''.join((base, ''.join(i.split('-')), '.csv')) for i in time_range]
-
-
-########################################################################################################################
+##########################################################################################
 
 
 ## HDF5 Processing
@@ -96,7 +88,7 @@ def hdf2df(in_hdf, hdf_keys):
     return [pd.read_hdf(in_hdf, i) for i in hdf_keys]
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Excel processing
@@ -126,20 +118,20 @@ def df2excel(df, path, name):
     return df.to_excel(path, sheet_name=name)
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # REGEX
 
 def get_re_or_from_iter(uni_iter):
     """
-    :param uni_iter: an iterator of unicode strings: ['\u5b87\u513f|tang', '\u8d85\u7ea7\u5988\u5988--Nancy']
+    :param uni_iter: an iterator of unicode strings: ['\u5b87\u513f|tang', '\u8d85\u7ea7']
     :return: re.compile(ur'(\u5b87\u513f|tang|\u8d85\u7ea7\u5988\u5988--Nancy)')
     """
     return compile("(" + '|'.join(uni_iter) + ")")
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Word Processing
@@ -260,7 +252,7 @@ def rename_series(df, old_col, new_col):
     return df.rename(columns={old_col: new_col})
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Data Structure
@@ -304,7 +296,8 @@ def split_dic(dic, start=None, end=None, precision=3):
     """
     split a dic according to range[start, end]
     """
-    return ', '.join([': '.join((k, str(round(v, precision)))) for (k, v) in dic[start:end]])
+    return ', '.join(
+        [': '.join((k, str(round(v, precision)))) for (k, v) in dic[start:end]])
 
 
 def join_data(in_file1, in_file2, out_file):
@@ -455,7 +448,7 @@ def line_file2dict(in_file):
 
 
 def df2set(df, title=False):
-    return {i for j in df.as_matrix() for i in j} if title==False else \
+    return {i for j in df.as_matrix() for i in j} if title == False else \
         {i.title() for j in df.as_matrix() for i in j}
 
 
@@ -469,7 +462,8 @@ def df2dic(df):
     :param df: 
     :return: 
     """
-    return {k: v for (k, v) in zip(df.iloc[:,0], df.iloc[:,1])}
+    return {k: v for (k, v) in zip(df.iloc[:, 0], df.iloc[:, 1])}
+
 
 ########################################################################################################################
 
@@ -493,7 +487,7 @@ def json2pd(in_file, col_list, lines=True):
     return result
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Math
@@ -507,10 +501,11 @@ def divide_series(col1, col2, index, dec=2):
     :param dec: set decimal for rounding
     :return: a pandas Series
     """
-    return pd.Series.round(pd.Series(100.0 * pd.Series(col1) / pd.Series(col2), index=index), decimals=dec)
+    return pd.Series.round(
+        pd.Series(100.0 * pd.Series(col1) / pd.Series(col2), index=index), decimals=dec)
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Time processing
@@ -554,7 +549,8 @@ def get_np_this_month(time, delimiter):
     :param delimiter: define delimiter here
     :return: numpy.datetime64('Y-M')
     """
-    return np.datetime64(delimiter.join((str(time.year), str(time.month))), dtype='datetime64[D]')
+    return np.datetime64(delimiter.join((str(time.year), str(time.month))),
+                         dtype='datetime64[D]')
 
 
 def get_past_month(time=0):
@@ -582,7 +578,7 @@ def get_now(format='%Y-%m-%d %H:%M:%S:%f'):
     return date.strftime(datetime.now(), format)
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Randomization
@@ -598,7 +594,7 @@ def random_rows(df, size, col_name):
     return result
 
 
-########################################################################################################################
+##########################################################################################
 
 
 # Config
@@ -610,7 +606,7 @@ def load_yaml_conf(conf_f):
     return result
 
 
-########################################################################################################################
+##########################################################################################
 
 def hashit(string):
     return hashlib.md5(string.encode('utf-8')).hexdigest()
