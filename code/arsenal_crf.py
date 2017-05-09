@@ -11,9 +11,7 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
-
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS',
                  'PRT', 'SHP']
@@ -29,23 +27,7 @@ RE_WORDS = compile(r"[\w\d\.-]+")
 # Data preparation
 
 
-def process_annotated(in_file):
-    """
-    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature dic is used instead
-    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
-    :param in_file: CSV file: TOKEN, POS, NER
-    :return: [[sent]]
-    """
-    data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
-    data.columns = HEADER_ANNOTATION
-    data = data.dropna()
-    sents = (tuple(i) for i in zip(data['TOKEN'].tolist(), data['POS'].tolist(), data['NER'].tolist()))
-    sents = (list(x[1])[:-1] for x in groupby(sents, lambda x: x == ('##END', '###', 'O')) if not x[0])
-    sents = [i for i in sents if i != []]
-    return sents
-
-
-def add_feature_str(sent, feature_set):
+def map_list_2_matrix(sent, feature_set):
     """
     :param sent: [(word, pos, ner)]
     :param feature_set: {feature1, feature2}
@@ -55,7 +37,7 @@ def add_feature_str(sent, feature_set):
     return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
 
 
-def add_one_feature_dict(sent, feature_dic):
+def map_dict_2_matrix(sent, feature_dic):
     """
     :param sent: [(word, pos, ner)]
     :param feature_set: {feature1:value1, feature2:value2}
@@ -145,6 +127,80 @@ def sent2label_spfc(line, label):
 ##############################################################################
 
 
+def feature_selector_(word, feature_conf, conf_switch, postag, **features):
+    """
+    Set the feature dict here
+    :param word: word itself
+    :param feature_conf: feature config
+    :param conf_switch: select the right config from feature_config
+    :param postag:
+    :param name:
+    :param com_suffix:
+    :param country:
+    :param city:
+    :param com_single:
+    :param tfidf:
+    :param tfdf:
+    :return:
+    """
+    feature_dict = {
+        'bias': 1.0,
+        conf_switch + '_word.lower()': word.lower(),
+        conf_switch + '_word[-3]': word[-3:],
+        conf_switch + '_word[-2]': word[-2:],
+        conf_switch + '_word.isupper()': word.isupper(),
+        conf_switch + '_word.istitle()': word.istitle(),
+        conf_switch + '_word.isdigit()': word.isdigit(),
+        conf_switch + '_word.islower()': word.islower(),
+        conf_switch + '_postag': postag,
+        conf_switch + '_aca': aca,
+        conf_switch + '_com_single': com_single,
+        conf_switch + '_com_suffix': com_suffix,
+        conf_switch + '_location': location,
+        conf_switch + '_name': name,
+        conf_switch + '_ticker': ticker,
+        conf_switch + '_tfidf': tfidf,
+        conf_switch + '_tfdf': tfdf,
+    }
+    return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if i in feature_dict.keys()}
+
+
+def word2features_(sent, i, feature_conf, *features):
+
+    word, postag, _, features = sent[i]
+    features = feature_selector(word, feature_conf, 'current', postag)
+    if i > 0:
+        word1, postag1, _, features  = sent[i - 1]
+        features.update(feature_selector(word1, feature_conf, 'previous', postag1))
+    else:
+        features['BOS'] = True
+
+    if i < len(sent) - 1:
+        word1, postag1, _, features  = sent[i + 1]
+        features.update(feature_selector(word1, feature_conf, 'next', postag1))
+    else:
+        features['EOS'] = True
+
+    return features
+
+def sent2features_(line, feature_conf, *features):
+    return [word2features_(line, i, feature_conf, *features) for i in range(len(line))]
+
+
+def feed_crf_trainer_(in_data, conf, *features):
+    """
+    :param in_data:
+    :param conf_f:
+    :return:
+    """
+    features = [sent2features_(s, conf, *features) for s in in_data]
+    labels = [sent2labels(s) for s in in_data]
+    return features, labels
+
+
+##############################################################################
+
+
 # CRF training
 
 
@@ -152,45 +208,38 @@ def feed_crf_trainer(in_data, conf):
     """
     :param in_data:
     :param conf_f:
-    :return:
+    :return: nested lists of lists
     """
     features = [sent2features(s, conf) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
     return features, labels
 
 
-def feed_crf_trainer_spfc(in_data, conf, label):
+def train_crf(X_train, y_train, algm='lbfgs', c1=0.1, c2=0.1, max_iter=100, all_trans=True):
     """
-    :param in_data:
-    :param conf_f:
-    :return:
+    :param X_train: 
+    :param y_train: 
+    :param algm: 
+    :param c1: 
+    :param c2: 
+    :param max_iter: 
+    :param all_trans: 
+    :return: 
     """
-    features = [sent2features(s, conf) for s in in_data]
-    labels = [sent2label_spfc(s, label) for s in in_data]
-    return features, labels
-
-
-def train_crf(X_train, y_train):
     crf = sklearn_crfsuite.CRF(
-        algorithm='lbfgs',
-        c1=0.1,
-        c2=0.1,
-        max_iterations=100,
-        all_possible_transitions=True
+        algorithm=algm,
+        c1=c1,
+        c2=c2,
+        max_iterations=max_iter,
+        all_possible_transitions=all_trans
     )
     return crf.fit(X_train, y_train)
 
 
-def show_crf_label(crf):
+def show_crf_label(crf, remove_list = ['O','NER', '']):
     labels = list(crf.classes_)
     print(labels)
-    if 'O' in labels:
-        labels.remove('O')
-    if 'NER' in labels:
-        labels.remove('NER')
-    if '' in labels:
-        labels.remove('')
-    return labels
+    return [i for i in labels if i not in remove_list]
 
 
 def make_param_space():
@@ -200,8 +249,8 @@ def make_param_space():
     }
 
 
-def make_f1_scorer(labels):
-    return make_scorer(metrics.flat_f1_score, average='weighted', labels=labels)
+def make_f1_scorer(labels, avg='weighted'):
+    return make_scorer(metrics.flat_f1_score, average=avg, labels=labels)
 
 
 def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteration=50):
@@ -220,7 +269,28 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
 # CRF testing and predicting
 
 
-def test_crf_prediction(crf, X_test, y_test, test_switch='all'):
+def concert_tags(data):
+    converted = []
+    for sent in data:
+        test_result = []
+        for tag in sent:
+            if tag == 'O':
+                test_result.append('0')
+            else:
+                test_result.append('1')
+        converted.append(test_result)
+    return converted
+
+
+def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
+    """
+    
+    :param crf: 
+    :param X_test: 
+    :param y_test: 
+    :param test_switch: 'spc' for specific labels, 'bin' for binary labels
+    :return: 
+    """
     y_pred = crf.predict(X_test)
 
     if test_switch == 'spc':
@@ -233,26 +303,10 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='all'):
 
         return result, details
 
-    elif test_switch == 'all':
-        y_pred_converted = []
-        for sent in y_pred:
-            pred_result = []
-            for tag in sent:
-                if tag == 'O':
-                    pred_result.append('0')
-                else:
-                    pred_result.append('1')
-            y_pred_converted.append(pred_result)
+    elif test_switch == 'bin':
 
-        y_test_converted = []
-        for sent in y_test:
-            test_result = []
-            for tag in sent:
-                if tag == 'O':
-                    test_result.append('0')
-                else:
-                    test_result.append('1')
-            y_test_converted.append(test_result)
+        y_pred_converted = concert_tags(y_pred)
+        y_test_converted = concert_tags(y_test)
 
         result = metrics.flat_f1_score(y_test_converted, y_pred_converted, average='weighted', labels=['1'])
 
@@ -261,8 +315,11 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='all'):
 
         details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][1:-1]
         details = pd.DataFrame(details, columns=HEADER_CRF)
+        details = details.sort_values('f1', ascending=False)
 
-        return result, details.sort_values('f1', ascending=False)
+        return result, details
+
+
 
 
 def crf_predict(crf, new_data, processed_data):
