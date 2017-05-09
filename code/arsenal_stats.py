@@ -88,13 +88,13 @@ def df2hdf(out_hdf, dfs, hdf_keys, mode='a'):
         j.to_hdf(out_hdf, k, table=True, mode=mode)
 
 
-def hdf2df(in_df, hdf_keys):
+def hdf2df(in_hdf, hdf_keys):
     """
     Read a hdf5 file and return all dfs
-    :param in_df: a hdf5 file 
+    :param in_hdf: a hdf5 file 
     :param hdf_keys: 
     """
-    return [pd.read_hdf(in_df, i) for i in hdf_keys]
+    return [pd.read_hdf(in_hdf, i) for i in hdf_keys]
 
 
 ########################################################################################################################
