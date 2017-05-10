@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from itertools import groupby
 from math import modf
 from os import listdir, path
 
@@ -44,9 +43,6 @@ def batch_add_features(pos_data, aca, com_single, com_suffix, location, name, ti
     return result
 
 
-
-
-
 def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
     # todo fix feature loading
     conf = load_yaml_conf(dict_conf)
@@ -59,7 +55,12 @@ def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
     return conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf
 
 
+##############################################################################
+
+# Refactoring
+
 def prepare_features_(dfs):
+    # Move to arsenal
     """
     :param dfs: a list of pd dfs 
     :return: a list of feature sets and feature dicts
@@ -67,6 +68,23 @@ def prepare_features_(dfs):
     feature_sets = [df2set(df) for df in dfs if len(df.columns) == 1]
     feature_dics = [df2dic(df) for df in dfs if len(df.columns) == 2]
     return feature_sets, feature_dics
+
+
+def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
+    # Move to arsenal
+    """
+    :param dict_conf: 
+    :param crf_f: 
+    :param feature_hdf: 
+    :param hdf_keys: 
+    :param crf_model: 
+    :return: 
+    """
+    conf = load_yaml_conf(dict_conf)
+    crf = jl.load(crf_f) if crf_model else None
+    loads = hdf2df(feature_hdf, hdf_keys)
+    feature_sets, feature_dics = prepare_features_(loads)
+    return conf, crf, feature_sets, feature_dics
 
 
 def batch_add_features_(data, feature_sets, feature_dics):
@@ -81,13 +99,24 @@ def batch_add_features_(data, feature_sets, feature_dics):
     return result
 
 
-def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
-    conf = load_yaml_conf(dict_conf)
-    crf = jl.load(crf_f) if switch == 'test' else None
-    loads = hdf2df(feature_hdf, hdf_keys)
-    feature_sets, feature_dics = prepare_features_(loads)
-    return conf, crf, feature_sets, feature_dics
+def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, f_hdf, hdf_key, report_type):
+    basic_logging('Loading begins')
+    conf, crf, f_sets, f_dics = batch_loading_(dict_conf, '', f_hdf, hdf_key)
+    basic_logging('Loading ends')
+    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
+    train_sents = batch_add_features_(train_data, f_sets, f_dics)
+    test_sents = batch_add_features_(test_data, f_sets, f_dics)
+    basic_logging('Adding features ends')
+    X_train, y_train = feed_crf_trainer(train_sents, conf)
+    X_test, y_test = feed_crf_trainer(test_sents, conf)
 
+    basic_logging('Conversion ends')
+    crf = train_crf(X_train, y_train)
+    basic_logging('Training ends')
+    result, details = test_crf_prediction(crf, X_test, y_test, report_type)
+    basic_logging('Testing ends')
+    # jl.dump(crf, model_f)
+    return crf, result, details
 
 ##############################################################################
 
@@ -120,28 +149,6 @@ def convert_crf_result_json(crf_result, raw_df):
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
     return json_result
-
-
-def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys,
-                        test_switch):
-    basic_logging('Loading begins')
-    conf, crf, feature_sets, feature_dics = batch_loading_(dict_conf, '', feature_hdf,
-                                                           hdf_keys, 'train')
-    basic_logging('Loading ends')
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    train_sents = batch_add_features_(train_data, feature_sets, feature_dics)
-    test_sents = batch_add_features_(test_data, feature_sets, feature_dics)
-    basic_logging('Adding features ends')
-    X_train, y_train = feed_crf_trainer(train_sents, conf)
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
-
-    basic_logging('Conversion ends')
-    crf = train_crf(X_train, y_train)
-    basic_logging('Training ends')
-    result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
-    basic_logging('Testing ends')
-    # jl.dump(crf, model_f)
-    return crf, result, details
 
 
 ##############################################################################
@@ -216,8 +223,8 @@ def pipeline_pos_crf(in_f, out_f, crf_f, dict_conf, feature_hdf, hdf_keys, switc
     basic_logging('Spacy ends')
 
     parsed_data = chain.from_iterable(parsed_data)
-    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END',
-                                                                              '###', 'O'))
+    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data,
+                                                 lambda x: x == ('##END', '###', 'O'))
                 if not x[0]]
 
     test_sents = batch_add_features(pos_data, aca, com_single, com_suffix, location, name,
