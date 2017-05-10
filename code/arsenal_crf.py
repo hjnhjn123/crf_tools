@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from itertools import chain, groupby
 from collections import Counter, OrderedDict
+from copy import deepcopy
+from itertools import chain, groupby
 from operator import itemgetter
 from re import findall, compile
-from copy import deepcopy
 
 import pandas as pd
+import numpy as np
 import scipy.stats as sstats
 import sklearn_crfsuite
 from sklearn.metrics import make_scorer
@@ -19,8 +20,7 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', '
                  'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS', 'PRT', 'SHP']
 LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
-HEADER_ANNOTATION = ['TOKEN' , 'POS', 'NER']
-
+HEADER_NER = ['TOKEN', 'POS', 'NER']
 
 RE_WORDS = compile(r"[\w\d\.-]+")
 
@@ -30,8 +30,7 @@ RE_WORDS = compile(r"[\w\d\.-]+")
 
 # Data preparation
 
-def process_annotated(in_file, col_names= HEADER_ANNOTATION, delimiter=('##END', '###',
-                                                                       'O')):
+def process_annotated(in_file, col_names=HEADER_NER, delimiter=('##END', '###', 'O')):
     """
     | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature 
     | dic is used instead
@@ -50,6 +49,25 @@ def process_annotated(in_file, col_names= HEADER_ANNOTATION, delimiter=('##END',
              if not x[0])
     sents = [i for i in sents if i != []]
     return sents
+
+
+def process_annotated_(in_file, col_names):
+    """
+    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature 
+    | dic is used instead
+    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
+    :param in_file: CSV file: TOKEN, POS, NER
+    :param col_names
+    :param delimiter
+    :return: [[sent]]
+    """
+    data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
+    data.columns = col_names
+    data = data.dropna()
+    return data
+
+
+##############################################################################
 
 
 def map_set_2_matrix(sent, feature_set):
@@ -72,6 +90,18 @@ def map_dict_2_matrix(sent, feature_dic):
         str(feature_dic.get(line[0].lower())) if line[0].lower() in feature_dic.keys()
         else '0' for line in sent]
     return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
+
+
+def map_set2df(df, col_name, feature_set):
+    feature_str = '|'.join(feature_set)
+    df[col_name] = df.iloc[:,0].str.contains(feature_str, na='False')  # Pandas warning
+    # pd.Series.str.match is terribly slow
+    return df
+
+
+def map_dict2df(df, col_name, feature_dict):
+    df[col_name] = df.iloc[:,0].map(feature_dict)
+    return df.replace(np.nan, 0)
 
 
 ##############################################################################
@@ -122,7 +152,7 @@ def feature_selector(word, feature_conf, conf_switch, postag, aca, com_single, c
 
 def word2features(sent, i, feature_conf):
     word, postag, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = \
-    sent[i]
+        sent[i]
     features = feature_selector(word, feature_conf, 'current', postag, aca, com_single,
                                 com_suffix, location, name, ticker, tfdf, tfidf)
     if i > 0:
@@ -362,8 +392,8 @@ def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
     length = len(list(new_data))
     crf_result = (
-    [(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
-    range(length))
+        [(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
+        range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
 
