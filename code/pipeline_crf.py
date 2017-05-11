@@ -88,7 +88,6 @@ def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
 
 
 def batch_add_features_(df, f_sets, f_dics):
-    cols = df.columns
     set_name = [str(i) for i in range(len(f_sets))]
     dic_name = [str(-i-1) for i in range(len(f_dics))]
     df_list0 = [map_set2df(df, c_name, f_set) for c_name, f_set in zip(set_name, f_sets)]
