@@ -95,10 +95,10 @@ def map_dict_2_matrix(sent, feature_dic):
 def map_set2df(df, col_name, feature_set):
     feature_dict = {i:i for i in feature_set}  # Construct a dic from a set
     df[col_name] = df.iloc[:,0].map(feature_dict)
-    return df
+    return df.replace(np.nan, '0')
 
 
-def map_dict2df(df, col_name, feature_dict):
+def map_dic2df(df, col_name, feature_dict):
     df[col_name] = df.iloc[:,0].map(feature_dict)
     return df.replace(np.nan, 0)
 
