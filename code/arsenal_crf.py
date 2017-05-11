@@ -51,7 +51,7 @@ def process_annotated(in_file, col_names=HEADER_NER, delimiter=('##END', '###', 
     return sents
 
 
-def process_annotated_(in_file, col_names):
+def process_annotated_(in_file, col_names=HEADER_NER):
     """
     | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature 
     | dic is used instead
@@ -93,9 +93,8 @@ def map_dict_2_matrix(sent, feature_dic):
 
 
 def map_set2df(df, col_name, feature_set):
-    feature_str = '|'.join(feature_set)
-    df[col_name] = df.iloc[:,0].str.contains(feature_str, na='False')  # Pandas warning
-    # pd.Series.str.match is terribly slow
+    feature_dict = {i:i for i in feature_set}  # Construct a dic from a set
+    df[col_name] = df.iloc[:,0].map(feature_dict)
     return df
 
 
