@@ -67,6 +67,16 @@ def process_annotated_(in_file, col_names=HEADER_NER):
     return data
 
 
+def df2crfsuite(df, delim='##END'):
+    col_names = df.columns
+    delimiter = df[df.iloc[:,0] == delim].iloc[0,:].tolist()
+    zipped_list = zip(df[i].tolist() for i in col_names)
+    sents = (tuple(i) for i in zipped_list)
+    sents = (list(x[1]) for x in groupby(sents, lambda x: x == delimiter))
+    sents = [i for i in sents if i != []]
+    return sents
+    
+
 ##############################################################################
 
 
