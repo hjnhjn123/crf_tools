@@ -32,7 +32,7 @@ RE_WORDS = compile(r"[\w\d\.-]+")
 
 def process_annotated(in_file, col_names=HEADER_NER, delimiter=('##END', '###', 'O')):
     """
-    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature 
+    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature
     | dic is used instead
     | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
     :param in_file: CSV file: TOKEN, POS, NER
@@ -66,7 +66,7 @@ def process_annotated_(in_file, col_names=HEADER_NER):
 def prepare_features_(dfs):
     # Move to arsenal
     """
-    :param dfs: a list of pd dfs 
+    :param dfs: a list of pd dfs
     :return: a list of feature sets and feature dicts
     """
     f_sets = [df2set(df) for df in dfs if len(df.columns) == 1]
@@ -77,12 +77,12 @@ def prepare_features_(dfs):
 def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
     # Move to arsenal
     """
-    :param dict_conf: 
-    :param crf_f: 
-    :param feature_hdf: 
-    :param hdf_keys: 
-    :param crf_model: 
-    :return: 
+    :param dict_conf:
+    :param crf_f:
+    :param feature_hdf:
+    :param hdf_keys:
+    :param crf_model:
+    :return:
     """
     conf = load_yaml_conf(dict_conf)
     crf = jl.load(crf_f) if crf_model else None
@@ -214,8 +214,40 @@ def word2features(sent, i, feature_conf):
     return features
 
 
+def feature_selector_(word_tuple, feature_conf, conf_switch):
+    """
+    Set the feature dict here
+    :param word: word itself
+    :param feature_conf: feature config
+    :param conf_switch: select the right config from feature_config
+    :return:
+    """
+    word, pos = ''.join(("'", word_tuple[0].replace("'", '"'), "'")), word_tuple[1]    
+    other_features = word_tuple[3:]
+    other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(len(other_features)), other_features)}
+    feature_dict = {'_'.join((conf_switch, i)): eval(''.join((word, i))) for i in feature_conf}    
+    feature_dict.update(other_dict)
+    return feature_dict
+
+
+def word2features_(sent, i, feature_conf):
+    for j in range(len(sent)):
+        features = feature_selector_(sent[j], feature_conf, 'current')
+    if i > 0:
+        features.update(
+            feature_selector_(sent[i - 1], feature_conf, 'previous'))
+    else:
+        features['BOS'] = True
+    if i < len(sent) - 1:
+        features.update(
+            feature_selector_(sent[i + 1], feature_conf, 'next'))
+    else:
+        features['EOS'] = True
+    return features
+
+
 def sent2features(line, feature_conf):
-    return [word2features(line, i, feature_conf) for i in range(len(line))]
+    return [word2features_(line, i, feature_conf) for i in range(len(line))]
 
 
 def sent2labels(line):
@@ -229,106 +261,34 @@ def sent2label_spfc(line, label):
 ##############################################################################
 
 
-# def feature_selector_(word, feature_conf, conf_switch, postag, **features):
-#     """
-#     Set the feature dict here
-#     :param word: word itself
-#     :param feature_conf: feature config
-#     :param conf_switch: select the right config from feature_config
-#     :param postag:
-#     :param name:
-#     :param com_suffix:
-#     :param country:
-#     :param city:
-#     :param com_single:
-#     :param tfidf:
-#     :param tfdf:
-#     :return:
-#     """
-#     feature_dict = {
-#         'bias': 1.0,
-#         conf_switch + '_word.lower()': word.lower(),
-#         conf_switch + '_word[-3]': word[-3:],
-#         conf_switch + '_word[-2]': word[-2:],
-#         conf_switch + '_word.isupper()': word.isupper(),
-#         conf_switch + '_word.istitle()': word.istitle(),
-#         conf_switch + '_word.isdigit()': word.isdigit(),
-#         conf_switch + '_word.islower()': word.islower(),
-#         conf_switch + '_postag': postag,
-#         conf_switch + '_aca': aca,
-#         conf_switch + '_com_single': com_single,
-#         conf_switch + '_com_suffix': com_suffix,
-#         conf_switch + '_location': location,
-#         conf_switch + '_name': name,
-#         conf_switch + '_ticker': ticker,
-#         conf_switch + '_tfidf': tfidf,
-#         conf_switch + '_tfdf': tfdf,
-#     }
-#     return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if
-#             i in feature_dict.keys()}
-#
-#
-# def word2features_(sent, i, feature_conf, *features):
-#     word, postag, _, features = sent[i]
-#     features = feature_selector(word, feature_conf, 'current', postag)
-#     if i > 0:
-#         word1, postag1, _, features = sent[i - 1]
-#         features.update(feature_selector(word1, feature_conf, 'previous', postag1))
-#     else:
-#         features['BOS'] = True
-#
-#     if i < len(sent) - 1:
-#         word1, postag1, _, features = sent[i + 1]
-#         features.update(feature_selector(word1, feature_conf, 'next', postag1))
-#     else:
-#         features['EOS'] = True
-#
-#     return features
-#
-#
-# def sent2features_(line, feature_conf, *features):
-#     return [word2features_(line, i, feature_conf, *features) for i in range(len(line))]
-#
-#
-# def feed_crf_trainer_(in_data, conf, *features):
-#     """
-#     :param in_data:
-#     :param conf_f:
-#     :return:
-#     """
-#     features = [sent2features_(s, conf, *features) for s in in_data]
-#     labels = [sent2labels(s) for s in in_data]
-#     return features, labels
-
-
-##############################################################################
-
-
 # CRF training
 
-
+@do_cprofile
 def feed_crf_trainer(in_data, conf):
     """
     :param in_data:
     :param conf_f:
     :return: nested lists of lists
     """
+    basic_logging('begins')    
     features = [sent2features(s, conf) for s in in_data]
+    basic_logging('feaures')
     labels = [sent2labels(s) for s in in_data]
+    basic_logging('label')
     return features, labels
 
 
 def train_crf(X_train, y_train, algm='lbfgs', c1=0.1, c2=0.1, max_iter=100,
               all_trans=True):
     """
-    :param X_train: 
-    :param y_train: 
-    :param algm: 
-    :param c1: 
-    :param c2: 
-    :param max_iter: 
-    :param all_trans: 
-    :return: 
+    :param X_train:
+    :param y_train:
+    :param algm:
+    :param c1:
+    :param c2:
+    :param max_iter:
+    :param all_trans:
+    :return:
     """
     crf = sklearn_crfsuite.CRF(
         algorithm=algm,
@@ -396,12 +356,12 @@ def export_test_result(labels, y_test, y_pred):
 
 def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
     """
-    
-    :param crf: 
-    :param X_test: 
-    :param y_test: 
+
+    :param crf:
+    :param X_test:
+    :param y_test:
     :param test_switch: 'spc' for specific labels, 'bin' for binary labels
-    :return: 
+    :return:
     """
     y_pred = crf.predict(X_test)
 

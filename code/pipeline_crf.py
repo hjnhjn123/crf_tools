@@ -72,9 +72,9 @@ def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, f_hdf, hdf_key, rep
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('Converting ends')
-
+    
     X_train, y_train = feed_crf_trainer(train_sents, conf)
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
+    X_test, y_test = feed_crf_trainer_(test_sents, conf)
 
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
@@ -211,8 +211,7 @@ def pipeline_crf_test(test_f, dict_conf, crf_f, feature_hdf, hdf_keys, switch,
     conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
     test_data = process_annotated(test_f)
     test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location,
-                                    name, ticker,
-                                    tfdf, tfidf)
+                                    name, ticker, tfdf, tfidf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     basic_logging('Conversion ends')
     result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
