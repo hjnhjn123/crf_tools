@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 
-from collections import Counter, OrderedDict
+from collections import Counter
 from copy import deepcopy
 from itertools import chain, groupby
-from operator import itemgetter
 from re import findall, compile
 
-import pandas as pd
-import numpy as np
+import joblib as jl
 import scipy.stats as sstats
 import sklearn_crfsuite
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
+
+from arsenal_stats import *
 
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU',
@@ -53,12 +53,8 @@ def process_annotated(in_file, col_names=HEADER_NER, delimiter=('##END', '###', 
 
 def process_annotated_(in_file, col_names=HEADER_NER):
     """
-    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature 
-    | dic is used instead
-    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
     :param in_file: CSV file: TOKEN, POS, NER
     :param col_names
-    :param delimiter
     :return: [[sent]]
     """
     data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
@@ -67,15 +63,49 @@ def process_annotated_(in_file, col_names=HEADER_NER):
     return data
 
 
+def prepare_features_(dfs):
+    # Move to arsenal
+    """
+    :param dfs: a list of pd dfs 
+    :return: a list of feature sets and feature dicts
+    """
+    f_sets = [df2set(df) for df in dfs if len(df.columns) == 1]
+    f_dics = [df2dic(df) for df in dfs if len(df.columns) == 2]
+    return f_sets, f_dics
+
+
+def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
+    # Move to arsenal
+    """
+    :param dict_conf: 
+    :param crf_f: 
+    :param feature_hdf: 
+    :param hdf_keys: 
+    :param crf_model: 
+    :return: 
+    """
+    conf = load_yaml_conf(dict_conf)
+    crf = jl.load(crf_f) if crf_model else None
+    loads = hdf2df(feature_hdf, hdf_keys)
+    f_sets, f_dics = prepare_features_(loads)
+    return conf, crf, f_sets, f_dics
+
+
+def batch_add_features_(df, f_sets, f_dics):
+    f_sets = [{i: i for i in j} for j in f_sets]  # A special case of comprehension
+    all = f_sets + f_dics
+    all_names = [str(i) for i in range(len(all))]
+    df_list = [map_dic2df(df, c_name, f_dic) for c_name, f_dic in zip(all_names, all)]
+    return df_list[-1]
+
+
 def df2crfsuite(df, delim='##END'):
-    col_names = df.columns
-    delimiter = df[df.iloc[:,0] == delim].iloc[0,:].tolist()
-    zipped_list = zip(df[i].tolist() for i in col_names)
-    sents = (tuple(i) for i in zipped_list)
+    delimiter = tuple(df[df.iloc[:, 0] == delim].iloc[0, :].tolist())
+    sents = [tuple(df.iloc[i, :]) for i in range(len(df))]
     sents = (list(x[1]) for x in groupby(sents, lambda x: x == delimiter))
-    sents = [i for i in sents if i != []]
-    return sents
-    
+    result = [i for i in sents if i != [] and i != [(delimiter)]]
+    return result
+
 
 ##############################################################################
 
@@ -103,13 +133,13 @@ def map_dict_2_matrix(sent, feature_dic):
 
 
 def map_set2df(df, col_name, feature_set):
-    feature_dict = {i:i for i in feature_set}  # Construct a dic from a set
-    df[col_name] = df.iloc[:,0].map(feature_dict)
+    feature_dict = {str(i): str(i) for i in feature_set}  # Construct a dic from a set
+    df[col_name] = df.iloc[:, 0].map(feature_dict)
     return df.replace(np.nan, '0')
 
 
 def map_dic2df(df, col_name, feature_dict):
-    df[col_name] = df.iloc[:,0].map(feature_dict)
+    df[col_name] = df.iloc[:, 0].map(feature_dict)
     return df.replace(np.nan, 0)
 
 
