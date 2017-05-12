@@ -101,11 +101,10 @@ def batch_add_features_(df, f_sets, f_dics):
 
 def df2crfsuite(df, delim='##END'):
     delimiter = tuple(df[df.iloc[:, 0] == delim].iloc[0, :].tolist())
-    sents = [tuple(df.iloc[i, :]) for i in range(len(df))]
+    sents = zip(*[df[i].tolist() for i in df.columns])  # Use * to unpack a list
     sents = (list(x[1]) for x in groupby(sents, lambda x: x == delimiter))
     result = [i for i in sents if i != [] and i != [(delimiter)]]
     return result
-
 
 ##############################################################################
 

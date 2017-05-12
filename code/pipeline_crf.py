@@ -59,53 +59,20 @@ def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
 
 # Refactoring
 
-def prepare_features_(dfs):
-    # Move to arsenal
-    """
-    :param dfs: a list of pd dfs 
-    :return: a list of feature sets and feature dicts
-    """
-    f_sets = [df2set(df) for df in dfs if len(df.columns) == 1]
-    f_dics = [df2dic(df) for df in dfs if len(df.columns) == 2]
-    return f_sets, f_dics
-
-
-def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
-    # Move to arsenal
-    """
-    :param dict_conf: 
-    :param crf_f: 
-    :param feature_hdf: 
-    :param hdf_keys: 
-    :param crf_model: 
-    :return: 
-    """
-    conf = load_yaml_conf(dict_conf)
-    crf = jl.load(crf_f) if crf_model else None
-    loads = hdf2df(feature_hdf, hdf_keys)
-    f_sets, f_dics = prepare_features_(loads)
-    return conf, crf, f_sets, f_dics
-
-
-def batch_add_features_(df, f_sets, f_dics):
-    set_name = [str(i) for i in range(len(f_sets))]
-    dic_name = [str(-i-1) for i in range(len(f_dics))]
-    df_list0 = [map_set2df(df, c_name, f_set) for c_name, f_set in zip(set_name, f_sets)]
-    basic_logging('mapping set ends')
-    df_list1 = [map_dic2df(df, c_name, f_dic) for c_name, f_dic in zip(dic_name, f_dics)]
-    basic_logging('mapping dic ends')
-    return df_list1[-1]
-
 
 def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, f_hdf, hdf_key, report_type):
-    basic_logging('Loading begins')
+    basic_logging('Conf loading begins')
     conf, crf, f_sets, f_dics = batch_loading_(dict_conf, '', f_hdf, hdf_key)
-    basic_logging('Loading ends')
+    basic_logging('Conf loading ends')
     train_df, test_df = process_annotated_(train_f), process_annotated_(test_f)
-
-    train_sents = batch_add_features_(train_df, f_sets, f_dics)
-    test_sents = batch_add_features_(test_df, f_sets, f_dics)
+    basic_logging('Data loading ends')
+    train_df = batch_add_features_(train_df, f_sets, f_dics)
+    test_df = batch_add_features_(test_df, f_sets, f_dics)
     basic_logging('Adding features ends')
+    train_sents = df2crfsuite(train_df)
+    test_sents = df2crfsuite(test_df)
+    basic_logging('Converting ends')
+
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
 
