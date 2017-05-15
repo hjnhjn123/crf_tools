@@ -4,7 +4,8 @@ from collections import Counter
 from copy import deepcopy
 from itertools import chain, groupby
 from re import findall, compile
-
+import six
+import imp
 import joblib as jl
 import scipy.stats as sstats
 import sklearn_crfsuite
@@ -13,6 +14,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
 from arsenal_stats import *
+from arsenal_logging import *
 
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU',
@@ -27,6 +29,12 @@ RE_WORDS = compile(r"[\w\d\.-]+")
 
 ##############################################################################
 
+def build_func(scripts):
+    mods = {name: imp.new_module(name) for name in scripts}  
+    codes = {name: compile(scripts[name], name, 'exec') for name in scripts} 
+    for name in mods:
+        six.exec_(codes[name], mods[name].__dict__)
+    return mods
 
 # Data preparation
 
@@ -214,6 +222,9 @@ def word2features(sent, i, feature_conf):
     return features
 
 
+
+
+
 def feature_selector_(word_tuple, feature_conf, conf_switch):
     """
     Set the feature dict here
@@ -225,7 +236,9 @@ def feature_selector_(word_tuple, feature_conf, conf_switch):
     word, pos = ''.join(("'", word_tuple[0].replace("'", '"'), "'")), word_tuple[1]    
     other_features = word_tuple[3:]
     other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(len(other_features)), other_features)}
-    feature_dict = {'_'.join((conf_switch, i)): eval(''.join((word, i))) for i in feature_conf}    
+    dict_func = {i.split(':')[1]: eval(i) for i in feature_conf}
+    feature_dict = {'_'.join((conf_switch, k)): v(word) for (k, v) in dict_func.items()}    
+    # feature_dict = {'_'.join((conf_switch, i)): eval(''.join((word, i))) for i in feature_conf}    
     feature_dict.update(other_dict)
     return feature_dict
 
