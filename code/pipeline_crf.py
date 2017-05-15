@@ -3,7 +3,6 @@
 from math import modf
 from os import listdir, path
 
-import joblib as jl
 import redis
 
 from arsenal_crf import *
@@ -72,9 +71,9 @@ def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, f_hdf, hdf_key, rep
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('Converting ends')
-    
+
     X_train, y_train = feed_crf_trainer(train_sents, conf)
-    X_test, y_test = feed_crf_trainer_(test_sents, conf)
+    X_test, y_test = feed_crf_trainer(test_sents, conf)
 
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
@@ -83,6 +82,7 @@ def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, f_hdf, hdf_key, rep
     basic_logging('Testing ends')
     # jl.dump(crf, model_f)
     return crf, result, details
+
 
 ##############################################################################
 
