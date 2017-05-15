@@ -3,9 +3,9 @@
 from collections import Counter
 from copy import deepcopy
 from itertools import chain, groupby
-from re import findall, compile
 import six
 import imp
+import re
 import joblib as jl
 import scipy.stats as sstats
 import sklearn_crfsuite
@@ -24,17 +24,12 @@ LABEL_COLLEGE = ['COL']
 LABEL_REMAPPED = ['ORG', 'MISC']
 HEADER_NER = ['TOKEN', 'POS', 'NER']
 
-RE_WORDS = compile(r"[\w\d\.-]+")
+RE_WORDS = re.compile(r"[\w\d\.-]+")
+QUOTATION = {"'": '"'}
 
 
 ##############################################################################
 
-def build_func(scripts):
-    mods = {name: imp.new_module(name) for name in scripts}  
-    codes = {name: compile(scripts[name], name, 'exec') for name in scripts} 
-    for name in mods:
-        six.exec_(codes[name], mods[name].__dict__)
-    return mods
 
 # Data preparation
 
@@ -82,7 +77,7 @@ def prepare_features_(dfs):
     return f_sets, f_dics
 
 
-def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
+def batch_loading_(crf_f, feature_hdf, hdf_keys, crf_model=False):
     # Move to arsenal
     """
     :param dict_conf:
@@ -92,11 +87,10 @@ def batch_loading_(dict_conf, crf_f, feature_hdf, hdf_keys, crf_model=False):
     :param crf_model:
     :return:
     """
-    conf = load_yaml_conf(dict_conf)
     crf = jl.load(crf_f) if crf_model else None
     loads = hdf2df(feature_hdf, hdf_keys)
     f_sets, f_dics = prepare_features_(loads)
-    return conf, crf, f_sets, f_dics
+    return crf, f_sets, f_dics
 
 
 def batch_add_features_(df, f_sets, f_dics):
@@ -222,9 +216,6 @@ def word2features(sent, i, feature_conf):
     return features
 
 
-
-
-
 def feature_selector_(word_tuple, feature_conf, conf_switch):
     """
     Set the feature dict here
@@ -233,19 +224,18 @@ def feature_selector_(word_tuple, feature_conf, conf_switch):
     :param conf_switch: select the right config from feature_config
     :return:
     """
-    word, pos = ''.join(("'", word_tuple[0].replace("'", '"'), "'")), word_tuple[1]    
-    other_features = word_tuple[3:]
-    other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(len(other_features)), other_features)}
-    dict_func = {i.split(':')[1]: eval(i) for i in feature_conf}
-    feature_dict = {'_'.join((conf_switch, k)): v(word) for (k, v) in dict_func.items()}    
-    # feature_dict = {'_'.join((conf_switch, i)): eval(''.join((word, i))) for i in feature_conf}    
+
+    word, pos, other_features = word_tuple[0], word_tuple[1], word_tuple[3:]
+    other_length = len(other_features)
+    other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(other_length), other_features)}
+    feature_func = {'_'.join((conf_switch, name)): func for (name, func) in feature_conf.items()}
+    feature_dict = {name: func(word) for (name, func) in feature_func.items()}
     feature_dict.update(other_dict)
     return feature_dict
 
 
 def word2features_(sent, i, feature_conf):
-    for j in range(len(sent)):
-        features = feature_selector_(sent[j], feature_conf, 'current')
+    features = feature_selector_(sent[i], feature_conf, 'current')
     if i > 0:
         features.update(
             feature_selector_(sent[i - 1], feature_conf, 'previous'))
@@ -276,7 +266,6 @@ def sent2label_spfc(line, label):
 
 # CRF training
 
-@do_cprofile
 def feed_crf_trainer(in_data, conf):
     """
     :param in_data:
@@ -360,7 +349,8 @@ def convert_tags(data):
 
 def export_test_result(labels, y_test, y_pred):
     details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
-    details = [i for i in [findall(RE_WORDS, i) for i in details.split('\n')] if i != []][
+    details = [i for i in [re.findall(RE_WORDS, i) for i in details.split('\n')] if i !=
+               []][
               1:-1]
     details = pd.DataFrame(details, columns=HEADER_CRF)
     details = details.sort_values('f1', ascending=False)
