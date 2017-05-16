@@ -15,11 +15,10 @@ HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'tick
                     'tfdf', 'tfidf']
 
 conf_path = argv[1] if argv[1] else ''
-# path.insert(1,os.path.dirname(conf_path))
+path.insert(1,os.path.dirname(conf_path))
 conf_name=os.path.splitext(os.path.split(conf_path)[-1])[0]
 settings =  __import__('.'.join(('conf', conf_name)))
-
-
+# conf = settings.pat360ner_crf_en_settings.feature_function
 
 ##############################################################################
 
@@ -68,12 +67,12 @@ def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
 
 def pipeline_crf_train_(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type):
     basic_logging('Conf loading begins')
-    crf, f_sets, f_dics = batch_loading_('', f_hdf, hdf_key)
+    _, f_dics = batch_loading_('', f_hdf, hdf_key)
     basic_logging('Conf loading ends')
     train_df, test_df = process_annotated_(train_f), process_annotated_(test_f)
     basic_logging('Data loading ends')
-    train_df = batch_add_features_(train_df, f_sets, f_dics)
-    test_df = batch_add_features_(test_df, f_sets, f_dics)
+    train_df = batch_add_features_(train_df, f_dics)
+    test_df = batch_add_features_(test_df, f_dics)
     basic_logging('Adding features ends')
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
