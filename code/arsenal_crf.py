@@ -3,8 +3,6 @@
 from collections import Counter
 from copy import deepcopy
 from itertools import chain, groupby
-import six
-import imp
 import re
 import joblib as jl
 import scipy.stats as sstats
@@ -43,7 +41,7 @@ def process_annotated(in_file, col_names=HEADER_NER):
     return data
 
 
-def batch_loading(crf_f, feature_hdf, hdf_keys, crf_model=False):
+def batch_loading(crf_f, feature_hdf, hdf_keys):
     # Move to arsenal
     """
     :param dict_conf:
@@ -53,13 +51,13 @@ def batch_loading(crf_f, feature_hdf, hdf_keys, crf_model=False):
     :param crf_model:
     :return:
     """
-    crf = jl.load(crf_f) if crf_model else None
+    crf = jl.load(crf_f) if crf_f else None
     loads = hdf2df(feature_hdf, hdf_keys)
-    f_dics = prepare_features_(loads)
+    f_dics = prepare_features(loads)
     return crf, f_dics
 
 
-def prepare_features_(dfs):
+def prepare_features(dfs):
     """
     :param dfs: a list of pd dfs
     :return: a list of feature sets and feature dicts
@@ -72,6 +70,12 @@ def prepare_features_(dfs):
 
 
 def batch_add_features(df, f_dics):
+    """
+    # This will generate multiple list of repeated dfs, so only extract the last list
+    :param df: a single df
+    :param f_dics: feature dicts
+    :return: a single df
+    """
     df_list = [map_dic2df(df, name, f_dic) for name, f_dic in f_dics.items()]
     return df_list[-1]
 
@@ -277,16 +281,6 @@ def crf_result2dict(crf_result):
     return ner_result
 
 
-def sort_dic(dic, sort_key=0, rev=False):
-    """
-    :param dic:
-    :param sort_key: 0: sort by key, 1: sort by value
-    :param rev: false by default
-    :return: sorted {(k, v)}
-    """
-    return OrderedDict(sorted(iter(dic.items()), key=itemgetter(sort_key), reverse=rev))
-
-
 def extract_ner_result(ner_candidate, new_index):
     new_candidate = deepcopy(ner_candidate)
     for i in new_index:
@@ -301,3 +295,11 @@ def extract_ner_result(ner_candidate, new_index):
                   ner_result)
     ner_result = sort_dic(Counter(i for i in ner_result if i), sort_key=1, rev=True)
     return ner_result
+
+
+def crf_result2json(crf_result, raw_df):
+    ner_phrase = crf_result2dict(crf_result)
+    raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
+    raw_df = raw_df.drop(['content'], axis=1)
+    json_result = raw_df.to_json(orient='records', lines=True)
+    return json_result
