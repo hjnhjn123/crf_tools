@@ -10,14 +10,15 @@ from arsenal_crf import *
 from arsenal_logging import *
 from arsenal_spacy import *
 from arsenal_stats import *
+from conf.pat360ner_crf_en_settings import *
 
 HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker',
                     'tfdf', 'tfidf']
 
-conf_path = argv[1] if argv[1] else ''
-path.insert(1,os.path.dirname(conf_path))
-conf_name=os.path.splitext(os.path.split(conf_path)[-1])[0]
-settings =  __import__('.'.join(('conf', conf_name)))
+# conf_path = argv[1] if argv[1] else ''
+# path.insert(1,os.path.dirname(conf_path))
+# conf_name=os.path.splitext(os.path.split(conf_path)[-1])[0]
+# settings =  __import__('.'.join(('conf', conf_name)))
 # conf = settings.pat360ner_crf_en_settings.feature_function
 
 ##############################################################################
@@ -96,8 +97,8 @@ def pipeline_crf_test(test_f, model_f, crf_f, conf, f_hdf, hdf_key, report_type)
 # Streaming
 
 
-def streaming_pos_crf(in_f, crf, conf, aca, com_single, com_suffix, location, name,
-                      ticker, tfdf, tfidf):
+def streaming_pos_crf(in_f, f_hdf, hdf_key, conf):
+    crf, f_dics = batch_loading('', f_hdf, hdf_key)
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
 
@@ -106,8 +107,7 @@ def streaming_pos_crf(in_f, crf, conf, aca, com_single, com_suffix, location, na
     prepared_data = [list(x[1]) for x in
                      groupby(parsed_data, lambda x: x == ('##END', '###', 'O'))
                      if not x[0]]
-    test_sents = batch_add_features(prepared_data, aca, com_single, com_suffix, location,
-                                    name, ticker, tfdf, tfidf)
+    test_sents = batch_add_features(prepared_data, f_dics)
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
     crf_result = crf_predict(crf, prepared_data, X_test)
@@ -142,8 +142,7 @@ def pipeline_pos_crf(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type
                                                  lambda x: x == ('##END', '###', 'O'))
                 if not x[0]]
 
-    test_sents = batch_add_features(pos_data, aca, com_single, com_suffix, location, name,
-                                    ticker, tfdf, tfidf)
+    test_sents = batch_add_features(pos_data, f_dics)
     basic_logging('Adding features ends')
 
     X_test, y_test = feed_crf_trainer(test_sents, conf)
@@ -152,7 +151,6 @@ def pipeline_pos_crf(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type
     basic_logging('Predicting ends')
     out = pd.DataFrame(result)
     out.to_csv(out_f, header=False, index=False)
-
 
 
 

@@ -12,7 +12,6 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
 from arsenal_stats import *
-from arsenal_logging import *
 
 HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU',
@@ -23,7 +22,6 @@ LABEL_REMAPPED = ['ORG', 'MISC']
 HEADER_NER = ['TOKEN', 'POS', 'NER']
 
 RE_WORDS = re.compile(r"[\w\d\.-]+")
-QUOTATION = {"'": '"'}
 
 
 ##############################################################################

@@ -615,7 +615,6 @@ def hashit(string):
 ##########################################################################################
 
 
-
 def map_set_2_matrix(sent, feature_set):
     """
     :param sent: [(word, pos, ner)]
