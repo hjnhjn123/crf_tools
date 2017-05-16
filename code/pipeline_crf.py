@@ -23,45 +23,6 @@ settings =  __import__('.'.join(('conf', conf_name)))
 ##############################################################################
 
 
-def prepare_features(aca_df, com_single_df, com_suffix_df, location_df, name_df,
-                     ticker_df, tfdf_df, tfidf_df):
-    aca, com_single = df2set(aca_df), df2set(com_single_df)
-    name, location = df2set(name_df), df2set(location_df)
-    ticker = df2set(ticker_df)
-    com_suffix = df2set(com_suffix_df, title=True)
-    tfdf = df2dic(tfdf_df)
-    tfidf = df2dic(tfidf_df)
-    return aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf
-
-
-def batch_add_features(pos_data, aca, com_single, com_suffix, location, name, ticker,
-                       tfdf, tfidf):
-    added_aca = (map_set_2_matrix(chunk, aca) for chunk in pos_data)
-    added_com_single = (map_set_2_matrix(chunk, com_single) for chunk in added_aca)
-    added_com_suffix = (map_set_2_matrix(chunk, com_suffix) for chunk in
-                        added_com_single)
-    added_location = (map_set_2_matrix(chunk, location) for chunk in added_com_suffix)
-    added_name = (map_set_2_matrix(chunk, name) for chunk in added_location)
-    added_ticker = (map_set_2_matrix(chunk, ticker) for chunk in added_name)
-    added_tfidf = (map_dict_2_matrix(chunk, tfidf) for chunk in added_ticker)
-    result = [map_dict_2_matrix(chunk, tfdf) for chunk in added_tfidf]
-    return result
-
-
-def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
-    # todo fix feature loading
-    conf = load_yaml_conf(dict_conf)
-    crf = jl.load(crf_f) if switch == 'test' else None
-    loads = hdf2df(feature_hdf, hdf_keys)
-    aca_df, com_single_df, com_suffix_df, location_df, name_df, ticker_df, tfdf_df, tfidf_df = loads
-    features = prepare_features(aca_df, com_single_df, com_suffix_df, location_df,
-                                name_df, ticker_df, tfdf_df, tfidf_df)
-    aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = features
-    return conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf
-
-
-##############################################################################
-
 # Refactoring
 
 

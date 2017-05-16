@@ -31,32 +31,6 @@ QUOTATION = {"'": '"'}
 ##############################################################################
 
 
-# Data preparation
-
-def process_annotated(in_file, col_names=HEADER_NER, delimiter=('##END', '###', 'O')):
-    """
-    | following python-crfsuit, sklearn_crfsuit doesn't support pandas DF, so a feature
-    | dic is used instead
-    | http://python-crfsuite.readthedocs.io/en/latest/pycrfsuite.html#pycrfsuite.ItemSequence
-    :param in_file: CSV file: TOKEN, POS, NER
-    :param col_names
-    :param delimiter
-    :return: [[sent]]
-    """
-    data = pd.read_csv(in_file, header=None, engine='c', quoting=0)
-    data.columns = col_names
-    data = data.dropna()
-    zipped_list = zip(data[i].tolist() for i in col_names)
-    sents = (tuple(i) for i in zipped_list)
-    sents = (list(x[1])[:-1] for x in groupby(sents, lambda x: x == delimiter)
-             if not x[0])
-    sents = [i for i in sents if i != []]
-    return sents
-
-
-##############################################################################
-
-
 def process_annotated_(in_file, col_names=HEADER_NER):
     """
     :param in_file: CSV file: TOKEN, POS, NER
@@ -143,78 +117,6 @@ def map_set2df(df, col_name, feature_set):
 def map_dic2df(df, col_name, feature_dict):
     df[col_name] = df.iloc[:, 0].map(feature_dict)
     return df.replace(np.nan, 0)
-
-
-##############################################################################
-
-
-# Feature extraction
-
-
-def feature_selector(word, feature_conf, conf_switch, postag, aca, com_single, com_suffix,
-                     location, name, ticker, tfdf, tfidf):
-    """
-    Set the feature dict here
-    :param word: word itself
-    :param feature_conf: feature config
-    :param conf_switch: select the right config from feature_config
-    :param postag:
-    :param name:
-    :param com_suffix:
-    :param country:
-    :param city:
-    :param com_single:
-    :param tfidf:
-    :param tfdf:
-    :return:
-    """
-    feature_dict = {
-        'bias': 1.0,
-        conf_switch + '_word.lower()': word.lower(),
-        conf_switch + '_word[-3]': word[-3:],
-        conf_switch + '_word[-2]': word[-2:],
-        conf_switch + '_word.isupper()': word.isupper(),
-        conf_switch + '_word.istitle()': word.istitle(),
-        conf_switch + '_word.isdigit()': word.isdigit(),
-        conf_switch + '_word.islower()': word.islower(),
-        conf_switch + '_postag': postag,
-        conf_switch + '_aca': aca,
-        conf_switch + '_com_single': com_single,
-        conf_switch + '_com_suffix': com_suffix,
-        conf_switch + '_location': location,
-        conf_switch + '_name': name,
-        conf_switch + '_ticker': ticker,
-        conf_switch + '_tfidf': tfidf,
-        conf_switch + '_tfdf': tfdf,
-    }
-    return {i: feature_dict.get(i) for i in feature_conf[conf_switch] if
-            i in feature_dict.keys()}
-
-
-def word2features(sent, i, feature_conf):
-    word, postag, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = \
-        sent[i]
-    features = feature_selector(word, feature_conf, 'current', postag, aca, com_single,
-                                com_suffix, location, name, ticker, tfdf, tfidf)
-    if i > 0:
-        word1, postag1, _, aca1, com_single1, com_suffix1, location1, name1, ticker1, tfidf1, tfdf1 = \
-            sent[i - 1]
-        features.update(
-            feature_selector(word1, feature_conf, 'previous', postag1, aca1, com_single1,
-                             com_suffix1, location1, name1, ticker1, tfidf1, tfdf1))
-    else:
-        features['BOS'] = True
-
-    if i < len(sent) - 1:
-        word1, postag1, _, aca1, com_single1, com_suffix1, location1, name1, ticker1, tfidf1, tfdf1 = \
-            sent[i + 1]
-        features.update(
-            feature_selector(word1, feature_conf, 'next', postag1, aca1, com_single1,
-                             com_suffix1, location1, name1, ticker1, tfidf1, tfdf1))
-    else:
-        features['EOS'] = True
-
-    return features
 
 
 ##############################################################################
@@ -354,8 +256,7 @@ def convert_tags(data):
 def export_test_result(labels, y_test, y_pred):
     details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
     details = [i for i in [re.findall(RE_WORDS, i) for i in details.split('\n')] if i !=
-               []][
-              1:-1]
+               []][1:-1]
     details = pd.DataFrame(details, columns=HEADER_CRF)
     details = details.sort_values('f1', ascending=False)
     return details
