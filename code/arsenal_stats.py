@@ -611,3 +611,39 @@ def load_yaml_conf(conf_f):
 
 def hashit(string):
     return hashlib.md5(string.encode('utf-8')).hexdigest()
+
+##########################################################################################
+
+
+
+def map_set_2_matrix(sent, feature_set):
+    """
+    :param sent: [(word, pos, ner)]
+    :param feature_set: {feature1, feature2}
+    :return: [(word, pos, ner, other_features)]
+    """
+    feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
+    return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
+
+
+def map_dict_2_matrix(sent, feature_dic):
+    """
+    :param sent: [(word, pos, ner)]
+    :param feature_set: {feature1:value1, feature2:value2}
+    :return: [(word, pos, ner, other_features)]
+    """
+    feature_list = [
+        str(feature_dic.get(line[0].lower())) if line[0].lower() in feature_dic.keys()
+        else '0' for line in sent]
+    return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
+
+
+def map_set2df(df, col_name, feature_set):
+    feature_dict = {str(i): str(i) for i in feature_set}  # Construct a dic from a set
+    df[col_name] = df.iloc[:, 0].map(feature_dict)
+    return df.replace(np.nan, '0')
+
+
+def map_dic2df(df, col_name, feature_dict):
+    df[col_name] = df.iloc[:, 0].map(feature_dict)
+    return df.replace(np.nan, 0)

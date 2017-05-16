@@ -31,7 +31,7 @@ QUOTATION = {"'": '"'}
 ##############################################################################
 
 
-def process_annotated_(in_file, col_names=HEADER_NER):
+def process_annotated(in_file, col_names=HEADER_NER):
     """
     :param in_file: CSV file: TOKEN, POS, NER
     :param col_names
@@ -43,7 +43,7 @@ def process_annotated_(in_file, col_names=HEADER_NER):
     return data
 
 
-def batch_loading_(crf_f, feature_hdf, hdf_keys, crf_model=False):
+def batch_loading(crf_f, feature_hdf, hdf_keys, crf_model=False):
     # Move to arsenal
     """
     :param dict_conf:
@@ -71,7 +71,7 @@ def prepare_features_(dfs):
     return OrderedDict(sorted(f_dics.items()))
 
 
-def batch_add_features_(df, f_dics):
+def batch_add_features(df, f_dics):
     df_list = [map_dic2df(df, name, f_dic) for name, f_dic in f_dics.items()]
     return df_list[-1]
 
@@ -86,43 +86,7 @@ def df2crfsuite(df, delim='##END'):
 ##############################################################################
 
 
-def map_set_2_matrix(sent, feature_set):
-    """
-    :param sent: [(word, pos, ner)]
-    :param feature_set: {feature1, feature2}
-    :return: [(word, pos, ner, other_features)]
-    """
-    feature_list = ['1' if line[0] in feature_set else '0' for line in sent]
-    return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
-
-
-def map_dict_2_matrix(sent, feature_dic):
-    """
-    :param sent: [(word, pos, ner)]
-    :param feature_set: {feature1:value1, feature2:value2}
-    :return: [(word, pos, ner, other_features)]
-    """
-    feature_list = [
-        str(feature_dic.get(line[0].lower())) if line[0].lower() in feature_dic.keys()
-        else '0' for line in sent]
-    return [(sent[i] + (feature_list[i],)) for i in range(len(list(sent)))]
-
-
-def map_set2df(df, col_name, feature_set):
-    feature_dict = {str(i): str(i) for i in feature_set}  # Construct a dic from a set
-    df[col_name] = df.iloc[:, 0].map(feature_dict)
-    return df.replace(np.nan, '0')
-
-
-def map_dic2df(df, col_name, feature_dict):
-    df[col_name] = df.iloc[:, 0].map(feature_dict)
-    return df.replace(np.nan, 0)
-
-
-##############################################################################
-
-
-def feature_selector_(word_tuple, feature_conf, conf_switch):
+def feature_selector(word_tuple, feature_conf, conf_switch):
     """
     Set the feature dict here
     :param word: word itself
@@ -140,23 +104,23 @@ def feature_selector_(word_tuple, feature_conf, conf_switch):
     return feature_dict
 
 
-def word2features_(sent, i, feature_conf):
-    features = feature_selector_(sent[i], feature_conf, 'current')
+def word2features(sent, i, feature_conf):
+    features = feature_selector(sent[i], feature_conf, 'current')
     if i > 0:
         features.update(
-            feature_selector_(sent[i - 1], feature_conf, 'previous'))
+            feature_selector(sent[i - 1], feature_conf, 'previous'))
     else:
         features['BOS'] = True
     if i < len(sent) - 1:
         features.update(
-            feature_selector_(sent[i + 1], feature_conf, 'next'))
+            feature_selector(sent[i + 1], feature_conf, 'next'))
     else:
         features['EOS'] = True
     return features
 
 
 def sent2features(line, feature_conf):
-    return [word2features_(line, i, feature_conf) for i in range(len(line))]
+    return [word2features(line, i, feature_conf) for i in range(len(line))]
 
 
 def sent2labels(line):
@@ -178,11 +142,8 @@ def feed_crf_trainer(in_data, conf):
     :param conf_f:
     :return: nested lists of lists
     """
-    basic_logging('begins')    
     features = [sent2features(s, conf) for s in in_data]
-    basic_logging('feaures')
     labels = [sent2labels(s) for s in in_data]
-    basic_logging('label')
     return features, labels
 
 
