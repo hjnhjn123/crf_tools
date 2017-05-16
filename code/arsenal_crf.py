@@ -72,8 +72,8 @@ def prepare_features_(dfs):
     :param dfs: a list of pd dfs
     :return: a list of feature sets and feature dicts
     """
-    f_sets = [df2set(df) for df in dfs if len(df.columns) == 1]
-    f_dics = [df2dic(df) for df in dfs if len(df.columns) == 2]
+    f_sets = {name: df2set(df) for (name, df) in dfs.items() if len(df.columns) == 1}
+    f_dics = {name: df2dic(df) for (name, df) in dfs.items() if len(df.columns) == 2}
     return f_sets, f_dics
 
 
@@ -94,10 +94,9 @@ def batch_loading_(crf_f, feature_hdf, hdf_keys, crf_model=False):
 
 
 def batch_add_features_(df, f_sets, f_dics):
-    f_sets = [{i: i for i in j} for j in f_sets]  # A special case of comprehension
-    all = f_sets + f_dics
-    all_names = [str(i) for i in range(len(all))]
-    df_list = [map_dic2df(df, c_name, f_dic) for c_name, f_dic in zip(all_names, all)]
+    feature_sets = {k: {i: i for i in j} for (k, j) in f_sets.items()}  # special case
+    f_dics.update(feature_sets)
+    df_list = [map_dic2df(df, name, f_dic) for name, f_dic in f_dics.items()]
     return df_list[-1]
 
 
@@ -216,6 +215,9 @@ def word2features(sent, i, feature_conf):
     return features
 
 
+##############################################################################
+
+
 def feature_selector_(word_tuple, feature_conf, conf_switch):
     """
     Set the feature dict here
@@ -266,6 +268,7 @@ def sent2label_spfc(line, label):
 
 # CRF training
 
+@do_cprofile
 def feed_crf_trainer(in_data, conf):
     """
     :param in_data:
