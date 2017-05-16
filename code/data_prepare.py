@@ -89,9 +89,6 @@ def extract_institute(institute_json, out_csv):
     pd.DataFrame(ii).to_csv(out_csv, index=False, header=None)
 
 
-
-
-
 ##############################################################################
 
 

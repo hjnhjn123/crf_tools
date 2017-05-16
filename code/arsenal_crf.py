@@ -268,7 +268,6 @@ def sent2label_spfc(line, label):
 
 # CRF training
 
-@do_cprofile
 def feed_crf_trainer(in_data, conf):
     """
     :param in_data:
