@@ -2,6 +2,7 @@
 
 from math import modf
 from os import listdir, path
+from sys import argv, path
 
 import redis
 
@@ -12,6 +13,12 @@ from arsenal_stats import *
 
 HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker',
                     'tfdf', 'tfidf']
+
+conf_path = argv[1] if argv[1] else ''
+# path.insert(1,os.path.dirname(conf_path))
+conf_name=os.path.splitext(os.path.split(conf_path)[-1])[0]
+settings =  __import__('.'.join(('conf', conf_name)))
+
 
 
 ##############################################################################
@@ -59,9 +66,9 @@ def batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch):
 # Refactoring
 
 
-def pipeline_crf_train_(train_f, test_f, model_f, dict_conf, f_hdf, hdf_key, report_type):
+def pipeline_crf_train_(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type):
     basic_logging('Conf loading begins')
-    conf, crf, f_sets, f_dics = batch_loading_(dict_conf, '', f_hdf, hdf_key)
+    crf, f_sets, f_dics = batch_loading_('', f_hdf, hdf_key)
     basic_logging('Conf loading ends')
     train_df, test_df = process_annotated_(train_f), process_annotated_(test_f)
     basic_logging('Data loading ends')
