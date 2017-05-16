@@ -84,8 +84,9 @@ def hdf2df(in_hdf, hdf_keys):
     Read a hdf5 file and return all dfs
     :param in_hdf: a hdf5 file 
     :param hdf_keys: 
+    :return a dict of df
     """
-    return [pd.read_hdf(in_hdf, i) for i in hdf_keys]
+    return {i: pd.read_hdf(in_hdf, i) for i in hdf_keys}
 
 
 ##########################################################################################
