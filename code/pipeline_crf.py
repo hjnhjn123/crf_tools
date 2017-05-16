@@ -23,30 +23,28 @@ settings =  __import__('.'.join(('conf', conf_name)))
 ##############################################################################
 
 
-# Refactoring
+# Pipelines
 
 
 def pipeline_crf_train_(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type):
-    basic_logging('Conf loading begins')
-    _, f_dics = batch_loading_('', f_hdf, hdf_key)
-    basic_logging('Conf loading ends')
-    train_df, test_df = process_annotated_(train_f), process_annotated_(test_f)
-    basic_logging('Data loading ends')
-    train_df = batch_add_features_(train_df, f_dics)
-    test_df = batch_add_features_(test_df, f_dics)
-    basic_logging('Adding features ends')
+    basic_logging('loading conf begins')
+    _, f_dics = batch_loading('', f_hdf, hdf_key)
+    basic_logging('loading conf ends')
+    train_df, test_df = process_annotated(train_f), process_annotated(test_f)
+    basic_logging('loading data ends')
+    train_df = batch_add_features(train_df, f_dics)
+    test_df = batch_add_features(test_df, f_dics)
+    basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
-    basic_logging('Converting ends')
-
+    basic_logging('converting to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, conf)
     X_test, y_test = feed_crf_trainer(test_sents, conf)
-
-    basic_logging('Conversion ends')
+    basic_logging('adding more features ends')
     crf = train_crf(X_train, y_train)
-    basic_logging('Training ends')
+    basic_logging('training ends')
     result, details = test_crf_prediction(crf, X_test, y_test, report_type)
-    basic_logging('Testing ends')
+    basic_logging('testing ends')
     # jl.dump(crf, model_f)
     return crf, result, details
 
@@ -87,34 +85,13 @@ def convert_crf_result_json(crf_result, raw_df):
 ##############################################################################
 
 
-# Pipelines
+# Refactoring
 
-
-def pipeline_crf_train(train_f, test_f, model_f, dict_conf, feature_hdf, hdf_keys,
-                       test_switch):
-    loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
-    conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
-    train_data, test_data = process_annotated(train_f), process_annotated(test_f)
-    train_sents = batch_add_features(train_data, aca, com_single, com_suffix, location,
-                                     name, ticker, tfdf, tfidf)
-    test_sents = batch_add_features(test_data, aca, com_single, com_suffix, location,
-                                    name, ticker, tfdf, tfidf)
-    basic_logging('Adding features ends')
-    X_train, y_train = feed_crf_trainer(train_sents, conf)
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
-
-    basic_logging('Conversion ends')
-    crf = train_crf(X_train, y_train)
-    basic_logging('Training ends')
-    result, details = test_crf_prediction(crf, X_test, y_test, test_switch)
-    basic_logging('Testing ends')
-    # jl.dump(crf, model_f)
-    return crf, result, details
+# todo
 
 
 def pipeline_train_best_predict(train_f, test_f, model_f, dict_conf, feature_hdf,
-                                hdf_keys, cv,
-                                iteration, test_switch):
+                                hdf_keys, cv, iteration, test_switch):
     loads = batch_loading(dict_conf, '', feature_hdf, hdf_keys, 'train')
     conf, _, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
     train_data, test_data = process_annotated(train_f), process_annotated(test_f)
