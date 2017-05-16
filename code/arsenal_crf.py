@@ -54,6 +54,9 @@ def process_annotated(in_file, col_names=HEADER_NER, delimiter=('##END', '###', 
     return sents
 
 
+##############################################################################
+
+
 def process_annotated_(in_file, col_names=HEADER_NER):
     """
     :param in_file: CSV file: TOKEN, POS, NER
@@ -64,17 +67,6 @@ def process_annotated_(in_file, col_names=HEADER_NER):
     data.columns = col_names
     data = data.dropna()
     return data
-
-
-def prepare_features_(dfs):
-    # Move to arsenal
-    """
-    :param dfs: a list of pd dfs
-    :return: a list of feature sets and feature dicts
-    """
-    f_sets = {name: df2set(df) for (name, df) in dfs.items() if len(df.columns) == 1}
-    f_dics = {name: df2dic(df) for (name, df) in dfs.items() if len(df.columns) == 2}
-    return f_sets, f_dics
 
 
 def batch_loading_(crf_f, feature_hdf, hdf_keys, crf_model=False):
@@ -89,13 +81,23 @@ def batch_loading_(crf_f, feature_hdf, hdf_keys, crf_model=False):
     """
     crf = jl.load(crf_f) if crf_model else None
     loads = hdf2df(feature_hdf, hdf_keys)
-    f_sets, f_dics = prepare_features_(loads)
-    return crf, f_sets, f_dics
+    f_dics = prepare_features_(loads)
+    return crf, f_dics
 
 
-def batch_add_features_(df, f_sets, f_dics):
+def prepare_features_(dfs):
+    """
+    :param dfs: a list of pd dfs
+    :return: a list of feature sets and feature dicts
+    """
+    f_sets = {name: df2set(df) for (name, df) in dfs.items() if len(df.columns) == 1}
+    f_dics = {name: df2dic(df) for (name, df) in dfs.items() if len(df.columns) == 2}
     feature_sets = {k: {i: i for i in j} for (k, j) in f_sets.items()}  # special case
     f_dics.update(feature_sets)
+    return OrderedDict(sorted(f_dics.items()))
+
+
+def batch_add_features_(df, f_dics):
     df_list = [map_dic2df(df, name, f_dic) for name, f_dic in f_dics.items()]
     return df_list[-1]
 
