@@ -2,7 +2,7 @@
 
 from math import modf
 from os import listdir, path
-from sys import argv, path
+from sys import path
 
 import redis
 
@@ -10,9 +10,15 @@ from arsenal_crf import *
 from arsenal_logging import *
 from arsenal_spacy import *
 from arsenal_stats import *
-from conf.pat360ner_crf_en_settings import *
+import conf.pat360ner_crf_en_settings as settings
 
-# conf = settings.pat360ner_crf_en_settings.feature_function
+FEATURES = settings.FEATURE_FUNCTION
+TRAIN_F = settings.TRAIN_F
+TEST_F = settings.TEST_F
+MODEL_F = settings.MODEL_F
+HDF_F = settings.HDF_F
+HDF_KEY = settings.HDF_KEY
+REPORT_TYPE = settings.REPORT_TYPE
 
 ##############################################################################
 
