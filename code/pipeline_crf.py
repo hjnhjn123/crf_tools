@@ -6,11 +6,11 @@ from sys import path
 
 import redis
 
+import conf.pat360ner_crf_en_settings as settings
 from arsenal_crf import *
 from arsenal_logging import *
 from arsenal_spacy import *
 from arsenal_stats import *
-import conf.pat360ner_crf_en_settings as settings
 
 FEATURES = settings.FEATURE_FUNCTION
 TRAIN_F = settings.TRAIN_F
@@ -20,6 +20,7 @@ HDF_F = settings.HDF_F
 HDF_KEY = settings.HDF_KEY
 REPORT_TYPE = settings.REPORT_TYPE
 
+
 ##############################################################################
 
 
@@ -27,6 +28,16 @@ REPORT_TYPE = settings.REPORT_TYPE
 
 
 def pipeline_train(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type):
+    """
+    A pipeline for CRF training
+    :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param model_f: model file
+    :param conf: feature configurations
+    :param hdf_f: feature HDF5 file
+    :param hdf_key: keys of feature HDF5 file
+    :param report_type: 'spc' for a specific report and 'bin' for binary report
+    """
     basic_logging('loading conf begins')
     _, f_dics = batch_loading('', hdf_f, hdf_key)
     basic_logging('loading conf ends')
@@ -51,6 +62,18 @@ def pipeline_train(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type):
 
 def pipeline_best_predict(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type,
                           cv, iteration):
+    """
+    A pipeline for CRF training
+    :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param model_f: model file
+    :param conf: feature configurations
+    :param hdf_f: feature HDF5 file
+    :param hdf_key: keys of feature HDF5 file
+    :param report_type: 'spc' for a specific report and 'bin' for binary report
+    :param cv: cv scale
+    :param iteration: iteration time
+    """
     basic_logging('loading conf begins')
     _, f_dics = batch_loading('', hdf_f, hdf_key)
     basic_logging('loading conf ends')
@@ -78,6 +101,15 @@ def pipeline_best_predict(train_f, test_f, model_f, conf, hdf_f, hdf_key, report
 
 
 def pipeline_test(test_f, model_f, crf_f, conf, hdf_f, hdf_key, report_type):
+    """
+    A pipeline for CRF training
+    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param model_f: model file
+    :param conf: feature configurations
+    :param hdf_f: feature HDF5 file
+    :param hdf_key: keys of feature HDF5 file
+    :param report_type: 'spc' for a specific report and 'bin' for binary report
+    """
     basic_logging('loading conf begins')
     crf, f_dics = batch_loading(crf_f, hdf_f, hdf_key)
     basic_logging('loading conf ends')
@@ -123,7 +155,7 @@ def streaming_pos_crf(in_f, hdf_f, hdf_key, conf):
 
 
 def pipeline_pos_crf(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type, cols,
-                     pieces=10):
+                     out_f, pieces=10):
     crf, f_dics = batch_loading('', hdf_f, hdf_key)
     raw_df = pd.read_json(train_f, lines=True)
     basic_logging('Reading ends')
@@ -150,7 +182,6 @@ def pipeline_pos_crf(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type
     basic_logging('Predicting ends')
     out = pd.DataFrame(result)
     out.to_csv(out_f, header=False, index=False)
-
 
 
 def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, feature_hdf,
