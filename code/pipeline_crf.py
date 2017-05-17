@@ -73,8 +73,10 @@ def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, re
     basic_logging('loading data ends')
     train_df = batch_add_features(train_df, f_dics)
     test_df = batch_add_features(test_df, f_dics)
+    basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
+    basic_logging('converting to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key)
     X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
     basic_logging('Conversion ends')
@@ -82,8 +84,9 @@ def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, re
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
+    basic_logging('cv begins')
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    basic_logging('Training ends')
+    basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
     best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test,
                                                     report_type)
@@ -107,7 +110,9 @@ def pipeline_test(test_f, crf_f, features, hdf_f, hdf_key, report_type):
     basic_logging('loading conf ends')
     test_df = process_annotated(test_f)
     test_df = batch_add_features(test_df, f_dics)
+    basic_logging('adding features ends')
     test_sents = df2crfsuite(test_df)
+    basic_logging('converting to crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
     basic_logging('Conversion ends')
     result, details = test_crf_prediction(crf, X_test, y_test, report_type)
@@ -242,10 +247,11 @@ ITERATION = settings.ITERATION
 
 
 def main(argv):
+    print(argv[1])
     dic = {'train': pipeline_train(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
                                    REPORT_TYPE),
           'cv': pipeline_best_predict(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
                                    REPORT_TYPE, CV, ITERATION),
           'test': pipeline_test(TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY, REPORT_TYPE)
      }
-    return dic[argv]
+    return dic[argv[1]]

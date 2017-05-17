@@ -14,8 +14,8 @@ from sklearn_crfsuite import metrics
 from code.arsenal_stats import *
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
-HEADER_REPORT = ['tag', 'precision', 'recall', 'f1', 'support']
 
+HEADER_REPORT = ['tag', 'precision', 'recall', 'f1', 'support']
 RE_WORDS = re.compile(r"[\w\d\.-]+")
 
 
