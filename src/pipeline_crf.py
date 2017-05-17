@@ -35,8 +35,8 @@ def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_ty
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
-    train_df = batch_add_features(train_df, f_dics)
-    test_df = batch_add_features(test_df, f_dics)
+    # train_df = batch_add_features(train_df, f_dics)
+    # test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
@@ -97,10 +97,10 @@ def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, re
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_validate(test_f, crf_f, features, hdf_f, hdf_key, report_type):
+def pipeline_validate(validate_f, model_f, features, hdf_f, hdf_key, report_type):
     """
     A pipeline for CRF training
-    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param validate_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param model_f: model file
     :param features: feature configurations
     :param hdf_f: feature HDF5 file
@@ -108,10 +108,10 @@ def pipeline_validate(test_f, crf_f, features, hdf_f, hdf_key, report_type):
     :param report_type: 'spc' for a specific report and 'bin' for binary report
     """
     basic_logging('loading conf begins')
-    crf, f_dics = batch_loading(crf_f, hdf_f, hdf_key)
+    crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    test_df = process_annotated(test_f)
-    test_df = batch_add_features(test_df, f_dics)
+    test_df = process_annotated(validate_f)
+    # test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
@@ -241,6 +241,7 @@ FEATURES = FEATURE_FUNCTION
 TRAIN_F = TRAIN_F
 TEST_F = TEST_F
 MODEL_F = MODEL_F
+VALIDATE_F = VALIDATE_F
 HDF_F = HDF_F
 HDF_KEY = HDF_KEY
 REPORT_TYPE = REPORT_TYPE

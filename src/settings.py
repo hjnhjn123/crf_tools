@@ -33,6 +33,9 @@ TRAIN_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
 TEST_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
     '/annotate_test_20170425.csv'
 
+VALIDATE_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
+    '/zdnet_test_20170425.csv'
+
 HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170425.h5'
 
 MODEL_F = ''
