@@ -48,3 +48,7 @@ HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfd
            'tfidf']
 
 REPORT_TYPE = 'spc'
+
+CV = 5
+
+ITERATION = 10

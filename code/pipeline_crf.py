@@ -12,14 +12,6 @@ from arsenal_logging import *
 from arsenal_spacy import *
 from arsenal_stats import *
 
-FEATURES = settings.FEATURE_FUNCTION
-TRAIN_F = settings.TRAIN_F
-TEST_F = settings.TEST_F
-MODEL_F = settings.MODEL_F
-HDF_F = settings.HDF_F
-HDF_KEY = settings.HDF_KEY
-REPORT_TYPE = settings.REPORT_TYPE
-
 
 ##############################################################################
 
@@ -27,13 +19,13 @@ REPORT_TYPE = settings.REPORT_TYPE
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type):
+def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param model_f: model file
-    :param conf: feature configurations
+    :param features: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     :param report_type: 'spc' for a specific report and 'bin' for binary report
@@ -49,8 +41,8 @@ def pipeline_train(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type):
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, conf, hdf_key)
-    X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
+    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
@@ -60,14 +52,14 @@ def pipeline_train(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type):
     return crf, result, details
 
 
-def pipeline_best_predict(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type,
+def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type,
                           cv, iteration):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param model_f: model file
-    :param conf: feature configurations
+    :param features: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     :param report_type: 'spc' for a specific report and 'bin' for binary report
@@ -83,8 +75,8 @@ def pipeline_best_predict(train_f, test_f, model_f, conf, hdf_f, hdf_key, report
     test_df = batch_add_features(test_df, f_dics)
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
-    X_train, y_train = feed_crf_trainer(train_sents, conf, hdf_key)
-    X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
+    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
@@ -100,12 +92,12 @@ def pipeline_best_predict(train_f, test_f, model_f, conf, hdf_f, hdf_key, report
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_test(test_f, model_f, crf_f, conf, hdf_f, hdf_key, report_type):
+def pipeline_test(test_f, crf_f, features, hdf_f, hdf_key, report_type):
     """
     A pipeline for CRF training
     :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param model_f: model file
-    :param conf: feature configurations
+    :param features: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     :param report_type: 'spc' for a specific report and 'bin' for binary report
@@ -116,7 +108,7 @@ def pipeline_test(test_f, model_f, crf_f, conf, hdf_f, hdf_key, report_type):
     test_df = process_annotated(test_f)
     test_df = batch_add_features(test_df, f_dics)
     test_sents = df2crfsuite(test_df)
-    X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
     basic_logging('Conversion ends')
     result, details = test_crf_prediction(crf, X_test, y_test, report_type)
     return result, details
@@ -235,3 +227,25 @@ def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, feature_hdf, hdf_keys
         i += 1
         if modf(i / 10)[0] == 0.0:
             print(get_now(), i)
+
+##############################################################################
+
+FEATURES = settings.FEATURE_FUNCTION
+TRAIN_F = settings.TRAIN_F
+TEST_F = settings.TEST_F
+MODEL_F = settings.MODEL_F
+HDF_F = settings.HDF_F
+HDF_KEY = settings.HDF_KEY
+REPORT_TYPE = settings.REPORT_TYPE
+CV = settings.CV
+ITERATION = settings.ITERATION
+
+
+def main(argv):
+    dic = {'train': pipeline_train(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
+                                   REPORT_TYPE),
+          'cv': pipeline_best_predict(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
+                                   REPORT_TYPE, CV, ITERATION),
+          'test': pipeline_test(TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY, REPORT_TYPE)
+     }
+    return dic[argv]
