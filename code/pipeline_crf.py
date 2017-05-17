@@ -26,9 +26,9 @@ REPORT_TYPE = settings.REPORT_TYPE
 # Pipelines
 
 
-def pipeline_crf_train(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type):
+def pipeline_train(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type):
     basic_logging('loading conf begins')
-    _, f_dics = batch_loading('', f_hdf, hdf_key)
+    _, f_dics = batch_loading('', hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
@@ -49,10 +49,10 @@ def pipeline_crf_train(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_ty
     return crf, result, details
 
 
-def pipeline_train_best_predict(train_f, test_f, model_f, conf, f_hdf, hdf_key,
-                                report_type, cv, iteration):
+def pipeline_best_predict(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type,
+                          cv, iteration):
     basic_logging('loading conf begins')
-    _, f_dics = batch_loading('', f_hdf, hdf_key)
+    _, f_dics = batch_loading('', hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
@@ -77,9 +77,9 @@ def pipeline_train_best_predict(train_f, test_f, model_f, conf, f_hdf, hdf_key,
     return crf, best_predictor, rs_cv, best_result, best_details
 
 
-def pipeline_crf_test(test_f, model_f, crf_f, conf, f_hdf, hdf_key, report_type):
+def pipeline_test(test_f, model_f, crf_f, conf, hdf_f, hdf_key, report_type):
     basic_logging('loading conf begins')
-    crf, f_dics = batch_loading(crf_f, f_hdf, hdf_key)
+    crf, f_dics = batch_loading(crf_f, hdf_f, hdf_key)
     basic_logging('loading conf ends')
     test_df = process_annotated(test_f)
     test_df = batch_add_features(test_df, f_dics)
@@ -96,8 +96,8 @@ def pipeline_crf_test(test_f, model_f, crf_f, conf, f_hdf, hdf_key, report_type)
 # Streaming
 
 
-def streaming_pos_crf(in_f, f_hdf, hdf_key, conf):
-    crf, f_dics = batch_loading('', f_hdf, hdf_key)
+def streaming_pos_crf(in_f, hdf_f, hdf_key, conf):
+    crf, f_dics = batch_loading('', hdf_f, hdf_key)
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
 
@@ -122,9 +122,9 @@ def streaming_pos_crf(in_f, f_hdf, hdf_key, conf):
 # todo
 
 
-def pipeline_pos_crf(train_f, test_f, model_f, conf, f_hdf, hdf_key, report_type, cols,
+def pipeline_pos_crf(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type, cols,
                      pieces=10):
-    crf, f_dics = batch_loading('', f_hdf, hdf_key)
+    crf, f_dics = batch_loading('', hdf_f, hdf_key)
     raw_df = pd.read_json(train_f, lines=True)
     basic_logging('Reading ends')
     data = pd.DataFrame(raw_df.result.values.tolist())['content'].reset_index()
