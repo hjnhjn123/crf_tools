@@ -87,26 +87,28 @@ def df2crfsuite(df, delim='##END'):
 ##############################################################################
 
 
-def feature_selector(word_tuple, feature_conf, conf_switch, hdf_key):
+def feature_selector(word_tuple, feature_conf, window, hdf_key):
     """
     Set the feature dict here
     :param word: word itself
     :param feature_conf: feature config
-    :param conf_switch: select the right config from feature_config
+    :param window: select the right config from feature_config
     :return:
     """
 
     word, pos, other_features = word_tuple[0], word_tuple[1], word_tuple[3:]
-    other_dict = {'_'.join((conf_switch, j)): k for j, k in zip(sorted(hdf_key), other_features)}
-    feature_func = {'_'.join((conf_switch, name)): func for (name, func) in feature_conf.items()}
+    other_dict = {'_'.join((window, j)): k for j, k in zip(sorted(hdf_key), other_features)}
+    feature_func = {name: func for (name, func) in feature_conf.items() if
+                    name.startswith(window)}
     feature_dict = {name: func(word) for (name, func) in feature_func.items()}
     feature_dict.update(other_dict)
+    feature_dict.update({'_'.join((window, 'pos')): pos})
     return feature_dict
 
 
 def word2features(sent, i, feature_conf, hdf_key):
     features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
-    features.update({'bias':1.0})
+    features.update({'bias': 1.0})
     if i > 0:
         features.update(
             feature_selector(sent[i - 1], feature_conf, 'previous', hdf_key))
