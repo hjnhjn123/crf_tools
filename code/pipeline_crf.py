@@ -132,7 +132,7 @@ def streaming_pos_crf(in_f, hdf_f, hdf_key, conf):
                      if not x[0]]
     test_sents = batch_add_features(prepared_data, f_dics)
 
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
+    X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
     crf_result = crf_predict(crf, prepared_data, X_test)
 
     return crf_result, raw_df
