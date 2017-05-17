@@ -14,6 +14,7 @@ from sklearn_crfsuite import metrics
 from code.arsenal_stats import *
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
+HEADER_REPORT = ['tag', 'precision', 'recall', 'f1', 'support']
 
 RE_WORDS = re.compile(r"[\w\d\.-]+")
 
@@ -215,7 +216,7 @@ def export_test_result(labels, y_test, y_pred):
     details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
     details = [i for i in [re.findall(RE_WORDS, i) for i in details.split('\n')] if i !=
                []][1:-1]
-    details = pd.DataFrame(details, columns=HEADER_CRF)
+    details = pd.DataFrame(details, columns=HEADER_REPORT)
     details = details.sort_values('f1', ascending=False)
     return details
 
