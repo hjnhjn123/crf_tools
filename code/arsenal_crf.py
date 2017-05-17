@@ -88,7 +88,7 @@ def df2crfsuite(df, delim='##END'):
 ##############################################################################
 
 
-def feature_selector(word_tuple, feature_conf, conf_switch):
+def feature_selector(word_tuple, feature_conf, conf_switch, hdf_key):
     """
     Set the feature dict here
     :param word: word itself
@@ -99,30 +99,31 @@ def feature_selector(word_tuple, feature_conf, conf_switch):
 
     word, pos, other_features = word_tuple[0], word_tuple[1], word_tuple[3:]
     other_length = len(other_features)
-    other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(other_length), other_features)}
+    # other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(other_length), other_features)}
+    other_dict = {'_'.join((conf_switch, j)): k for j, k in zip(sorted(hdf_key), other_features)}
     feature_func = {'_'.join((conf_switch, name)): func for (name, func) in feature_conf.items()}
     feature_dict = {name: func(word) for (name, func) in feature_func.items()}
     feature_dict.update(other_dict)
     return feature_dict
 
 
-def word2features(sent, i, feature_conf):
-    features = feature_selector(sent[i], feature_conf, 'current')
+def word2features(sent, i, feature_conf, hdf_key):
+    features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
     if i > 0:
         features.update(
-            feature_selector(sent[i - 1], feature_conf, 'previous'))
+            feature_selector(sent[i - 1], feature_conf, 'previous', hdf_key))
     else:
         features['BOS'] = True
     if i < len(sent) - 1:
         features.update(
-            feature_selector(sent[i + 1], feature_conf, 'next'))
+            feature_selector(sent[i + 1], feature_conf, 'next', hdf_key))
     else:
         features['EOS'] = True
     return features
 
 
-def sent2features(line, feature_conf):
-    return [word2features(line, i, feature_conf) for i in range(len(line))]
+def sent2features(line, feature_conf, hdf_key):
+    return [word2features(line, i, feature_conf, hdf_key) for i in range(len(line))]
 
 
 def sent2labels(line):
@@ -138,13 +139,13 @@ def sent2label_spfc(line, label):
 
 # CRF training
 
-def feed_crf_trainer(in_data, conf):
+def feed_crf_trainer(in_data, conf, hdf_key):
     """
     :param in_data:
     :param conf_f:
     :return: nested lists of lists
     """
-    features = [sent2features(s, conf) for s in in_data]
+    features = [sent2features(s, conf, hdf_key) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
     return features, labels
 
