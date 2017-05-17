@@ -11,7 +11,7 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-from arsenal_stats import *
+from code.arsenal_stats import *
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
 

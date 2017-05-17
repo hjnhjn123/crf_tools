@@ -6,11 +6,11 @@ from sys import path
 
 import redis
 
-import conf.pat360ner_crf_en_settings as settings
-from arsenal_crf import *
-from arsenal_logging import *
-from arsenal_spacy import *
-from arsenal_stats import *
+import code.conf.pat360ner_crf_en_settings as settings
+from code.arsenal_crf import *
+from code.arsenal_logging import *
+from code.arsenal_spacy import *
+from code.arsenal_stats import *
 
 
 ##############################################################################
