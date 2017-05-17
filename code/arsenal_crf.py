@@ -97,8 +97,6 @@ def feature_selector(word_tuple, feature_conf, conf_switch, hdf_key):
     """
 
     word, pos, other_features = word_tuple[0], word_tuple[1], word_tuple[3:]
-    other_length = len(other_features)
-    # other_dict = {'_'.join((conf_switch, str(j))): k for j, k in zip(range(other_length), other_features)}
     other_dict = {'_'.join((conf_switch, j)): k for j, k in zip(sorted(hdf_key), other_features)}
     feature_func = {'_'.join((conf_switch, name)): func for (name, func) in feature_conf.items()}
     feature_dict = {name: func(word) for (name, func) in feature_func.items()}
@@ -108,6 +106,7 @@ def feature_selector(word_tuple, feature_conf, conf_switch, hdf_key):
 
 def word2features(sent, i, feature_conf, hdf_key):
     features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
+    features.update({'bias':1.0})
     if i > 0:
         features.update(
             feature_selector(sent[i - 1], feature_conf, 'previous', hdf_key))
