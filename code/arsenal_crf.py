@@ -13,13 +13,7 @@ from sklearn_crfsuite import metrics
 
 from arsenal_stats import *
 
-HEADER_CRF = ['tag', 'precision', 'recall', 'f1', 'support']
-LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU',
-                 'OPD', 'PEF', 'FND', 'FNS', 'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS',
-                 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS', 'PRT', 'SHP']
-LABEL_COLLEGE = ['COL']
-LABEL_REMAPPED = ['ORG', 'MISC']
-HEADER_NER = ['TOKEN', 'POS', 'NER']
+HEADER_CRF = ['TOKEN', 'POS', 'NER']
 
 RE_WORDS = re.compile(r"[\w\d\.-]+")
 
@@ -27,7 +21,7 @@ RE_WORDS = re.compile(r"[\w\d\.-]+")
 ##############################################################################
 
 
-def process_annotated(in_file, col_names=HEADER_NER):
+def process_annotated(in_file, col_names=HEADER_CRF):
     """
     :param in_file: CSV file: TOKEN, POS, NER
     :param col_names
