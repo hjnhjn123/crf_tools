@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+
+# FEATURES
+
 FEATURE_FUNCTION = {
     'current_original': lambda x: x,
     'current_lower': lambda x: x.lower(),
@@ -19,17 +23,28 @@ FEATURE_FUNCTION = {
     'next_islower': lambda x: x.islower()
 }
 
-HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf',
-           'tfidf']
+##############################################################################
 
-HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170425.h5'
-
-MODEL_F = ''
+# FILE DIR
 
 TRAIN_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
     '/annotate_train_20170425.csv'
 
 TEST_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
     '/annotate_test_20170425.csv'
+
+HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170425.h5'
+
+MODEL_F = ''
+
+OUT_F = ''
+
+##############################################################################
+
+# MISC
+
+
+HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf',
+           'tfidf']
 
 REPORT_TYPE = 'spc'
