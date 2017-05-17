@@ -40,7 +40,6 @@ def process_annotated(in_file, col_names=HEADER_NER):
 
 
 def batch_loading(crf_f, feature_hdf, hdf_keys):
-    # Move to arsenal
     """
     :param dict_conf:
     :param crf_f:

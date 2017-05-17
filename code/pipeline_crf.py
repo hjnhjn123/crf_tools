@@ -12,13 +12,6 @@ from arsenal_spacy import *
 from arsenal_stats import *
 from conf.pat360ner_crf_en_settings import *
 
-HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker',
-                    'tfdf', 'tfidf']
-
-# conf_path = argv[1] if argv[1] else ''
-# path.insert(1,os.path.dirname(conf_path))
-# conf_name=os.path.splitext(os.path.split(conf_path)[-1])[0]
-# settings =  __import__('.'.join(('conf', conf_name)))
 # conf = settings.pat360ner_crf_en_settings.feature_function
 
 ##############################################################################
