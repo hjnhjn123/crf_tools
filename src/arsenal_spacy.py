@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
-import random
 from itertools import chain
 
-import pandas as pd
 import spacy
-from spacy import pipeline, gold
 
 NLP = spacy.load('en')
 
-LABEL_FACTSET = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
-                 'JVT', 'VEN', 'NPO', 'HED', 'UIT', 'MUE', 'COL', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
+LABEL_FACTSET = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU',
+                 'OPD', 'PEF', 'FND', 'FNS',
+                 'JVT', 'VEN', 'NPO', 'HED', 'UIT', 'MUE', 'COL', 'ABS', 'GOV', 'ESP',
+                 'PRO', 'FAF', 'SOV', 'COR',
                  'IDX', 'BAS', 'PRT', 'SHP']
 LABEL_NER = ('PERSON', 'NORP', 'ORG', 'GPE', 'PRODUCT', 'EVENT', 'MONEY')
 
@@ -45,7 +44,8 @@ def spacy_parser(text, switches, label):
               'txt': spacy_dic['txt'],
               'crf': (i + ('O',) for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
               'dep': (i for i in zip(spacy_dic['txt'], spacy_dic['dep'])),
-              'pos+dep': (i[:2] + ('O',) + (i[2],) for i in zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep'])),
+              'pos+dep': (i[:2] + ('O',) + (i[2],) for i in
+                          zip(spacy_dic['txt'], spacy_dic['pos'], spacy_dic['dep'])),
               'txt+pos': (i for i in zip(spacy_dic['txt'], spacy_dic['pos'])),
               }
     return list(result[switches])
@@ -112,53 +112,3 @@ def spacy_batch_processing(data, label, col, header, switch):
 
     return result_dic[switch]
 
-
-##############################################################################################
-
-
-# Training
-
-
-def df2gold_parser(df, entity_col='short_name', tag_col='entity_type'):
-    """
-    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
-    :param df: a df containing entity names and entity types
-    :param entity_col: entity names
-    :param tag_col: entity types
-    :return: (string containing entities, [(start, end, type)])
-    """
-    length = pd.Series((df[entity_col].str.len())).astype(str)
-    zeros, tag = pd.Series(['0' for i in range(len(df))]), df[tag_col]
-    len_series = pd.Series(list(zip(df[entity_col], zeros, length, df.entity_type)))
-    result = pd.DataFrame({'Gold_parser_format': len_series})
-    return result
-
-
-def read_gold_parser_train_data(input, col, file=True):
-    """
-    ('Who is Chaka Khan?', [(7, 17, 'PERSON')]),
-    :param input:
-    :param col:
-    :param file: True for csv file, else dataframe
-    :return: list of (string containing entities, [(start, end, type)])
-    """
-    data = pd.read_csv(input, usecols=col, quoting=0, engine='c') if file else input
-    train_data = [(i[0], list((tuple((int(i[1]), int(i[2]), i[3])),))) for i in data[col].tolist()]
-    return train_data
-
-
-def gold_parser(train_data, label=LABEL_FACTSET):
-    """
-    https://spacy.io/docs/usage/entity-recognition#updating
-    :param train_data: list of (string containing entities, [(start, end, type)])
-    :param label: a list of entity types
-    """
-    ner = pipeline.EntityRecognizer(NLP.vocab, entity_types=label)
-    for itn in range(5):
-        random.shuffle(train_data)
-        for raw_text, entity_offsets in train_data:
-            doc = NLP.make_doc(raw_text)
-            gold = spacy.gold.GoldParse(doc, entities=entity_offsets)
-            NLP.tagger(doc)
-            ner.update(doc, gold)
-    ner.model.end_training()
