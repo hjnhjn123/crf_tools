@@ -67,3 +67,5 @@ CV = 5
 
 # Set iteration
 ITERATION = 10
+
+WINDOW_SIZE = 2

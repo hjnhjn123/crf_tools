@@ -19,7 +19,7 @@ from .arsenal_stats import *
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type):
+def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type, window_size):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -41,8 +41,8 @@ def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_ty
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key)
-    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
+    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key, window_size)
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
@@ -247,12 +247,13 @@ HDF_KEY = HDF_KEY
 REPORT_TYPE = REPORT_TYPE
 CV = CV
 ITERATION = ITERATION
+WINDOW_SIZE = WINDOW_SIZE
 
 
 def main(argv):
     print(argv[1])
     dic = {'train': pipeline_train(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
-                                   REPORT_TYPE),
+                                   REPORT_TYPE, WINDOW_SIZE),
           'cv': pipeline_best_predict(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
                                    REPORT_TYPE, CV, ITERATION),
           'validate': pipeline_validate(TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
