@@ -6,11 +6,11 @@ from sys import path
 
 import redis
 
-from .settings import *
 from .arsenal_crf import *
 from .arsenal_logging import *
 from .arsenal_spacy import *
 from .arsenal_stats import *
+from .settings import *
 
 
 ##############################################################################
@@ -19,7 +19,8 @@ from .arsenal_stats import *
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type, window_size, result_f):
+def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, features,
+                   report_type, window_size):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -41,8 +42,10 @@ def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_ty
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key, window_size)
+    X_train, y_train = feed_crf_trainer(
+        train_sents, features, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(
+        test_sents, features, hdf_key, window_size)
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
@@ -52,12 +55,12 @@ def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_ty
     basic_logging('testing ends')
     if model_f:
         jl.dump(crf, model_f)
-    
-    return crf, overall_f1, details
+    return crf, details
 
 
-def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type,
-                          cv, iteration):
+def pipeline_best_predict(train_f, test_f, model_f, result_f, features, hdf_f, hdf_key,
+                          report_type,
+                          cv, iteration, window_size):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -81,25 +84,32 @@ def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, re
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key)
-    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
+    X_train, y_train = feed_crf_trainer(
+        train_sents, features, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(
+        test_sents, features, hdf_key, window_size)
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
     basic_logging('cv begins')
-    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    rs_cv = search_param(X_train, y_train, crf,
+                         params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
-    best_result, best_details = test_crf_prediction(best_predictor, X_test, y_test,
-                                                    report_type)
+    best_f1, best_details = test_crf_prediction(best_predictor, X_test, y_test,
+                                                report_type)
     basic_logging('Testing ends')
-    # jl.dump(best_predictor, model_f)
-    return crf, best_predictor, rs_cv, best_result, best_details
+    best_details['overall_f1'] = best_f1
+    best_details.to_csv(result_f, index=False)
+    if model_f:
+        jl.dump(best_predictor, model_f)
+    return crf, best_predictor, rs_cv, best_details
 
 
-def pipeline_validate(validate_f, model_f, features, hdf_f, hdf_key, report_type):
+def pipeline_validate(validate_f, model_f, features, hdf_f, result_f, hdf_key,
+                      report_type, window_size):
     """
     A pipeline for CRF training
     :param validate_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -113,13 +123,15 @@ def pipeline_validate(validate_f, model_f, features, hdf_f, hdf_key, report_type
     crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
     basic_logging('loading conf ends')
     test_df = process_annotated(validate_f)
-    # test_df = batch_add_features(test_df, f_dics)
+    test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key, window_size)
     basic_logging('Conversion ends')
-    result, details = test_crf_prediction(crf, X_test, y_test, report_type)
+    overall_f1, details = test_crf_prediction(crf, X_test, y_test, report_type)
+    details['overall_f1'] = overall_f1
+    details.to_csv(result_f, index=False)
     return result, details
 
 
@@ -143,7 +155,6 @@ def streaming_pos_crf(in_f, hdf_f, hdf_key, conf):
 
     X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
     crf_result = crf_predict(crf, prepared_data, X_test)
-
     return crf_result, raw_df
 
 
@@ -166,7 +177,8 @@ def pipeline_pos_crf(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type
     data = data.dropna()
     basic_logging('Cleaning ends')
 
-    parsed_data = spacy_batch_processing(data, '', 'content', ['content'], 'crf')
+    parsed_data = spacy_batch_processing(
+        data, '', 'content', ['content'], 'crf')
     basic_logging('Spacy ends')
 
     parsed_data = chain.from_iterable(parsed_data)
@@ -237,28 +249,27 @@ def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, feature_hdf, hdf_keys
         if modf(i / 10)[0] == 0.0:
             print(get_now(), i)
 
+
 ##############################################################################
 
-FEATURES = FEATURE_FUNCTION
-TRAIN_F = TRAIN_F
-TEST_F = TEST_F
-MODEL_F = MODEL_F
-VALIDATE_F = VALIDATE_F
-HDF_F = HDF_F
-HDF_KEY = HDF_KEY
-REPORT_TYPE = REPORT_TYPE
-CV = CV
-ITERATION = ITERATION
-WINDOW_SIZE = WINDOW_SIZE
+
+RESULT_F = '_'.join((RESULT_F, get_now(), '.csv'))
 
 
 def main(argv):
     print(argv[1])
-    dic = {'train': pipeline_train(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
-                                   REPORT_TYPE, WINDOW_SIZE),
-          'cv': pipeline_best_predict(TRAIN_F, TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
-                                   REPORT_TYPE, CV, ITERATION),
-          'validate': pipeline_validate(TEST_F, MODEL_F, FEATURES, HDF_F, HDF_KEY,
-                                        REPORT_TYPE)
-     }
+    dic = {'train': pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
+                                   result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                   features=FEATURE_FUNCTION, report_type=REPORT_TYPE,
+                                   window_size=WINDOW_SIZE),
+           'cv': pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
+                                       result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                       features=FEATURE_FUNCTION, report_type=REPORT_TYPE,
+                                       window_size=WINDOW_SIZE, cv=CV,
+                                       iteration=ITERATION),
+           'validate': pipeline_validate(validate_f=VALIDATE_F, model_f=MODEL_F,
+                                         result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                         features=FEATURE_FUNCTION,
+                                         report_type=REPORT_TYPE, window_size=WINDOW_SIZE)
+           }
     return dic[argv[1]]
