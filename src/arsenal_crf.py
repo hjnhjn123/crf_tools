@@ -101,6 +101,7 @@ def feature_selector(word_tuple, feature_conf, window, hdf_key):
     return feature_dict
 
 
+
 def word2features(sent, i, feature_conf, hdf_key, window_size):
     features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
     features.update({'bias': 1.0})

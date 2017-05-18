@@ -19,7 +19,7 @@ from .arsenal_stats import *
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type, window_size):
+def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type, window_size, result_f):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -46,12 +46,14 @@ def pipeline_train(train_f, test_f, model_f, features, hdf_f, hdf_key, report_ty
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
-    result, details = test_crf_prediction(crf, X_test, y_test, report_type)
+    overall_f1, details = test_crf_prediction(crf, X_test, y_test, report_type)
+    details['overall_f1'] = overall_f1
+    details.to_csv(result_f, index=False)
     basic_logging('testing ends')
-    # jl.dump(crf, model_f)
-    print(result)
-    print(details)
-    return crf, result, details
+    if model_f:
+        jl.dump(crf, model_f)
+    
+    return crf, overall_f1, details
 
 
 def pipeline_best_predict(train_f, test_f, model_f, features, hdf_f, hdf_key, report_type,
