@@ -4,8 +4,8 @@
 
 # Set features to compute
 
-FEATURE_FUNCTION = {
-    'current_original': lambda x: x,
+FEATURES = {
+    # 'current_original': lambda x: x,
     'current_lower': lambda x: x.lower(),
     'current_last3': lambda x: x[-3:],
     'current_last2': lambda x: x[-2:],
@@ -33,21 +33,22 @@ FEATURE_FUNCTION = {
 
 # Set train DIR
 TRAIN_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
-    '/annotate_train_20170425.csv'
+    '/annotate_train_20170518.csv'
 
 # Set test DIR
 TEST_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
-    '/annotate_test_20170425.csv'
+    '/annotate_test_20170518.csv'
 
 # Set validate DIR
 VALIDATE_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
-    '/zdnet_test_20170425.csv'
+    '/zdnet_test_20170518.csv'
 
 # Set HDF5 DIR
 HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170425.h5'
 
 # Set model DIR
-MODEL_F = ''
+MODEL_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170518' \
+          '.joblib'
 
 # Set output DIR
 OUT_F = ''
@@ -62,6 +63,10 @@ RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
 
 # Set HDF5 key to extract feature dicts
 HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfidf']
+
+# Set header for train/test/validate dataset
+
+HEADER = ['TOKEN', 'NER', 'POS']
 
 # Set report type
 REPORT_TYPE = 'spc'
