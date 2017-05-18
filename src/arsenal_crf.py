@@ -101,22 +101,6 @@ def feature_selector(word_tuple, feature_conf, window, hdf_key):
     return feature_dict
 
 
-# def word2features(sent, i, feature_conf, hdf_key):
-    # features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
-    # features.update({'bias': 1.0})
-    # if i > 0:
-    #     features.update(
-    #         feature_selector(sent[i - 1], feature_conf, 'previous', hdf_key))
-    # else:
-    #     features['BOS'] = True
-    # if i < len(sent) - 1:
-    #     features.update(
-    #         feature_selector(sent[i + 1], feature_conf, 'next', hdf_key))
-    # else:
-    #     features['EOS'] = True
-    # return features
-
-
 def word2features(sent, i, feature_conf, hdf_key, window_size):
     features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
     features.update({'bias': 1.0})
