@@ -8,7 +8,7 @@ from string import punctuation
 from sklearn.feature_extraction import text
 from zhon import hanzi
 
-from code.arsenal_stats import *
+from .arsenal_stats import *
 
 
 ########################################################################################################################
