@@ -56,7 +56,7 @@ def prepare_features(dfs):
     """
     f_sets = {name: df2set(df) for (name, df) in dfs.items() if len(df.columns) == 1}
     f_dics = {name: df2dic(df) for (name, df) in dfs.items() if len(df.columns) == 2}
-    f_sets_dics = {k: {i: 1 for i in j} for (k, j) in f_sets.items()}  # special case
+    f_sets_dics = {k: {i: '1' for i in j} for (k, j) in f_sets.items()}  # special case
     f_dics.update(f_sets_dics)
     return OrderedDict(sorted(f_dics.items()))
 
