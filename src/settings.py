@@ -52,6 +52,10 @@ MODEL_F = ''
 # Set output DIR
 OUT_F = ''
 
+# Set result DIR
+
+RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
+
 ##############################################################################
 
 # MISC
