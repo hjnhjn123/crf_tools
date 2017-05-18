@@ -645,4 +645,4 @@ def map_set2df(df, col_name, feature_set):
 
 def map_dic2df(df, col_name, feature_dict):
     df[col_name] = df.iloc[:, 0].map(feature_dict)
-    return df.replace(np.nan, 0)
+    return df.replace(np.nan, '0')
