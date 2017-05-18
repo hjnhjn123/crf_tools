@@ -7,6 +7,8 @@ FEATURE_FUNCTION = {
     'current_lower': lambda x: x.lower(),
     'current_last3': lambda x: x[-3:],
     'current_last2': lambda x: x[-2:],
+    'current_first3': lambda x: x[:2],
+    'current_first2': lambda x: x[-3:],
     'current_isupper': lambda x: x.isupper(),
     'current_istitle': lambda x: x.istitle(),
     'current_isdigit': lambda x: x.isdigit(),
@@ -47,8 +49,7 @@ OUT_F = ''
 # MISC
 
 
-HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf',
-           'tfidf']
+HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfidf']
 
 REPORT_TYPE = 'spc'
 
