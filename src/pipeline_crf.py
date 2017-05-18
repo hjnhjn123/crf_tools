@@ -257,19 +257,26 @@ RESULT_F = '_'.join((RESULT_F, get_now(), '.csv'))
 
 
 def main(argv):
-    print(argv[1])
-    dic = {'train': pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
+    print(argv)
+    print()
+    dic = {
+        'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
                                    result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
                                    features=FEATURE_FUNCTION, report_type=REPORT_TYPE,
                                    window_size=WINDOW_SIZE),
-           'cv': pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
-                                       result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                       features=FEATURE_FUNCTION, report_type=REPORT_TYPE,
-                                       window_size=WINDOW_SIZE, cv=CV,
-                                       iteration=ITERATION),
-           'validate': pipeline_validate(validate_f=VALIDATE_F, model_f=MODEL_F,
-                                         result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                         features=FEATURE_FUNCTION,
-                                         report_type=REPORT_TYPE, window_size=WINDOW_SIZE)
-           }
-    return dic[argv[1]]
+        'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F,
+                                            model_f=MODEL_F,
+                                            result_f=RESULT_F, hdf_f=HDF_F,
+                                            hdf_key=HDF_KEY,
+                                            features=FEATURE_FUNCTION,
+                                            report_type=REPORT_TYPE,
+                                            window_size=WINDOW_SIZE, cv=CV,
+                                            iteration=ITERATION),
+        'validate': lambda: pipeline_validate(validate_f=VALIDATE_F, model_f=MODEL_F,
+                                              result_f=RESULT_F, hdf_f=HDF_F,
+                                              hdf_key=HDF_KEY,
+                                              features=FEATURE_FUNCTION,
+                                              report_type=REPORT_TYPE,
+                                              window_size=WINDOW_SIZE)
+    }
+    dic[argv]()
