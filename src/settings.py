@@ -5,7 +5,7 @@
 # Set features to compute
 
 FEATURES = {
-    # 'current_original': lambda x: x,
+    'current_original': lambda x: x,
     'current_lower': lambda x: x.lower(),
     'current_last3': lambda x: x[-3:],
     'current_last2': lambda x: x[-2:],
@@ -54,7 +54,6 @@ MODEL_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_201
 OUT_F = ''
 
 # Set result DIR
-
 RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
 
 ##############################################################################
@@ -65,7 +64,6 @@ RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
 HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfidf']
 
 # Set header for train/test/validate dataset
-
 HEADER = ['TOKEN', 'NER', 'POS']
 
 # Set report type
@@ -77,4 +75,7 @@ CV = 5
 # Set iteration
 ITERATION = 10
 
+# Set Window Size
 WINDOW_SIZE = 2
+
+from .conf.user_setting import *

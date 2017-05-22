@@ -261,9 +261,10 @@ def main(argv):
     print()
     dic = {
         'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
-                                   result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                   features=FEATURE_FUNCTION, report_type=REPORT_TYPE,
-                                   window_size=WINDOW_SIZE),
+                                        result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                        features=FEATURE_FUNCTION,
+                                        report_type=REPORT_TYPE,
+                                        window_size=WINDOW_SIZE),
         'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F,
                                             model_f=MODEL_F,
                                             result_f=RESULT_F, hdf_f=HDF_F,
