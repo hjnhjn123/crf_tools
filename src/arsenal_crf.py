@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import re
 from collections import Counter
 from copy import deepcopy
 from itertools import chain, groupby
-import re
+
 import joblib as jl
 import scipy.stats as sstats
 import sklearn_crfsuite
@@ -36,12 +37,10 @@ def process_annotated(in_file, col_names=HEADER_CRF):
 
 def batch_loading(crf_f, feature_hdf, hdf_keys):
     """
-    :param dict_conf:
-    :param crf_f:
-    :param feature_hdf:
-    :param hdf_keys:
-    :param crf_model:
-    :return:
+    :param crf_f: model file
+    :param feature_hdf: feature dict file
+    :param hdf_keys: hdfkey to extract dicts
+    :return: 
     """
     crf = jl.load(crf_f) if crf_f else None
     loads = hdf2df(feature_hdf, hdf_keys)
@@ -56,7 +55,7 @@ def prepare_features(dfs):
     """
     f_sets = {name: df2set(df) for (name, df) in dfs.items() if len(df.columns) == 1}
     f_dics = {name: df2dic(df) for (name, df) in dfs.items() if len(df.columns) == 2}
-    f_sets_dics = {k: {i: '1' for i in j} for (k, j) in f_sets.items()}  # special case
+    f_sets_dics = {k: {i: True for i in j} for (k, j) in f_sets.items()}  # special case
     f_dics.update(f_sets_dics)
     return OrderedDict(sorted(f_dics.items()))
 
@@ -79,27 +78,27 @@ def df2crfsuite(df, delim='##END'):
     result = [i for i in sents if i != [] and i != [(delimiter)]]
     return result
 
+
 ##############################################################################
 
 
 def feature_selector(word_tuple, feature_conf, window, hdf_key):
     """
-    Set the feature dict here
-    :param word: word itself
-    :param feature_conf: feature config
-    :param window: select the right config from feature_config
-    :return:
+    :param word_tuple: (word, label, features) 
+    :param feature_conf: import from setting
+    :param window: window size
+    :param hdf_key: 
+    :return: 
     """
-
     word, pos, other_features = word_tuple[0], word_tuple[1], word_tuple[3:]
-    other_dict = {'_'.join((window, j)): k for j, k in zip(sorted(hdf_key), other_features)}
+    other_dict = {'_'.join((window, j)): k for j, k in
+                  zip(sorted(hdf_key), other_features)}
     feature_func = {name: func for (name, func) in feature_conf.items() if
                     name.startswith(window)}
     feature_dict = {name: func(word) for (name, func) in feature_func.items()}
     feature_dict.update(other_dict)
     feature_dict.update({'_'.join((window, 'pos')): pos})
     return feature_dict
-
 
 
 def word2features(sent, i, feature_conf, hdf_key, window_size):
@@ -119,7 +118,8 @@ def word2features(sent, i, feature_conf, hdf_key, window_size):
 
 
 def sent2features(line, feature_conf, hdf_key, window_size):
-    return [word2features(line, i, feature_conf, hdf_key, window_size) for i in range(len(line))]
+    return [word2features(line, i, feature_conf, hdf_key, window_size) for i in
+            range(len(line))]
 
 
 def sent2labels(line):
@@ -137,9 +137,11 @@ def sent2label_spfc(line, label):
 
 def feed_crf_trainer(in_data, conf, hdf_key, window_size):
     """
-    :param in_data:
-    :param conf_f:
-    :return: nested lists of lists
+    :param in_data: converted data 
+    :param conf: feature conf
+    :param hdf_key: hdf keys
+    :param window_size: window size
+    :return: 
     """
     features = [sent2features(s, conf, hdf_key, window_size) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
@@ -247,8 +249,7 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
         labels = ['1']
 
         result = metrics.flat_f1_score(y_test_converted, y_pred_converted,
-                                       average='weighted',
-                                       labels=labels)
+                                       average='weighted', labels=labels)
         y_test_flatten = ['0' if j == 'O' else '1' for i in y_test for j in i]
         details = export_test_result(labels, y_test_flatten, y_pred_converted)
         return result, details
@@ -286,8 +287,7 @@ def extract_ner_result(ner_candidate, new_index):
             '##split'))
     ner_result = ([i.strip(' ') for i in ner_result if i and i != '##'])
     ner_result = ('##'.join((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]))
-                  for tt in
-                  ner_result)
+                  for tt in ner_result)
     ner_result = sort_dic(Counter(i for i in ner_result if i), sort_key=1, rev=True)
     return ner_result
 
