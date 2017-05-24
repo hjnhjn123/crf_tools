@@ -4,10 +4,9 @@ from math import modf
 from os import listdir, path
 from sys import path
 
-import redis
-
+from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, test_crf_prediction, \
+    df2crfsuite, load_yaml_conf, train_crf, show_crf_label, make_param_space, make_f1_scorer, crf_predict
 from .arsenal_logging import basic_logging
-from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, test_crf_prediction
 from .settings import *
 
 
@@ -17,8 +16,7 @@ from .settings import *
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, features,
-                   report_type, window_size):
+def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, features, report_type, window_size):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -40,10 +38,8 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, features,
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(
-        train_sents, features, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(
-        test_sents, features, hdf_key, window_size)
+    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key, window_size)
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
@@ -56,9 +52,8 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, features,
     return crf, details
 
 
-def pipeline_best_predict(train_f, test_f, model_f, result_f, features, hdf_f, hdf_key,
-                          report_type,
-                          cv, iteration, window_size):
+def pipeline_best_predict(train_f, test_f, model_f, result_f, features, hdf_f, hdf_key, report_type, cv, iteration,
+                          window_size):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -82,22 +77,18 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, features, hdf_f, h
     train_sents = df2crfsuite(train_df)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(
-        train_sents, features, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(
-        test_sents, features, hdf_key, window_size)
+    X_train, y_train = feed_crf_trainer(train_sents, features, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key, window_size)
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
     basic_logging('cv begins')
-    rs_cv = search_param(X_train, y_train, crf,
-                         params_space, f1_scorer, cv, iteration)
+    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
-    best_f1, best_details = test_crf_prediction(best_predictor, X_test, y_test,
-                                                report_type)
+    best_f1, best_details = test_crf_prediction(best_predictor, X_test, y_test, report_type)
     basic_logging('Testing ends')
     best_details['overall_f1'] = best_f1
     best_details.to_csv(result_f, index=False)
@@ -106,8 +97,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, features, hdf_f, h
     return crf, best_predictor, rs_cv, best_details
 
 
-def pipeline_validate(validate_f, model_f, features, hdf_f, result_f, hdf_key,
-                      report_type, window_size):
+def pipeline_validate(validate_f, model_f, features, hdf_f, result_f, hdf_key, report_type, window_size):
     """
     A pipeline for CRF training
     :param validate_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -139,16 +129,13 @@ def pipeline_validate(validate_f, model_f, features, hdf_f, result_f, hdf_key,
 # Streaming
 
 
-def streaming_pos_crf(in_f, hdf_f, hdf_key, conf):
-    crf, f_dics = batch_loading('', hdf_f, hdf_key)
+def streaming_pos_crf(in_f, model_f, hdf_f, hdf_key, conf):
+    crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
 
-    parsed_data = chain.from_iterable(
-        spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
-    prepared_data = [list(x[1]) for x in
-                     groupby(parsed_data, lambda x: x == ('##END', '###', 'O'))
-                     if not x[0]]
+    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
+    prepared_data = [list(x[1]) for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     test_sents = batch_add_features(prepared_data, f_dics)
 
     X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
