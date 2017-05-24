@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import gc
-from collections import Counter
+import pandas as pd
+from collections import Counter, defaultdict
+from operator import itemgetter
 from math import log
 from string import punctuation
 
 from sklearn.feature_extraction import text
 from zhon import hanzi
 
-from .arsenal_stats import *
-
+from .arsenal_stats import sort_dic, split_dic
 
 ########################################################################################################################
 
@@ -193,21 +194,3 @@ def convert_bag_of_words(df, col, kl):
     text_matrix = pd.DataFrame(matrix.toarray(), columns=header)
     return text_matrix
 
-
-def fix_textmsg(df, col, fix_set):
-    """
-    合并在分词过程(parse)中被分割的关键字;
-    在所有句末添加'###'保证所有疑问句可以提取指定关键字,便于与原句匹配(按index merge)
-    :param df:
-    :param col:
-    :param fix_set:
-    :return:
-    """
-    kw = get_re_or_from_iter(fix_set)
-    df = pd.DataFrame(df[col] + ' ###', columns=[col])
-    result = pd.DataFrame(df[col].str.extractall(kw).unstack())
-    result = result.fillna('###')
-    result = pd.concat([result[col].apply(lambda x: ''.join(x.split())) for col in result.columns], axis=1)[0]
-    result = pd.concat([result[col] + ' ' for col in result], axis=1)
-    result = combine_multi_series(result)
-    return result

@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import re
-from collections import Counter
+from collections import Counter, OrderedDict
 from copy import deepcopy
 from itertools import chain, groupby
 
 import joblib as jl
+import pandas as pd
 import scipy.stats as sstats
 import sklearn_crfsuite
 from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-from src.arsenal_stats import *
+from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
 
@@ -255,12 +256,11 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
         return result, details
 
 
-def evaluate_ner_result(y_test, y_pred):
-    compare_result = [i for i in zip(y_test, y_pred) if i[0]!= 'O']
-    ner_index = (i for i in range(len(compare_result)) if
-                 compare_result[i][0][0] == 'U' or compare_result[i][0][0] == 'L')
+def evaluate_ner_result(y_pred, y_test):
+    ners = [i for i in zip(y_test, y_pred) if i[0] != 'O']
+    ner_index = (i for i in range(len(ners)) if ners[i][0][0] == 'U' or ners[i][0][0] == 'L')
     new_index = (a + b for a, b in enumerate(ner_index))
-    pred_copy = deepcopy(compare_result)
+    pred_copy = deepcopy(ners)
     for i in new_index:
         pred_copy[i + 1:i + 1] = [('##split', '##split')]
     evaluate_list = [list(x[1]) for x in groupby(pred_copy, lambda x: x == ('##split', '##split'))]
@@ -274,7 +274,10 @@ def evaluate_ner_result(y_test, y_pred):
             wrong_list.append(ner_can)
     right_result = Counter(i[0][0].split('-')[1] for i in right_list)
     wrong_result = Counter(i[0][0].split('-')[1] for i in wrong_list)
-    return {k: v/(v+wrong_result[k]) for k, v in right_result.items()}
+    for k, v in wrong_result.items():
+        if k not in right_result.keys():
+            right_result.update({k: 0})
+    return {k: v / (v + wrong_result[k]) for k, v in right_result.items()}
 
 
 def crf_predict(crf, new_data, processed_data):

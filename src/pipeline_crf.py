@@ -6,10 +6,8 @@ from sys import path
 
 import redis
 
-from .arsenal_crf import *
-from .arsenal_logging import *
-from .arsenal_spacy import *
-from .arsenal_stats import *
+from .arsenal_logging import basic_logging
+from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, test_crf_prediction
 from .settings import *
 
 
@@ -177,14 +175,11 @@ def pipeline_pos_crf(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type
     data = data.dropna()
     basic_logging('Cleaning ends')
 
-    parsed_data = spacy_batch_processing(
-        data, '', 'content', ['content'], 'crf')
+    parsed_data = spacy_batch_processing(data, '', 'content', ['content'], 'crf')
     basic_logging('Spacy ends')
 
     parsed_data = chain.from_iterable(parsed_data)
-    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data,
-                                                 lambda x: x == ('##END', '###', 'O'))
-                if not x[0]]
+    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
 
     test_sents = batch_add_features(pos_data, f_dics)
     basic_logging('Adding features ends')
