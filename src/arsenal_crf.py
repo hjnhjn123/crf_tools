@@ -255,6 +255,28 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
         return result, details
 
 
+def evaluate_ner_result(y_test, y_pred):
+    compare_result = [i for i in zip(y_test, y_pred) if i[0]!= 'O']
+    ner_index = (i for i in range(len(compare_result)) if
+                 compare_result[i][0][0] == 'U' or compare_result[i][0][0] == 'L')
+    new_index = (a + b for a, b in enumerate(ner_index))
+    pred_copy = deepcopy(compare_result)
+    for i in new_index:
+        pred_copy[i + 1:i + 1] = [('##split', '##split')]
+    evaluate_list = [list(x[1]) for x in groupby(pred_copy, lambda x: x == ('##split', '##split'))]
+    right_list, wrong_list = [], []
+    for ner_can in evaluate_list:
+        if ner_can == [('##split', '##split')]:
+            continue
+        elif len([(a, b) for a, b in ner_can if a == b]) == len(ner_can):
+            right_list.append(ner_can)
+        else:
+            wrong_list.append(ner_can)
+    right_result = Counter(i[0][0].split('-')[1] for i in right_list)
+    wrong_result = Counter(i[0][0].split('-')[1] for i in wrong_list)
+    return {k: v/(v+wrong_result[k]) for k, v in right_result.items()}
+
+
 def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
     length = len(list(new_data))
