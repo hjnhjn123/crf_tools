@@ -109,18 +109,16 @@ def chunk_beginning(prev_tag, tag, prev_type, type):
     return chunk_beginning
 
 
-def cal_metrics(TP, P, T, percent=True):
+def cal_metrics(TP, P, T):
     """
-    compute overall precision, recall and FB1 (default values are 0.0)
+    compute overall precision, recall and f_score (default values are 0.0)
     if percent is True, return 100 * original decimal value
     """
     precision = TP / P if P else 0
     recall = TP / T if T else 0
-    FB1 = 2 * precision * recall / (precision + recall) if precision + recall else 0
-    if percent:
-        return 100 * precision, 100 * recall, 100 * FB1
-    else:
-        return precision, recall, FB1
+    f_score = 2 * precision * recall / (precision + recall) if precision + recall else 0
+    return 100 * precision, 100 * recall, 100 * f_score
+
 
 
 def split_tag(chunk_tag, oTag="O", raw=False):
@@ -141,15 +139,11 @@ def split_tag(chunk_tag, oTag="O", raw=False):
     return tag, type
 
 
-def count_chunk(file_iter, args):
+def count_chunk(file_iter, delimiter, raw, o_tag, boundary ="-X-"):
     """
     Process input in given format and count chunks using the last two columns;
     return correct_chunk, found_guessed, found_correct, correct_tag, token_count
     """
-    boundary = "-X-"  # sentence boundary
-    delimiter = args.delimiter
-    raw = args.raw
-    oTag = args.oTag
 
     correct_chunk = defaultdict(int)  # number of correctly identified chunks
     found_correct = defaultdict(int)  # number of chunks in corpus per type
@@ -172,8 +166,8 @@ def count_chunk(file_iter, args):
             raise IOError("conlleval: unexpected number of features in line %s\n" % line)
 
         # extract tags from last 2 columns
-        guessed, guessed_type = split_tag(features[-1], oTag=oTag, raw=raw)
-        correct, correct_type = split_tag(features[-2], oTag=oTag, raw=raw)
+        guessed, guessed_type = split_tag(features[-1], oTag=o_tag, raw=raw)
+        correct, correct_type = split_tag(features[-2], oTag=o_tag, raw=raw)
 
         # 1999-06-26 sentence breaks should always be counted as out of chunk
         firstItem = features[0]
@@ -246,9 +240,10 @@ def evaluate(correct_chunk, found_guessed, found_correct):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    delimiter, raw, o_tag, boundary = parse_args()
     # process input and count chunks
-    correct_chunk, found_guessed, found_correct, correct_tag, token_count = count_chunk(sys.stdin, args)
+    correct_chunk, found_guessed, found_correct, correct_tag, token_count = count_chunk(sys.stdin, delimiter, raw,
+                                                                                        o_tag, boundary)
 
     # compute metrics and print
     evaluate(correct_chunk, found_guessed, found_correct)

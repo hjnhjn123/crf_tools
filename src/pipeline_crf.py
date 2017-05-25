@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from math import modf
-from os import listdir, path
-from sys import path
-
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, test_crf_prediction, \
-    df2crfsuite, load_yaml_conf, train_crf, show_crf_label, make_param_space, make_f1_scorer, crf_predict
+    df2crfsuite, train_crf, show_crf_label, make_param_space, make_f1_scorer, crf_predict
 from .arsenal_logging import basic_logging
 from .settings import *
 
