@@ -200,7 +200,7 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
 ##############################################################################
 
 
-# CRF testing and predicting
+# CRF predicting
 
 
 def convert_tags(data):
@@ -223,6 +223,21 @@ def export_test_result(labels, y_test, y_pred):
     details = pd.DataFrame(details, columns=HEADER_REPORT)
     details = details.sort_values('f1', ascending=False)
     return details
+
+
+def crf_predict(crf, new_data, processed_data):
+    result = crf.predict(processed_data)
+    length = len(list(new_data))
+    crf_result = (
+        [(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
+        range(length))
+    crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
+    return list(chain.from_iterable(crf_result))
+
+
+##############################################################################
+
+# CRF predicting
 
 
 def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
@@ -274,20 +289,16 @@ def evaluate_ner_result(y_pred, y_test):
             wrong_list.append(ner_can)
     right_result = Counter(i[0][0].split('-')[1] for i in right_list)
     wrong_result = Counter(i[0][0].split('-')[1] for i in wrong_list)
-    for k, v in wrong_result.items():
-        if k not in right_result.keys():
-            right_result.update({k: 0})
-    return {k: v / (v + wrong_result[k]) for k, v in right_result.items()}
 
 
-def crf_predict(crf, new_data, processed_data):
-    result = crf.predict(processed_data)
-    length = len(list(new_data))
-    crf_result = (
-        [(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in
-        range(length))
-    crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
-    return list(chain.from_iterable(crf_result))
+def cal_metrics(TP, P, T):
+    """
+    compute overall precision, recall and f_score (default values are 0.0)
+    """
+    precision = TP / P if P else 0
+    recall = TP / T if T else 0
+    f_score = 2 * precision * recall / (precision + recall) if precision + recall else 0
+    return 100 * precision, 100 * recall, 100 * f_score
 
 
 ##############################################################################
