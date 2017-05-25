@@ -12,11 +12,6 @@ from collections import defaultdict
 def parse_args():
     argparser = argparse.ArgumentParser()
     argparser.add_argument(
-        "-l", "--latex",
-        default=False, action="store_true",
-        help="generate LaTeX output"
-    )
-    argparser.add_argument(
         "-r", "--raw",
         default=False, action="store_true",
         help="accept raw result tags"
@@ -53,15 +48,19 @@ adjacent chunks of the same named entity.
 """
 
 
-# endOfChunk: checks if a chunk ended between the previous and current word
-# arguments:  previous and current chunk tags, previous and current types
-# note:       this code is capable of handling other chunk representations
-#             than the default CoNLL-2000 ones, see EACL'99 paper of Tjong
-#             Kim Sang and Veenstra http://xxx.lanl.gov/abs/cs.CL/9907006
-def endOfChunk(prevTag, tag, prevType, type):
+def chunk_ending(prevTag, tag, prevType, type):
     """
+    # chunk_ending: checks if a chunk ended between the previous and current word
+    # arguments:  previous and current chunk tags, previous and current types
+    # note:       this code is capable of handling other chunk representations
+    #             than the default CoNLL-2000 ones, see EACL'99 paper of Tjong
+    #             Kim Sang and Veenstra http://xxx.lanl.gov/abs/cs.CL/9907006
+    
     checks if a chunk ended between the previous and current word;
     arguments:  previous and current chunk tags, previous and current types
+    
+    # corrected 1998-12-22: these chunks are assumed to have length 1
+
     """
     return ((prevTag == "B" and tag == "B") or
             (prevTag == "B" and tag == "O") or
@@ -75,40 +74,42 @@ def endOfChunk(prevTag, tag, prevType, type):
 
             (prevTag != "O" and prevTag != "." and prevType != type) or
             (prevTag == "]" or prevTag == "["))
-    # corrected 1998-12-22: these chunks are assumed to have length 1
 
 
-# startOfChunk: checks if a chunk started between the previous and current word
-# arguments:    previous and current chunk tags, previous and current types
-# note:         this code is capable of handling other chunk representations
-#               than the default CoNLL-2000 ones, see EACL'99 paper of Tjong
-#               Kim Sang and Veenstra http://xxx.lanl.gov/abs/cs.CL/9907006
-def startOfChunk(prevTag, tag, prevType, type):
+def chunk_beginning(prevTag, tag, prevType, type):
     """
+    # chunk_beginning: checks if a chunk started between the previous and current word
+    # arguments:    previous and current chunk tags, previous and current types
+    # note:         this code is capable of handling other chunk representations
+    #               than the default CoNLL-2000 ones, see EACL'99 paper of Tjong
+    #               Kim Sang and Veenstra http://xxx.lanl.gov/abs/cs.CL/9907006
+
     checks if a chunk started between the previous and current word;
     arguments:  previous and current chunk tags, previous and current types
-    """
-    chunkStart = ((prevTag == "B" and tag == "B") or
-                  (prevTag == "B" and tag == "B") or
-                  (prevTag == "I" and tag == "B") or
-                  (prevTag == "O" and tag == "B") or
-                  (prevTag == "O" and tag == "I") or
-
-                  (prevTag == "E" and tag == "E") or
-                  (prevTag == "E" and tag == "I") or
-                  (prevTag == "O" and tag == "E") or
-                  (prevTag == "O" and tag == "I") or
-
-                  (tag != "O" and tag != "." and prevType != type) or
-                  (tag == "]" or tag == "["))
+    
     # corrected 1998-12-22: these chunks are assumed to have length 1
 
-    # print("startOfChunk?", prevTag, tag, prevType, type)
-    # print(chunkStart)
-    return chunkStart
+    # print("chunk_beginning?", prevTag, tag, prevType, type)
+    # print(chunk_beginning)
+    """
+    chunk_beginning = ((prevTag == "B" and tag == "B") or
+                       (prevTag == "B" and tag == "B") or
+                       (prevTag == "I" and tag == "B") or
+                       (prevTag == "O" and tag == "B") or
+                       (prevTag == "O" and tag == "I") or
+
+                       (prevTag == "E" and tag == "E") or
+                       (prevTag == "E" and tag == "I") or
+                       (prevTag == "O" and tag == "E") or
+                       (prevTag == "O" and tag == "I") or
+
+                       (tag != "O" and tag != "." and prevType != type) or
+                       (tag == "]" or tag == "["))
+
+    return chunk_beginning
 
 
-def calcMetrics(TP, P, T, percent=True):
+def cal_metrics(TP, P, T, percent=True):
     """
     compute overall precision, recall and FB1 (default values are 0.0)
     if percent is True, return 100 * original decimal value
@@ -122,7 +123,7 @@ def calcMetrics(TP, P, T, percent=True):
         return precision, recall, FB1
 
 
-def splitTag(chunkTag, oTag="O", raw=False):
+def split_tag(chunkTag, oTag="O", raw=False):
     """
     Split chunk tag into IOB tag and chunk type;
     return (iob_tag, chunk_type)
@@ -140,22 +141,22 @@ def splitTag(chunkTag, oTag="O", raw=False):
     return tag, type
 
 
-def countChunks(fileIterator, args):
+def count_chunk(fileIterator, args):
     """
     Process input in given format and count chunks using the last two columns;
-    return correctChunk, foundGuessed, foundCorrect, correctTags, tokenCounter
+    return correct_chunk, found_guessed, found_correct, correct_tag, tokenCounter
     """
     boundary = "-X-"  # sentence boundary
     delimiter = args.delimiter
     raw = args.raw
     oTag = args.oTag
 
-    correctChunk = defaultdict(int)  # number of correctly identified chunks
-    foundCorrect = defaultdict(int)  # number of chunks in corpus per type
-    foundGuessed = defaultdict(int)  # number of identified chunks per type
+    correct_chunk = defaultdict(int)  # number of correctly identified chunks
+    found_correct = defaultdict(int)  # number of chunks in corpus per type
+    found_guessed = defaultdict(int)  # number of identified chunks per type
 
     tokenCounter = 0  # token counter (ignores sentence breaks)
-    correctTags = 0  # number of correct chunk tags
+    correct_tag = 0  # number of correct chunk tags
 
     lastType = None  # temporary storage for detecting duplicates
     inCorrect = False  # currently processed chunk is correct until now
@@ -171,8 +172,8 @@ def countChunks(fileIterator, args):
             raise IOError("conlleval: unexpected number of features in line %s\n" % line)
 
         # extract tags from last 2 columns
-        guessed, guessedType = splitTag(features[-1], oTag=oTag, raw=raw)
-        correct, correctType = splitTag(features[-2], oTag=oTag, raw=raw)
+        guessed, guessedType = split_tag(features[-1], oTag=oTag, raw=raw)
+        correct, correctType = split_tag(features[-2], oTag=oTag, raw=raw)
 
         # 1999-06-26 sentence breaks should always be counted as out of chunk
         firstItem = features[0]
@@ -181,88 +182,75 @@ def countChunks(fileIterator, args):
 
         # decide whether current chunk is correct until now
         if inCorrect:
-            endOfGuessed = endOfChunk(lastCorrect, correct, lastCorrectType, correctType)
-            endOfCorrect = endOfChunk(lastGuessed, guessed, lastGuessedType, guessedType)
+            endOfGuessed = chunk_ending(lastCorrect, correct, lastCorrectType, correctType)
+            endOfCorrect = chunk_ending(lastGuessed, guessed, lastGuessedType, guessedType)
             if (endOfGuessed and endOfCorrect and lastGuessedType == lastCorrectType):
                 inCorrect = False
-                correctChunk[lastCorrectType] += 1
+                correct_chunk[lastCorrectType] += 1
             elif (endOfGuessed != endOfCorrect or guessedType != correctType):
                 inCorrect = False
 
-        startOfGuessed = startOfChunk(lastGuessed, guessed, lastGuessedType, guessedType)
-        startOfCorrect = startOfChunk(lastCorrect, correct, lastCorrectType, correctType)
+        startOfGuessed = chunk_beginning(lastGuessed, guessed, lastGuessedType, guessedType)
+        startOfCorrect = chunk_beginning(lastCorrect, correct, lastCorrectType, correctType)
         if (startOfCorrect and startOfGuessed and guessedType == correctType):
             inCorrect = True
         if startOfCorrect:
-            foundCorrect[correctType] += 1
+            found_correct[correctType] += 1
         if startOfGuessed:
-            foundGuessed[guessedType] += 1
+            found_guessed[guessedType] += 1
 
         if firstItem != boundary:
             if correct == guessed and guessedType == correctType:
-                correctTags += 1
+                correct_tag += 1
             tokenCounter += 1
 
         lastGuessed, lastGuessedType = guessed, guessedType
         lastCorrect, lastCorrectType = correct, correctType
 
     if inCorrect:
-        correctChunk[lastCorrectType] += 1
+        correct_chunk[lastCorrectType] += 1
 
-    return correctChunk, foundGuessed, foundCorrect, correctTags, tokenCounter
+    return correct_chunk, found_guessed, found_correct, correct_tag, tokenCounter
 
 
-def evaluate(correctChunk, foundGuessed, foundCorrect, latex=False):
+def evaluate(correct_chunk, found_guessed, found_correct):
     # sum counts
-    correctChunkSum = sum(correctChunk.values())
-    foundGuessedSum = sum(foundGuessed.values())
-    foundCorrectSum = sum(foundCorrect.values())
+    correct_chunkSum = sum(correct_chunk.values())
+    found_guessedSum = sum(found_guessed.values())
+    found_correctSum = sum(found_correct.values())
 
     # sort chunk type names
-    sortedTypes = list(foundCorrect) + list(foundGuessed)
-    sortedTypes = list(set(sortedTypes))
-    sortedTypes.sort()
+    sorted_type = list(found_correct) + list(found_guessed)
+    sorted_type = list(set(sorted_type))
+    sorted_type.sort()
 
-    # print overall performance, and performance per chunk type
-    if not latex:
-        # compute overall precision, recall and FB1 (default values are 0.0)
-        precision, recall, FB1 = calcMetrics(correctChunkSum, foundGuessedSum, foundCorrectSum)
-        # print overall performance
-        print("processed %i tokens with %i phrases; " % (tokenCounter, foundCorrectSum), end='')
-        print("found: %i phrases; correct: %i.\n" % (foundGuessedSum, correctChunkSum), end='')
-        if tokenCounter:
-            print("accuracy: %6.2f%%; " % (100 * correctTags / tokenCounter), end='')
-            print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
-                  (precision, recall, FB1))
 
-        for i in sortedTypes:
-            precision, recall, FB1 = calcMetrics(correctChunk[i], foundGuessed[i], foundCorrect[i])
-            print("%17s: " % i, end='')
-            print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
-                  (precision, recall, FB1), end='')
-            print("  %d" % foundGuessed[i])
-
-    # generate LaTeX output for tables like in
-    # http://cnts.uia.ac.be/conll2003/ner/example.tex
-    else:
-        print("        & Precision &  Recall  & F\$_{\\beta=1} \\\\\\hline", end='')
-        for i in sortedTypes:
-            precision, recall, FB1 = calcMetrics(correctChunk[i], foundGuessed[i], foundCorrect[i])
-            print("\n%-7s &  %6.2f\\%% & %6.2f\\%% & %6.2f \\\\" %
-                  (i, precision, recall, FB1), end='')
-        print("\\hline")
-
-        precision, recall, FB1 = calcMetrics(correctChunkSum, foundGuessedSum, foundCorrectSum)
-        print("Overall &  %6.2f\\%% & %6.2f\\%% & %6.2f \\\\\\hline" %
+    # compute overall precision, recall and FB1 (default values are 0.0)
+    precision, recall, FB1 = cal_metrics(correct_chunkSum, found_guessedSum, found_correctSum)
+    # print overall performance
+    print("processed %i tokens with %i phrases; " % (tokenCounter, found_correctSum), end='')
+    print("found: %i phrases; correct: %i.\n" % (found_guessedSum, correct_chunkSum), end='')
+    if tokenCounter:
+        print("accuracy: %6.2f%%; " % (100 * correct_tag / tokenCounter), end='')
+        print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
               (precision, recall, FB1))
+
+    for i in sorted_type:
+        precision, recall, FB1 = cal_metrics(correct_chunk[i], found_guessed[i], found_correct[i])
+        print("%17s: " % i, end='')
+        print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
+              (precision, recall, FB1), end='')
+        print("  %d" % found_guessed[i])
+
+
 
 
 if __name__ == "__main__":
     args = parse_args()
     # process input and count chunks
-    correctChunk, foundGuessed, foundCorrect, correctTags, tokenCounter = countChunks(sys.stdin, args)
+    correct_chunk, found_guessed, found_correct, correct_tag, tokenCounter = count_chunk(sys.stdin, args)
 
     # compute metrics and print
-    evaluate(correctChunk, foundGuessed, foundCorrect, latex=args.latex)
+    evaluate(correct_chunk, found_guessed, found_correct)
 
     sys.exit(0)
