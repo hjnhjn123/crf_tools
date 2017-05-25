@@ -5,6 +5,7 @@ from __future__ import division, print_function, unicode_literals
 
 import argparse
 import sys
+import pandas as pd
 from collections import defaultdict
 
 
@@ -120,7 +121,6 @@ def cal_metrics(TP, P, T):
     return 100 * precision, 100 * recall, 100 * f_score
 
 
-
 def split_tag(chunk_tag, oTag="O", raw=False):
     """
     Split chunk tag into IOB tag and chunk type;
@@ -139,7 +139,7 @@ def split_tag(chunk_tag, oTag="O", raw=False):
     return tag, type
 
 
-def count_chunk(file_iter, delimiter, raw, o_tag, boundary ="-X-"):
+def count_chunk(file_iter, delimiter, raw, o_tag, boundary="-X-"):
     """
     Process input in given format and count chunks using the last two columns;
     return correct_chunk, found_guessed, found_correct, correct_tag, token_count
@@ -218,7 +218,6 @@ def evaluate(correct_chunk, found_guessed, found_correct):
     sorted_type = list(set(sorted_type))
     sorted_type.sort()
 
-
     # compute overall precision, recall and FB1 (default values are 0.0)
     precision, recall, FB1 = cal_metrics(correct_chunk_sum, found_guessed_sum, found_correct_sum)
     # print overall performance
@@ -229,14 +228,8 @@ def evaluate(correct_chunk, found_guessed, found_correct):
         print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
               (precision, recall, FB1))
 
-    for i in sorted_type:
-        precision, recall, FB1 = cal_metrics(correct_chunk[i], found_guessed[i], found_correct[i])
-        print("%17s: " % i, end='')
-        print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
-              (precision, recall, FB1), end='')
-        print("  %d" % found_guessed[i])
-
-
+    result = pd.DataFrame([cal_metrics(correct_chunk[i], found_guessed[i], found_correct[i]) for i in sorted_type])
+    return result
 
 
 if __name__ == "__main__":
