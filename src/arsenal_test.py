@@ -48,7 +48,7 @@ adjacent chunks of the same named entity.
 """
 
 
-def chunk_ending(prevTag, tag, prevType, type):
+def chunk_ending(prev_tag, tag, prev_type, type):
     """
     # chunk_ending: checks if a chunk ended between the previous and current word
     # arguments:  previous and current chunk tags, previous and current types
@@ -62,21 +62,21 @@ def chunk_ending(prevTag, tag, prevType, type):
     # corrected 1998-12-22: these chunks are assumed to have length 1
 
     """
-    return ((prevTag == "B" and tag == "B") or
-            (prevTag == "B" and tag == "O") or
-            (prevTag == "I" and tag == "B") or
-            (prevTag == "I" and tag == "O") or
+    return ((prev_tag == "B" and tag == "B") or
+            (prev_tag == "B" and tag == "O") or
+            (prev_tag == "I" and tag == "B") or
+            (prev_tag == "I" and tag == "O") or
 
-            (prevTag == "E" and tag == "E") or
-            (prevTag == "E" and tag == "I") or
-            (prevTag == "E" and tag == "O") or
-            (prevTag == "I" and tag == "O") or
+            (prev_tag == "E" and tag == "E") or
+            (prev_tag == "E" and tag == "I") or
+            (prev_tag == "E" and tag == "O") or
+            (prev_tag == "I" and tag == "O") or
 
-            (prevTag != "O" and prevTag != "." and prevType != type) or
-            (prevTag == "]" or prevTag == "["))
+            (prev_tag != "O" and prev_tag != "." and prev_type != type) or
+            (prev_tag == "]" or prev_tag == "["))
 
 
-def chunk_beginning(prevTag, tag, prevType, type):
+def chunk_beginning(prev_tag, tag, prev_type, type):
     """
     # chunk_beginning: checks if a chunk started between the previous and current word
     # arguments:    previous and current chunk tags, previous and current types
@@ -89,21 +89,21 @@ def chunk_beginning(prevTag, tag, prevType, type):
     
     # corrected 1998-12-22: these chunks are assumed to have length 1
 
-    # print("chunk_beginning?", prevTag, tag, prevType, type)
+    # print("chunk_beginning?", prev_tag, tag, prev_type, type)
     # print(chunk_beginning)
     """
-    chunk_beginning = ((prevTag == "B" and tag == "B") or
-                       (prevTag == "B" and tag == "B") or
-                       (prevTag == "I" and tag == "B") or
-                       (prevTag == "O" and tag == "B") or
-                       (prevTag == "O" and tag == "I") or
+    chunk_beginning = ((prev_tag == "B" and tag == "B") or
+                       (prev_tag == "B" and tag == "B") or
+                       (prev_tag == "I" and tag == "B") or
+                       (prev_tag == "O" and tag == "B") or
+                       (prev_tag == "O" and tag == "I") or
 
-                       (prevTag == "E" and tag == "E") or
-                       (prevTag == "E" and tag == "I") or
-                       (prevTag == "O" and tag == "E") or
-                       (prevTag == "O" and tag == "I") or
+                       (prev_tag == "E" and tag == "E") or
+                       (prev_tag == "E" and tag == "I") or
+                       (prev_tag == "O" and tag == "E") or
+                       (prev_tag == "O" and tag == "I") or
 
-                       (tag != "O" and tag != "." and prevType != type) or
+                       (tag != "O" and tag != "." and prev_type != type) or
                        (tag == "]" or tag == "["))
 
     return chunk_beginning
@@ -123,28 +123,28 @@ def cal_metrics(TP, P, T, percent=True):
         return precision, recall, FB1
 
 
-def split_tag(chunkTag, oTag="O", raw=False):
+def split_tag(chunk_tag, oTag="O", raw=False):
     """
     Split chunk tag into IOB tag and chunk type;
     return (iob_tag, chunk_type)
     """
-    if chunkTag == "O" or chunkTag == oTag:
+    if chunk_tag == "O" or chunk_tag == oTag:
         tag, type = "O", None
     elif raw:
-        tag, type = "B", chunkTag
+        tag, type = "B", chunk_tag
     else:
         try:
             # split on first hyphen, allowing hyphen in type
-            tag, type = chunkTag.split('-', 1)
+            tag, type = chunk_tag.split('-', 1)
         except ValueError:
-            tag, type = chunkTag, None
+            tag, type = chunk_tag, None
     return tag, type
 
 
-def count_chunk(fileIterator, args):
+def count_chunk(file_iter, args):
     """
     Process input in given format and count chunks using the last two columns;
-    return correct_chunk, found_guessed, found_correct, correct_tag, tokenCounter
+    return correct_chunk, found_guessed, found_correct, correct_tag, token_count
     """
     boundary = "-X-"  # sentence boundary
     delimiter = args.delimiter
@@ -155,15 +155,15 @@ def count_chunk(fileIterator, args):
     found_correct = defaultdict(int)  # number of chunks in corpus per type
     found_guessed = defaultdict(int)  # number of identified chunks per type
 
-    tokenCounter = 0  # token counter (ignores sentence breaks)
+    token_count = 0  # token counter (ignores sentence breaks)
     correct_tag = 0  # number of correct chunk tags
 
     lastType = None  # temporary storage for detecting duplicates
-    inCorrect = False  # currently processed chunk is correct until now
-    lastCorrect, lastCorrectType = "O", None  # previous chunk tag in corpus
-    lastGuessed, lastGuessedType = "O", None  # previously identified chunk tag
+    in_correct = False  # currently processed chunk is correct until now
+    last_correct, last_correct_type = "O", None  # previous chunk tag in corpus
+    last_guessed, last_guessed_type = "O", None  # previously identified chunk tag
 
-    for line in fileIterator:
+    for line in file_iter:
         # each non-empty line must contain >= 3 columns
         features = line.strip().split(delimiter)
         if not features or features[0] == boundary:
@@ -172,52 +172,52 @@ def count_chunk(fileIterator, args):
             raise IOError("conlleval: unexpected number of features in line %s\n" % line)
 
         # extract tags from last 2 columns
-        guessed, guessedType = split_tag(features[-1], oTag=oTag, raw=raw)
-        correct, correctType = split_tag(features[-2], oTag=oTag, raw=raw)
+        guessed, guessed_type = split_tag(features[-1], oTag=oTag, raw=raw)
+        correct, correct_type = split_tag(features[-2], oTag=oTag, raw=raw)
 
         # 1999-06-26 sentence breaks should always be counted as out of chunk
         firstItem = features[0]
         if firstItem == boundary:
-            guessed, guessedType = "O", None
+            guessed, guessed_type = "O", None
 
         # decide whether current chunk is correct until now
-        if inCorrect:
-            endOfGuessed = chunk_ending(lastCorrect, correct, lastCorrectType, correctType)
-            endOfCorrect = chunk_ending(lastGuessed, guessed, lastGuessedType, guessedType)
-            if (endOfGuessed and endOfCorrect and lastGuessedType == lastCorrectType):
-                inCorrect = False
-                correct_chunk[lastCorrectType] += 1
-            elif (endOfGuessed != endOfCorrect or guessedType != correctType):
-                inCorrect = False
+        if in_correct:
+            guessed_end = chunk_ending(last_correct, correct, last_correct_type, correct_type)
+            correct_end = chunk_ending(last_guessed, guessed, last_guessed_type, guessed_type)
+            if (guessed_end and correct_end and last_guessed_type == last_correct_type):
+                in_correct = False
+                correct_chunk[last_correct_type] += 1
+            elif (guessed_end != correct_end or guessed_type != correct_type):
+                in_correct = False
 
-        startOfGuessed = chunk_beginning(lastGuessed, guessed, lastGuessedType, guessedType)
-        startOfCorrect = chunk_beginning(lastCorrect, correct, lastCorrectType, correctType)
-        if (startOfCorrect and startOfGuessed and guessedType == correctType):
-            inCorrect = True
-        if startOfCorrect:
-            found_correct[correctType] += 1
-        if startOfGuessed:
-            found_guessed[guessedType] += 1
+        guessed_start = chunk_beginning(last_guessed, guessed, last_guessed_type, guessed_type)
+        correct_start = chunk_beginning(last_correct, correct, last_correct_type, correct_type)
+        if (correct_start and guessed_start and guessed_type == correct_type):
+            in_correct = True
+        if correct_start:
+            found_correct[correct_type] += 1
+        if guessed_start:
+            found_guessed[guessed_type] += 1
 
         if firstItem != boundary:
-            if correct == guessed and guessedType == correctType:
+            if correct == guessed and guessed_type == correct_type:
                 correct_tag += 1
-            tokenCounter += 1
+            token_count += 1
 
-        lastGuessed, lastGuessedType = guessed, guessedType
-        lastCorrect, lastCorrectType = correct, correctType
+        last_guessed, last_guessed_type = guessed, guessed_type
+        last_correct, last_correct_type = correct, correct_type
 
-    if inCorrect:
-        correct_chunk[lastCorrectType] += 1
+    if in_correct:
+        correct_chunk[last_correct_type] += 1
 
-    return correct_chunk, found_guessed, found_correct, correct_tag, tokenCounter
+    return correct_chunk, found_guessed, found_correct, correct_tag, token_count
 
 
 def evaluate(correct_chunk, found_guessed, found_correct):
     # sum counts
-    correct_chunkSum = sum(correct_chunk.values())
-    found_guessedSum = sum(found_guessed.values())
-    found_correctSum = sum(found_correct.values())
+    correct_chunk_sum = sum(correct_chunk.values())
+    found_guessed_sum = sum(found_guessed.values())
+    found_correct_sum = sum(found_correct.values())
 
     # sort chunk type names
     sorted_type = list(found_correct) + list(found_guessed)
@@ -226,12 +226,12 @@ def evaluate(correct_chunk, found_guessed, found_correct):
 
 
     # compute overall precision, recall and FB1 (default values are 0.0)
-    precision, recall, FB1 = cal_metrics(correct_chunkSum, found_guessedSum, found_correctSum)
+    precision, recall, FB1 = cal_metrics(correct_chunk_sum, found_guessed_sum, found_correct_sum)
     # print overall performance
-    print("processed %i tokens with %i phrases; " % (tokenCounter, found_correctSum), end='')
-    print("found: %i phrases; correct: %i.\n" % (found_guessedSum, correct_chunkSum), end='')
-    if tokenCounter:
-        print("accuracy: %6.2f%%; " % (100 * correct_tag / tokenCounter), end='')
+    print("processed %i tokens with %i phrases; " % (token_count, found_correct_sum), end='')
+    print("found: %i phrases; correct: %i.\n" % (found_guessed_sum, correct_chunk_sum), end='')
+    if token_count:
+        print("accuracy: %6.2f%%; " % (100 * correct_tag / token_count), end='')
         print("precision: %6.2f%%; recall: %6.2f%%; FB1: %6.2f" %
               (precision, recall, FB1))
 
@@ -248,7 +248,7 @@ def evaluate(correct_chunk, found_guessed, found_correct):
 if __name__ == "__main__":
     args = parse_args()
     # process input and count chunks
-    correct_chunk, found_guessed, found_correct, correct_tag, tokenCounter = count_chunk(sys.stdin, args)
+    correct_chunk, found_guessed, found_correct, correct_tag, token_count = count_chunk(sys.stdin, args)
 
     # compute metrics and print
     evaluate(correct_chunk, found_guessed, found_correct)
