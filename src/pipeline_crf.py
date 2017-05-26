@@ -40,9 +40,12 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, features,
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
-    overall_f1, details = test_crf_prediction(crf, X_test, y_test, report_type)
-    details['overall_f1'] = overall_f1
-    details.to_csv(result_f, index=False)
+    y_pred = crf.predict(X_test)
+    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+
+    # overall_f1, details = test_crf_prediction(crf, y_pred, y_test, report_type)
+    # details['overall_f1'] = overall_f1
+    # result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
         jl.dump(crf, model_f)
@@ -85,7 +88,8 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, features, hdf_f, h
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
-    best_f1, best_details = test_crf_prediction(best_predictor, X_test, y_test, report_type)
+    y_pred = crf.predict(X_test)
+    best_f1, best_details = test_crf_prediction(best_predictor, y_pred, y_test, report_type)
     basic_logging('Testing ends')
     best_details['overall_f1'] = best_f1
     best_details.to_csv(result_f, index=False)
@@ -114,7 +118,11 @@ def pipeline_validate(validate_f, model_f, features, hdf_f, result_f, hdf_key, r
     basic_logging('converting to crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, features, hdf_key, window_size)
     basic_logging('Conversion ends')
-    overall_f1, details = test_crf_prediction(crf, X_test, y_test, report_type)
+
+    y_pred = crf.predict(X_test)
+    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+
+    overall_f1, details = test_crf_prediction(crf, y_pred, y_test, report_type)
     details['overall_f1'] = overall_f1
     details.to_csv(result_f, index=False)
     return result, details
