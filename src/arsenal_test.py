@@ -5,6 +5,7 @@ from collections import Counter
 from copy import deepcopy
 from itertools import groupby
 
+import pandas as pd
 from sklearn_crfsuite import metrics
 
 RE_WORDS = re.compile(r"[\w\d\.-]+")
@@ -28,7 +29,7 @@ def cal_metrics(true_positive, all_positive, T):
     precision = true_positive / all_positive if all_positive else 0
     recall = true_positive / T if T else 0
     f_score = 2 * precision * recall / (precision + recall) if precision + recall else 0
-    return 100 * precision, 100 * recall, 100 * f_score
+    return precision, recall, f_score
 
 
 def evaluate_ner_result(y_pred, y_test):
@@ -46,7 +47,8 @@ def evaluate_ner_result(y_pred, y_test):
     pred_entities = extract_entity(pred_ners)
 
     true_positive_list = [ner_can for ner_can in evaluate_list if
-                  len([(a, b) for a, b in ner_can if a == b]) == len(ner_can) and ner_can != [('##split', '##split')]]
+                          len([(a, b) for a, b in ner_can if a == b]) == len(ner_can) and ner_can != [
+                              ('##split', '##split')]]
     test_total = [ner_can for ner_can in test_entities if ner_can != [('##split', '##split')]]
     pred_total = [ner_can for ner_can in pred_entities if ner_can != [('##split', '##split')]]
 
@@ -55,8 +57,14 @@ def evaluate_ner_result(y_pred, y_test):
     relevant_elements = Counter(i[0][1].split('-')[1] for i in test_total)
     selected_elements = Counter(i[0][1].split('-')[1] for i in pred_total)
 
-    final_result = {k: cal_metrics(true_positive_result[k], v, selected_elements[k]) for (k, v) in relevant_elements.items()}
-    return final_result
+    final_result = {k: cal_metrics(true_positive_result[k], v, selected_elements[k]) + (v,) for (k, v) in
+                    relevant_elements.items()}
+    total_result = cal_metrics(sum(true_positive_result.values()), sum(relevant_elements.values()),
+                               sum(selected_elements.values()))
+    final_result.update({'Total': total_result + (sum(relevant_elements.values()), )})
+    output = pd.DataFrame(final_result).T.reset_index()
+    output.columns = ['Label', 'Precision', 'Recall', 'F1_score', 'Support']
+    return output
 
 
 ##############################################################################
@@ -89,17 +97,15 @@ def show_crf_label(crf, remove_list=['O', 'NER', '']):
     return [i for i in labels if i not in remove_list]
 
 
-def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
+def test_crf_prediction(crf, y_pred, y_test, test_switch='spc'):
     """
 
     :param crf:
-    :param X_test:
+    :param y_pred:
     :param y_test:
     :param test_switch: 'spc' for specific labels, 'bin' for binary labels
     :return:
     """
-    y_pred = crf.predict(X_test)
-
     if test_switch == 'spc':
         labels = show_crf_label(crf)
 
