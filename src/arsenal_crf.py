@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
-from itertools import chain, groupby
-from copy import deepcopy
 from collections import Counter, OrderedDict
-from sklearn.metrics import make_scorer
-from sklearn_crfsuite import metrics
+from copy import deepcopy
+from itertools import chain, groupby
 
 import joblib as jl
 import pandas as pd
 import scipy.stats as sstats
 import sklearn_crfsuite
+from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
+from sklearn_crfsuite import metrics
 
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 
@@ -122,11 +122,7 @@ def sent2features(line, feature_conf, hdf_key, window_size):
 
 
 def sent2labels(line):
-    return [i[2] for i in line]  # Use the correct column
-
-
-def sent2label_spfc(line, label):
-    return [i[2] if i[2].endswith(label) else '0' for i in line]
+    return [i[1] for i in line]  # Use the correct column
 
 
 ##############################################################################
@@ -167,9 +163,6 @@ def train_crf(X_train, y_train, algm='lbfgs', c1=0.1, c2=0.1, max_iter=100,
         all_possible_transitions=all_trans
     )
     return crf.fit(X_train, y_train)
-
-
-
 
 
 def make_param_space():
