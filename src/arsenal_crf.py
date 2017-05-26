@@ -272,23 +272,37 @@ def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
 
 
 def evaluate_ner_result(y_pred, y_test):
-    ners = [i for i in zip(y_test, y_pred) if i[0] != 'O']
-    ner_index = (i for i in range(len(ners)) if ners[i][0][0] == 'U' or ners[i][0][0] == 'L')
+    test_ners = [i for i in enumerate(y_test) if i[1] != 'O']
+    pred_ners = [i for i in enumerate(y_pred) if i[1] != 'O']
+    both_ners = [i for i in zip(y_test, y_pred) if i != ('O', 'O')]
+
+    evaluate_list = extract_entity(both_ners)
+    test_entities = extract_entity(test_ners)
+    pred_entities = extract_entity(pred_ners)
+
+
+    right_list = [ner_can for ner_can in evaluate_list
+                  if len([(a, b) for a, b in ner_can if a == b]) == len(ner_can) and ner_can !=[('##split', '##split')]]
+
+    test_total =  [ner_can for ner_can in test_entities if ner_can !=[('##split', '##split')]]
+    pred_total =  [ner_can for ner_can in pred_entities if ner_can !=[('##split', '##split')]]
+
+    right_result = Counter(i[0][0].split('-')[1] for i in right_list)
+    test_result = Counter(i[0][1].split('-')[1] for i in test_total)
+    guess_result = Counter(i[0][1].split('-')[1] for i in pred_total)
+
+    final_result = {k: cal_metrics(v, test_result[k], guess_result[k]) for (k, v) in right_result.items()}
+    return final_result
+
+
+def extract_entity(ners_list):
+    ner_index = (i for i in range(len(ners_list)) if ners_list[i][1][0] == 'U' or ners_list[i][1][0] == 'L')
     new_index = (a + b for a, b in enumerate(ner_index))
-    pred_copy = deepcopy(ners)
+    pred_copy = deepcopy(ners_list)
     for i in new_index:
         pred_copy[i + 1:i + 1] = [('##split', '##split')]
     evaluate_list = [list(x[1]) for x in groupby(pred_copy, lambda x: x == ('##split', '##split'))]
-    right_list, wrong_list = [], []
-    for ner_can in evaluate_list:
-        if ner_can == [('##split', '##split')]:
-            continue
-        elif len([(a, b) for a, b in ner_can if a == b]) == len(ner_can):
-            right_list.append(ner_can)
-        else:
-            wrong_list.append(ner_can)
-    right_result = Counter(i[0][0].split('-')[1] for i in right_list)
-    wrong_result = Counter(i[0][0].split('-')[1] for i in wrong_list)
+    return evaluate_list
 
 
 def cal_metrics(TP, P, T):
