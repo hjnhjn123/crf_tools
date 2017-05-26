@@ -1,24 +1,22 @@
 # -*- coding: utf-8 -*-
 
-import re
-from collections import Counter, OrderedDict
-from copy import deepcopy
 from itertools import chain, groupby
+from copy import deepcopy
+from collections import Counter, OrderedDict
+from sklearn.metrics import make_scorer
+from sklearn_crfsuite import metrics
 
 import joblib as jl
 import pandas as pd
 import scipy.stats as sstats
 import sklearn_crfsuite
-from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
-from sklearn_crfsuite import metrics
 
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
 
 HEADER_REPORT = ['tag', 'precision', 'recall', 'f1', 'support']
-RE_WORDS = re.compile(r"[\w\d\.-]+")
 
 
 ##############################################################################
@@ -171,9 +169,7 @@ def train_crf(X_train, y_train, algm='lbfgs', c1=0.1, c2=0.1, max_iter=100,
     return crf.fit(X_train, y_train)
 
 
-def show_crf_label(crf, remove_list=['O', 'NER', '']):
-    labels = list(crf.classes_)
-    return [i for i in labels if i not in remove_list]
+
 
 
 def make_param_space():
@@ -203,28 +199,6 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
 # CRF predicting
 
 
-def convert_tags(data):
-    converted = []
-    for sent in data:
-        test_result = []
-        for tag in sent:
-            if tag == 'O':
-                test_result.append('0')
-            else:
-                test_result.append('1')
-        converted.append(test_result)
-    return converted
-
-
-def export_test_result(labels, y_test, y_pred):
-    details = metrics.flat_classification_report(y_test, y_pred, digits=3, labels=labels)
-    details = [i for i in [re.findall(RE_WORDS, i) for i in details.split('\n')] if i !=
-               []][1:-1]
-    details = pd.DataFrame(details, columns=HEADER_REPORT)
-    details = details.sort_values('f1', ascending=False)
-    return details
-
-
 def crf_predict(crf, new_data, processed_data):
     result = crf.predict(processed_data)
     length = len(list(new_data))
@@ -233,86 +207,6 @@ def crf_predict(crf, new_data, processed_data):
         range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
-
-
-##############################################################################
-
-# CRF predicting
-
-
-def test_crf_prediction(crf, X_test, y_test, test_switch='spc'):
-    """
-
-    :param crf:
-    :param X_test:
-    :param y_test:
-    :param test_switch: 'spc' for specific labels, 'bin' for binary labels
-    :return:
-    """
-    y_pred = crf.predict(X_test)
-
-    if test_switch == 'spc':
-        labels = show_crf_label(crf)
-
-        result = metrics.flat_f1_score(y_test, y_pred, average='weighted', labels=labels)
-        details = export_test_result(labels, y_test, y_pred)
-        return result, details
-
-    elif test_switch == 'bin':
-
-        y_pred_converted = convert_tags(y_pred)
-        y_test_converted = convert_tags(y_test)
-        labels = ['1']
-
-        result = metrics.flat_f1_score(y_test_converted, y_pred_converted,
-                                       average='weighted', labels=labels)
-        y_test_flatten = ['0' if j == 'O' else '1' for i in y_test for j in i]
-        details = export_test_result(labels, y_test_flatten, y_pred_converted)
-        return result, details
-
-
-def evaluate_ner_result(y_pred, y_test):
-    test_ners = [i for i in enumerate(y_test) if i[1] != 'O']
-    pred_ners = [i for i in enumerate(y_pred) if i[1] != 'O']
-    both_ners = [i for i in zip(y_test, y_pred) if i != ('O', 'O')]
-
-    evaluate_list = extract_entity(both_ners)
-    test_entities = extract_entity(test_ners)
-    pred_entities = extract_entity(pred_ners)
-
-
-    right_list = [ner_can for ner_can in evaluate_list
-                  if len([(a, b) for a, b in ner_can if a == b]) == len(ner_can) and ner_can !=[('##split', '##split')]]
-
-    test_total =  [ner_can for ner_can in test_entities if ner_can !=[('##split', '##split')]]
-    pred_total =  [ner_can for ner_can in pred_entities if ner_can !=[('##split', '##split')]]
-
-    right_result = Counter(i[0][0].split('-')[1] for i in right_list)
-    test_result = Counter(i[0][1].split('-')[1] for i in test_total)
-    guess_result = Counter(i[0][1].split('-')[1] for i in pred_total)
-
-    final_result = {k: cal_metrics(v, test_result[k], guess_result[k]) for (k, v) in right_result.items()}
-    return final_result
-
-
-def extract_entity(ners_list):
-    ner_index = (i for i in range(len(ners_list)) if ners_list[i][1][0] == 'U' or ners_list[i][1][0] == 'L')
-    new_index = (a + b for a, b in enumerate(ner_index))
-    pred_copy = deepcopy(ners_list)
-    for i in new_index:
-        pred_copy[i + 1:i + 1] = [('##split', '##split')]
-    evaluate_list = [list(x[1]) for x in groupby(pred_copy, lambda x: x == ('##split', '##split'))]
-    return evaluate_list
-
-
-def cal_metrics(TP, P, T):
-    """
-    compute overall precision, recall and f_score (default values are 0.0)
-    """
-    precision = TP / P if P else 0
-    recall = TP / T if T else 0
-    f_score = 2 * precision * recall / (precision + recall) if precision + recall else 0
-    return 100 * precision, 100 * recall, 100 * f_score
 
 
 ##############################################################################
