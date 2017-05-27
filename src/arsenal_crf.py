@@ -71,6 +71,12 @@ def batch_add_features(df, f_dics):
 
 
 def df2crfsuite(df, delim='##END'):
+    """
+    
+    :param df: 
+    :param delim: 
+    :return:[[(word, label, features)]] 
+    """
     delimiter = tuple(df[df.iloc[:, 0] == delim].iloc[0, :].tolist())
     sents = zip(*[df[i].tolist() for i in df.columns])  # Use * to unpack a list
     sents = (list(x[1]) for x in groupby(sents, lambda x: x == delimiter))
