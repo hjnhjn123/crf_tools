@@ -30,8 +30,8 @@ def streaming_pos_crf(in_f, crf, f_dics, feature_conf, hdf_key, window_size):
 ##############################################################################
 
 
-def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, feature_conf, window_size):
-    sqs_queues = sqs_get_msgs(in_bucket)
+def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, feature_conf, window_size, online):
+    sqs_queues = sqs_get_msgs(in_bucket, online)
     crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
 
     while True:
@@ -46,9 +46,9 @@ def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, featu
 ##############################################################################
 
 def main(argv):
-    model_f = s3_get_file(BUCKET, MODEL_KEY, MODEL_FILE)
-    hdf_f = s3_get_file(BUCKET, HDF_FILE_KEY, HDF_FILE)
-
     if len(argv) > 1 and argv[1] == 'aws':
+        online = argv[1]
+        model_f = s3_get_file(BUCKET, MODEL_KEY, MODEL_FILE, online)
+        hdf_f = s3_get_file(BUCKET, HDF_FILE_KEY, HDF_FILE, online)
         in_bucket, out_bucket = os.environ['NLP_QUEUE_IN'], os.environ['NLP_QUEUE_OUT']
-        pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, HDF_KEY, FEATURE_CONF, WINDOW_SIZE)
+        pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, online)
