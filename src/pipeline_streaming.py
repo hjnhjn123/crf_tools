@@ -17,7 +17,6 @@ from .settings import *
 def streaming_pos_crf(in_f, crf, f_dics, feature_conf, hdf_key, window_size, col):
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df[col].to_dict()[0]['content']
-
     parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     test_df = batch_add_features(prepared_data, f_dics)
