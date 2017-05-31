@@ -4,7 +4,7 @@
 
 # Set features to compute
 
-FEATURES = {
+FEATURE_CONF = {
     'current_original': lambda x: x,
     'current_lower': lambda x: x.lower(),
     'current_last3': lambda x: x[-3:],
@@ -56,6 +56,30 @@ OUT_F = ''
 # Set result DIR
 RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
 
+
+##############################################################################
+
+# AWS Conf
+
+# Set S3 bucket name
+
+BUCKET = 'patsnap-360-npl'
+
+# Set model key
+
+MODEL_KEY = ''
+
+# Set model file
+
+MODEL_FILE = ''
+
+# Set HDF5 file key
+
+HDF_FILE_KEY = ''
+
+# Set HDF file
+
+HDF_FILE = ''
 ##############################################################################
 
 # MISC
@@ -77,5 +101,3 @@ ITERATION = 10
 
 # Set Window Size
 WINDOW_SIZE = 2
-
-from .conf.user_setting import *
