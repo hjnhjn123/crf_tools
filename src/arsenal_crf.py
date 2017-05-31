@@ -136,17 +136,17 @@ def sent2labels(line):
 
 # CRF training
 
-def feed_crf_trainer(in_data, conf, hdf_key, window_size):
+def feed_crf_trainer(in_data, feature_conf, hdf_key, window_size):
     """
     :param in_data: converted data 
-    :param conf: feature conf
+    :param feature_conf: feature conf
     :param hdf_key: hdf keys
     :param window_size: window size
     :return: 
     """
-    features = [sent2features(s, conf, hdf_key, window_size) for s in in_data]
+    feature_conf = [sent2features(s, feature_conf, hdf_key, window_size) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
-    return features, labels
+    return feature_conf, labels
 
 
 def train_crf(X_train, y_train, algm='lbfgs', c1=0.1, c2=0.1, max_iter=100,
