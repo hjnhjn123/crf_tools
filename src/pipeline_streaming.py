@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import os
 from itertools import chain, groupby
 
 import pandas as pd
 
 from .arsenal_boto import sqs_get_msgs, sqs_send_msg, s3_get_file
-from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json
+from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json, df2crfsuite
+from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .settings import *
 
@@ -16,22 +16,22 @@ from .settings import *
 
 def streaming_pos_crf(in_f, crf, f_dics, feature_conf, hdf_key, window_size):
     raw_df = pd.read_json(in_f, lines=True)
-    raw_df['content'] = raw_df.result.to_dict()[0]['content']
+    raw_df['content'] = raw_df.DETAIL.to_dict()[0]['content']
 
     parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
-    prepared_data = [list(x[1]) for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-    test_sents = batch_add_features(prepared_data, f_dics)
-
+    prepared_data = pd.DataFrame(list(parsed_data))
+    test_df = batch_add_features(prepared_data, f_dics)
+    test_sents = df2crfsuite(test_df)
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    crf_result = crf_predict(crf, prepared_data, X_test)
+    crf_result = crf_predict(crf, test_sents, X_test)
     return crf_result, raw_df
 
 
 ##############################################################################
 
 
-def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, feature_conf, window_size, online):
-    sqs_queues = sqs_get_msgs(in_bucket, online)
+def pipeline_streaming_sqs(in_queue, out_queue, model_f, hdf_f, hdf_key, feature_conf, window_size, online):
+    sqs_queues = sqs_get_msgs(in_queue, online)
     crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
 
     while True:
@@ -39,8 +39,9 @@ def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, featu
             json_input = q.body
             crf_result, raw_df = streaming_pos_crf(json_input, crf, f_dics, feature_conf, hdf_key, window_size)
             json_result = crf_result2json(crf_result, raw_df)
-            sqs_send_msg(json_result, queue_name=out_bucket)
-            q.delete()
+            sqs_send_msg(json_result, queue_name=out_queue)
+            basic_logging('Queue output')
+            # q.delete()
 
 
 ##############################################################################
@@ -48,7 +49,7 @@ def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, featu
 def main(argv):
     if len(argv) > 1 and argv[1] == 'aws':
         online = argv[1]
-        model_f = s3_get_file(BUCKET, MODEL_KEY, MODEL_FILE, online)
-        hdf_f = s3_get_file(BUCKET, HDF_FILE_KEY, HDF_FILE, online)
-        in_bucket, out_bucket = os.environ['NLP_QUEUE_IN'], os.environ['NLP_QUEUE_OUT']
-        pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, online)
+        s3_get_file(S3_BUCKET, MODEL_KEY, MODEL_FILE, online)
+        s3_get_file(S3_BUCKET, HDF_FILE_KEY, HDF_FILE, online)
+        basic_logging('Queue prepared')
+        pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, online)
