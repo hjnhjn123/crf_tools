@@ -198,17 +198,17 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
 # CRF predicting
 
 
-def crf_predict(crf, new_data, processed_data):
+def crf_predict(crf, test_sents, X_test):
     """
-    :param crf:
-    :param new_data:
-    :param processed_data:
+    :param crf: crf model
+    :param test_sents:
+    :param X_test:
     :return:
     """
-    result = crf.predict(processed_data)
-    length = len(list(new_data))
+    result = crf.predict(X_test)
+    length = len(list(test_sents))
     crf_result = (
-        [(new_data[j][i][:2] + (result[j][i],)) for i in range(len(new_data[j]))] for j in range(length))
+        [(test_sents[j][i][:2] + (result[j][i],)) for i in range(len(test_sents[j]))] for j in range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
 
@@ -236,9 +236,9 @@ def extract_ner_result(ner_candidate, new_index):
     return ner_result
 
 
-def crf_result2json(crf_result, raw_df):
+def crf_result2json(crf_result, raw_df, col):
     ner_phrase = crf_result2dict(crf_result)
-    raw_df.result.to_dict()[0]['ner_phrase'] = ner_phrase
+    raw_df[col].to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
     return json_result
