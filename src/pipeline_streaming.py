@@ -1,23 +1,20 @@
 # -*- coding: utf-8 -*-
 
-from math import modf
-from os import listdir, path
-from sys import path
-from collections import OrderedDict, defaultdict
+import os
 from itertools import chain, groupby
+
 import pandas as pd
 
-from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, test_crf_prediction, \
-    df2crfsuite, train_crf, show_crf_label, make_param_space, make_f1_scorer, crf_predict
+from .arsenal_boto import sqs_get_msgs, sqs_send_msg, s3_get_file
+from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json
 from .arsenal_spacy import spacy_batch_processing
-from .arsenal_logging import basic_logging
+from .settings import *
 
 
 ##############################################################################
 
 
-def streaming_pos_crf(in_f, model_f, hdf_f, hdf_key, conf):
-    crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
+def streaming_pos_crf(in_f, crf, f_dics, feature_conf, hdf_key, window_size):
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df.result.to_dict()[0]['content']
 
@@ -25,86 +22,33 @@ def streaming_pos_crf(in_f, model_f, hdf_f, hdf_key, conf):
     prepared_data = [list(x[1]) for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
     test_sents = batch_add_features(prepared_data, f_dics)
 
-    X_test, y_test = feed_crf_trainer(test_sents, conf, hdf_key)
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     crf_result = crf_predict(crf, prepared_data, X_test)
     return crf_result, raw_df
 
 
-def pipeline_pos_crf(train_f, test_f, model_f, conf, hdf_f, hdf_key, report_type, cols, out_f, pieces=10):
-    crf, f_dics = batch_loading('', hdf_f, hdf_key)
-    raw_df = pd.read_json(train_f, lines=True)
-    basic_logging('Reading ends')
-    data = pd.DataFrame(raw_df.result.values.tolist())['content'].reset_index()
-    data['content'] = data['content'].drop_duplicates()
-    # data = random_rows(data, pieces, 'content')
-    data = data.dropna()
-    basic_logging('Cleaning ends')
-
-    parsed_data = spacy_batch_processing(data, '', 'content', ['content'], 'crf')
-    basic_logging('Spacy ends')
-
-    parsed_data = chain.from_iterable(parsed_data)
-    pos_data = [list(x[1])[:-1] for x in groupby(parsed_data, lambda x: x == ('##END', '###', 'O')) if not x[0]]
-
-    test_sents = batch_add_features(pos_data, f_dics)
-    basic_logging('Adding features ends')
-
-    X_test, y_test = feed_crf_trainer(test_sents, conf)
-    basic_logging('Conversion ends')
-    result = crf_predict(crf, pos_data, X_test)
-    basic_logging('Predicting ends')
-    out = pd.DataFrame(result)
-    out.to_csv(out_f, header=False, index=False)
+##############################################################################
 
 
-def pipeline_streaming_folder(in_folder, out_folder, dict_conf, crf_f, feature_hdf, hdf_keys, switch):
-    loads = batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch)
-    conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
-
-    i = 0
-    root_dic = defaultdict()
-    for in_f in listdir(in_folder):
-        ff = path.join(in_folder, in_f)
-        crf_result, raw_df = streaming_pos_crf(ff, crf, conf, aca, com_single, com_suffix,
-                                               location, name, ticker, tfdf, tfidf)
-        # json_result = convert_crf_result_json(crf_result, raw_df)
-        if modf(i / 100)[0] == 0.0:
-        with open(path.join(out_folder, str(in_f) + '.csv'), 'w') as out:
-
-            # out.write(json_result)
-            pd.DataFrame(crf_result).to_csv(out, index=None, header=None)
-
-        i += 1
-        if modf(i / 100)[0] == 0.0:
-            basic_logging('%d pieces have been processed', i)
-    result = pd.DataFrame.from_dict(root_dic, orient='index').reset_index()
-    result.columns = ['Token', 'Freq']
-    result = result.sort_values(by='Freq', ascending=False)
-    result.to_csv(out_folder, header=None, index=False)
-
-
-def pipeline_streaming_queue(redis_conf, dict_conf, crf_f, feature_hdf, hdf_keys, switch):
-    loads = batch_loading(dict_conf, crf_f, feature_hdf, hdf_keys, switch)
-
-    conf, crf, aca, com_single, com_suffix, location, name, ticker, tfdf, tfidf = loads
-    r_address, r_port, r_db, r_key = OrderedDict(
-        load_yaml_conf(redis_conf)['test_read']).values()
-    w_address, w_port, w_db, w_key = OrderedDict(
-        load_yaml_conf(redis_conf)['test_write']).values()
-
-    r = redis.StrictRedis(host=r_address, port=r_port, db=r_db)
-    w = redis.StrictRedis(host=w_address, port=w_port, db=w_db)
-
-    i = 0
+def pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, hdf_key, feature_conf, window_size):
+    sqs_queues = sqs_get_msgs(in_bucket)
+    crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
 
     while True:
-        queue = r.lpop(r_key).decode('utf-8')
-        json_result = streaming_pos_crf(queue, crf, conf, aca, com_single, com_suffix,
-                                        location, name, ticker, tfdf, tfidf)
-        w.lpush(w_key, json_result)
-        i += 1
-        if modf(i / 10)[0] == 0.0:
-            print(get_now(), i)
+        for q in sqs_queues.receive_messages():
+            json_input = q.body
+            crf_result, raw_df = streaming_pos_crf(json_input, crf, f_dics, feature_conf, hdf_key, window_size)
+            json_result = crf_result2json(crf_result, raw_df)
+            sqs_send_msg(json_result, queue_name=out_bucket)
+            q.delete()
 
 
 ##############################################################################
+
+def main(argv):
+    model_f = s3_get_file(BUCKET, MODEL_KEY, MODEL_FILE)
+    hdf_f = s3_get_file(BUCKET, HDF_FILE_KEY, HDF_FILE)
+
+    if len(argv) > 1 and argv[1] == 'aws':
+        in_bucket, out_bucket = os.environ['NLP_QUEUE_IN'], os.environ['NLP_QUEUE_OUT']
+        pipeline_streaming_sqs(in_bucket, out_bucket, model_f, hdf_f, HDF_KEY, FEATURE_CONF, WINDOW_SIZE)
