@@ -86,6 +86,10 @@ HDF_FILE_KEY = '360-nlp/ner-dicts/features_20170425.h5'
 
 HDF_FILE = '../data/features_20170425.h5'
 
+# Set json attribute for content
+
+CONTENT_COL = 'DETAIL'
+
 ##############################################################################
 
 # MISC
