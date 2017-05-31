@@ -33,15 +33,15 @@ FEATURE_CONF = {
 
 # Set train DIR
 TRAIN_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
-    '/annotate_train_20170518.csv'
+          '/annotate_train_20170518.csv'
 
 # Set test DIR
 TEST_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
-    '/annotate_test_20170518.csv'
+         '/annotate_test_20170518.csv'
 
 # Set validate DIR
 VALIDATE_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
-    '/zdnet_test_20170518.csv'
+             '/zdnet_test_20170518.csv'
 
 # Set HDF5 DIR
 HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170425.h5'
@@ -56,30 +56,36 @@ OUT_F = ''
 # Set result DIR
 RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
 
-
 ##############################################################################
 
 # AWS Conf
 
 # Set S3 bucket name
 
-BUCKET = 'patsnap-360-npl'
+S3_BUCKET = 'patsnap-360-npl'
+
+# Set sqs queue
+
+IN_QUEUE = '360_nlp_input'
+
+OUT_QUQUE = '360_nlp_output'
 
 # Set model key
 
-MODEL_KEY = ''
+MODEL_KEY = '360-nlp/ner-models/crf_en_model_20170425_bp.joblib'
 
 # Set model file
 
-MODEL_FILE = ''
+MODEL_FILE = '../data/crf_en_model_20170425_bp.joblib'
 
 # Set HDF5 file key
 
-HDF_FILE_KEY = ''
+HDF_FILE_KEY = '360-nlp/ner-dicts/features_20170425.h5'
 
 # Set HDF file
 
-HDF_FILE = ''
+HDF_FILE = '../data/features_20170425.h5'
+
 ##############################################################################
 
 # MISC
