@@ -224,13 +224,9 @@ def extract_ner_result(ner_candidate, new_index):
     new_candidate = deepcopy(ner_candidate)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split')]
-    ner_result = (
-        ' '.join(
-            [(i[0].strip() + '##' + i[1].strip()) for i in new_candidate if i[1]]).split(
-            '##split'))
+    ner_result = (' '.join([(i[0].strip() + '##' + i[1].strip()) for i in new_candidate if i[1]]).split('##split'))
     ner_result = ([i.strip(' ') for i in ner_result if i and i != '##'])
-    ner_result = ('##'.join((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]))
-                  for tt in ner_result)
+    ner_result = ('##'.join((' '.join([i.split('##')[0] for i in tt.split()]), tt[-3:]))for tt in ner_result)
     ner_result = sort_dic(Counter(i for i in ner_result if i), sort_key=1, rev=True)
     return ner_result
 
