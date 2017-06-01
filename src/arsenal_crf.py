@@ -12,7 +12,6 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-from .arsenal_logging import *
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
@@ -230,7 +229,8 @@ def extract_ner_result(ner_candidate, new_index):
     new_candidate, final_dics = deepcopy(ner_candidate), defaultdict(list)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split', '##split')]
-    ner_result_0 = ('##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
+    ner_result_0 = (
+    '##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
     ner_result_1 = ([i.strip(' ') for i in ner_result_0 if i and i != '##'])
 
     for result in ner_result_1:

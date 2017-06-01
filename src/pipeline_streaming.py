@@ -51,4 +51,5 @@ def main(argv):
         s3_get_file(S3_BUCKET, MODEL_KEY, MODEL_FILE, online)
         s3_get_file(S3_BUCKET, HDF_FILE_KEY, HDF_FILE, online)
         basic_logging('Queue prepared')
-        pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL, online)
+        pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE,
+                               CONTENT_COL, online)

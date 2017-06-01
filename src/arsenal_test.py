@@ -61,7 +61,7 @@ def evaluate_ner_result(y_pred, y_test):
                     relevant_elements.items()}
     total_result = cal_metrics(sum(true_positive_result.values()), sum(relevant_elements.values()),
                                sum(selected_elements.values()))
-    final_result.update({'Total': total_result + (sum(relevant_elements.values()), )})
+    final_result.update({'Total': total_result + (sum(relevant_elements.values()),)})
     output = pd.DataFrame(final_result).T.reset_index()
     output.columns = ['Label', 'Precision', 'Recall', 'F1_score', 'Support']
     return output

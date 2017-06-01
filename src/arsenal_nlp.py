@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 
 import gc
-import pandas as pd
 from collections import Counter, defaultdict
-from operator import itemgetter
 from math import log
+from operator import itemgetter
 from string import punctuation
 
+import pandas as pd
 from sklearn.feature_extraction import text
 from zhon import hanzi
 
 from .arsenal_stats import sort_dic, split_dic
+
 
 ########################################################################################################################
 
@@ -193,4 +194,3 @@ def convert_bag_of_words(df, col, kl):
     header = vectorizer.get_feature_names()
     text_matrix = pd.DataFrame(matrix.toarray(), columns=header)
     return text_matrix
-

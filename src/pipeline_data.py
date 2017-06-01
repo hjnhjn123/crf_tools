@@ -18,8 +18,8 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
                  'IDX', 'BAS', 'PRT', 'SHP']
 LABEL_ANS = ['category', 'nname_en']
 
-
 HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
+
 
 ##############################################################################
 
@@ -84,7 +84,8 @@ def extract_factset_short_names(in_file, out_single, out_multi):
 
 def extract_institute(institute_json, out_csv):
     grid = pd.read_json('/Users/acepor/Downloads/grid.json', orient='institutes')
-    gg = [i['acronyms'] for i in grid['institutes'].values.tolist() if i['status'] != 'redirected' and i['status'] != 'obsolete']
+    gg = [i['acronyms'] for i in grid['institutes'].values.tolist() if
+          i['status'] != 'redirected' and i['status'] != 'obsolete']
     ii = sorted(list(set(i for j in gg for i in j if len(i.split()) == 1)))
     pd.DataFrame(ii).to_csv(out_csv, index=False, header=None)
 
@@ -288,22 +289,21 @@ def convert_html2ner(sent):
         elif sent_list[i].endswith('company|||'):
             ner_list[i] = 'L-COM'
         elif sent_list[i].startswith('||'):
-            ner_list[i] = 'B'            
+            ner_list[i] = 'B'
 
-    for i in range(-1, -len(ner_list)-1, -1):
+    for i in range(-1, -len(ner_list) - 1, -1):
         if ner_list[i] == 'L-PPL':
-            if ner_list[i-1] == 'B':
-                ner_list[i-1] = 'B-PPL'
-            elif ner_list[i-2] == 'B':
-                ner_list[i-1] = 'I-PPL'
-                ner_list[i-2] = 'B-PPL'
+            if ner_list[i - 1] == 'B':
+                ner_list[i - 1] = 'B-PPL'
+            elif ner_list[i - 2] == 'B':
+                ner_list[i - 1] = 'I-PPL'
+                ner_list[i - 2] = 'B-PPL'
         elif ner_list[i] == 'L-COM':
-            if ner_list[i-1] == 'B':
-                ner_list[i-1] = 'B-COM'
-            elif ner_list[i-2] == 'B':
-                ner_list[i-1] = 'I-COM'
-                ner_list[i-2] = 'B-COM'
+            if ner_list[i - 1] == 'B':
+                ner_list[i - 1] = 'B-COM'
+            elif ner_list[i - 2] == 'B':
+                ner_list[i - 1] = 'I-COM'
+                ner_list[i - 2] = 'B-COM'
     pos_text = spacy_parser(' '.join(clean_list), 'txt+pos', '')
     crf_text = [m + (n,) for m, n in zip(pos_text, ner_list)]
     return crf_text
-
