@@ -2,10 +2,9 @@ import cProfile
 import logging
 import os
 from logging import config
-from line_profiler import LineProfiler
-
 
 import yaml
+from line_profiler import LineProfiler
 
 
 def setup_logging(path='logging.yaml', level=logging.INFO, env_key='LOG_CFG'):
