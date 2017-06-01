@@ -1,5 +1,4 @@
 # Temporary and binary files
-*~
 *.py[cod]
 *.so
 *.cfg
@@ -11,6 +10,7 @@ __pycache__/*
 .cache/*
 .*.swp
 */.ipynb_checkpoints/*
+.gitignore
 
 # Project files
 .ropeproject
@@ -41,3 +41,5 @@ docs/api/*
 docs/_build/*
 cover/*
 MANIFEST
+ENV
+data
