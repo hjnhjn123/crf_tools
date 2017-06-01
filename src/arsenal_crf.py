@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from collections import Counter, OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict
 from copy import deepcopy
 from itertools import chain, groupby
 
@@ -12,7 +12,8 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
+from .arsenal_logging import *
+from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df
 
 HEADER_CRF = ['TOKEN', 'POS', 'NER']
 
@@ -215,19 +216,6 @@ def crf_predict(crf, test_sents, X_test):
 
 ##############################################################################
 
-
-# def crf_result2dict(crf_result):
-    # ner_candidate = [(token, ner) for token, _, ner in crf_result if ner[0] != 'O']
-    # # ner_index = (i for i in range(len(ner_candidate)) if
-    # #              ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L')
-    # # new_index = (a + b for a, b in enumerate(ner_index))
-    # ner_index = [i for i in range(len(ner_candidate)) if
-    #              ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
-    # new_index = [a + b for a, b in enumerate(ner_index)]
-    # ner_result = extract_ner_result(ner_candidate, new_index)
-    # return ner_result
-
-
 def crf_result2dict(crf_result):
     clean_sent = [(token, ner) for token, _, ner in crf_result if token != '##END']
     ner_candidate = [(index, token, ner) for index, (token, ner) in enumerate(clean_sent) if ner[0] != 'O']
@@ -242,11 +230,16 @@ def extract_ner_result(ner_candidate, new_index):
     new_candidate, final_dics = deepcopy(ner_candidate), defaultdict(list)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split', '##split')]
-    print(new_candidate)
-    ner_result_0 = ('##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
+    ner_result_0 = (
+    '##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
     ner_result_1 = ([i.strip(' ') for i in ner_result_0 if i and i != '##'])
 
     for result in ner_result_1:
+
+        print(result)
+
+        result = result.lstrip('##')
+        print(result)
         result_split = result.split('##')[:-1]
         if len(result_split) == 3:
             token, ner = result_split[0], result_split[1][-3:]
