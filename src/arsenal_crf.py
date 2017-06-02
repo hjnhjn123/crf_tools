@@ -95,7 +95,7 @@ def feature_selector(word_tuple, feature_conf, window, hdf_key):
     :param hdf_key: 
     :return: 
     """
-    word, pos, other_features = word_tuple[0], word_tuple[1], word_tuple[3:]
+    word, pos, other_features = word_tuple[0], word_tuple[2], word_tuple[3:]
     other_dict = {'_'.join((window, j)): k for j, k in
                   zip(sorted(hdf_key), other_features)}
     feature_func = {name: func for (name, func) in feature_conf.items() if
