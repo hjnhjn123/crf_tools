@@ -72,10 +72,10 @@ def batch_add_features(df, f_dics):
 
 def df2crfsuite(df, delim='##END'):
     """
-    
-    :param df: 
-    :param delim: 
-    :return:[[(word, label, features)]] 
+
+    :param df:
+    :param delim:
+    :return:[[(word, label, features)]]
     """
     delimiter = tuple(df[df.iloc[:, 0] == delim].iloc[0, :].tolist())
     sents = zip(*[df[i].tolist() for i in df.columns])  # Use * to unpack a list
@@ -89,11 +89,11 @@ def df2crfsuite(df, delim='##END'):
 
 def feature_selector(word_tuple, feature_conf, window, hdf_key):
     """
-    :param word_tuple: (word, label, features) 
+    :param word_tuple: (word, label, features)
     :param feature_conf: import from setting
     :param window: window size
-    :param hdf_key: 
-    :return: 
+    :param hdf_key:
+    :return:
     """
     word, pos, other_features = word_tuple[0], word_tuple[2], word_tuple[3:]
     other_dict = {'_'.join((window, j)): k for j, k in
@@ -138,11 +138,11 @@ def sent2labels(line):
 
 def feed_crf_trainer(in_data, feature_conf, hdf_key, window_size):
     """
-    :param in_data: converted data 
+    :param in_data: converted data
     :param feature_conf: feature conf
     :param hdf_key: hdf keys
     :param window_size: window size
-    :return: 
+    :return:
     """
     feature_conf = [sent2features(s, feature_conf, hdf_key, window_size) for s in in_data]
     labels = [sent2labels(s) for s in in_data]
@@ -230,15 +230,12 @@ def extract_ner_result(ner_candidate, new_index):
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split', '##split')]
     ner_result_0 = (
-    '##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
+        '##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
     ner_result_1 = ([i.strip(' ') for i in ner_result_0 if i and i != '##'])
 
     for result in ner_result_1:
 
-        print(result)
-
         result = result.lstrip('##')
-        print(result)
         result_split = result.split('##')[:-1]
         if len(result_split) == 3:
             token, ner = result_split[0], result_split[1][-3:]
@@ -248,12 +245,11 @@ def extract_ner_result(ner_candidate, new_index):
         elif len(result_split) > 3:
             token, ner = result_split[0::3], result_split[1][-3:]
             begin_index, end_index = result_split[2], result_split[-1]
-            print('##'.join((' '.join(token), ner)))
             final_dics['##'.join((' '.join(token), ner))].append((begin_index, end_index))
 
     final_lens = {k: str(len(v)) for (k, v) in final_dics.items()}
     final_result = {'##'.join((k, final_lens[k])): v for (k, v) in final_dics.items()}
-
+    # print(final_result)
     return final_result
 
 
