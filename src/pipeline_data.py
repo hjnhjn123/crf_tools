@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from scipy import stats
-
+from copy import deepcopy
 from .arsenal_nlp import *
 from .arsenal_spacy import *
 from .arsenal_stats import *
@@ -14,8 +14,8 @@ HEADER_EXTRACTED = ['Count', 'Token', 'POS', 'NER']
 HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
-                 'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR',
-                 'IDX', 'BAS', 'PRT', 'SHP']
+                 'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS',
+                 'PRT', 'SHP']
 LABEL_ANS = ['category', 'nname_en']
 
 HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
@@ -160,13 +160,6 @@ def titlefy_names(in_file, out_file):
             out.write(line)
 
 
-def train_gold_parser(in_file, entity_col, tag_col, gold_parser_col, label):
-    data = quickest_read_csv(in_file, HEADER_SN_TYPE)
-    data = df2gold_parser(data, entity_col, tag_col)
-    data = read_gold_parser_train_data(data, gold_parser_col, False)
-    gold_parser(data, label)
-
-
 def prepare_techcrunch(in_file, header, col):
     data = quickest_read_csv(in_file, header)
     data = data.dropna()
@@ -266,44 +259,47 @@ def prepare_feature_hdf(output_f, hdf_kesys, *files, mode='a'):
 
 def extract_labeled_ner(text):
     ner_text = (i for i in spacy_parser(text, 'chk', '') if '||' in i)
-    crf_texts = [convert_html2ner(sent) for sent in ner_text]
-    return [i + [('##END', '###', 'O')] for i in crf_texts]
+    crf_texts = [extract_ner_from_sent(sent) for sent in ner_text]
+    return [i + [('##END', 'O', '###')] for i in crf_texts]
 
 
-def convert_html2ner(sent):
+def extract_ner_from_sent(ner_sent):
     """
-    sent = 'The |||Obama||person||| administration worked for years to bring the Trans-Pacific Partnership
-     to life, or close to it. |||Donald Trump||person||| erased that with the sweep |||of a pen||person|||.'
-     """
-    sent_list = spacy_parser(sent, 'txt', '')
-    clean_list = [i.replace('||person', '').replace('||company', '').replace('|', '') for i in sent.split()]
+    """
+    ner_sent = ner_sent.split()
+    clean_list = [i.replace('||person', '').replace('||company', '').replace('|', '') for i in ner_sent]
+    # remove NER tags
+    ner_list = ['O' for i in range(len(ner_sent))]
+    # add default tags
 
-    ner_list = ['O' for i in range(len(sent_list))]
-    for i in range(len(sent_list)):
-        if sent_list[i].startswith('||') and sent_list[i].endswith('person|||'):
-            ner_list[i] = 'U-PPL'
-        elif sent_list[i].startswith('||') and sent_list[i].endswith('company|||'):
-            ner_list[i] = 'U-COM'
-        elif sent_list[i].endswith('person|||'):
-            ner_list[i] = 'L-PPL'
-        elif sent_list[i].endswith('company|||'):
-            ner_list[i] = 'L-COM'
-        elif sent_list[i].startswith('||'):
-            ner_list[i] = 'B'
+    begin_index = [i for (i, t) in enumerate(ner_sent) if t.startswith('||')]
+    end_index = [i for (i, t) in enumerate(ner_sent) if ('|||') in t]  # may have a punc after '|||'
 
-    for i in range(-1, -len(ner_list) - 1, -1):
-        if ner_list[i] == 'L-PPL':
-            if ner_list[i - 1] == 'B':
-                ner_list[i - 1] = 'B-PPL'
-            elif ner_list[i - 2] == 'B':
-                ner_list[i - 1] = 'I-PPL'
-                ner_list[i - 2] = 'B-PPL'
-        elif ner_list[i] == 'L-COM':
-            if ner_list[i - 1] == 'B':
-                ner_list[i - 1] = 'B-COM'
-            elif ner_list[i - 2] == 'B':
-                ner_list[i - 1] = 'I-COM'
-                ner_list[i - 2] = 'B-COM'
+    ner_list = extract_entity(begin_index, end_index, ner_list, ner_sent, 'person', 'PPL')
+    ner_list = extract_entity(begin_index, end_index, ner_list, ner_sent, 'company', 'COM')
     pos_text = spacy_parser(' '.join(clean_list), 'txt+pos', '')
-    crf_text = [m + (n,) for m, n in zip(pos_text, ner_list)]
+    crf_text = ((m,) + n for m, n in zip(ner_list, pos_text))
+    crf_text = [(b, a, c) for (a, b, c) in crf_text]
     return crf_text
+
+
+def extract_entity(begin_index, end_index, ner_list, sent, end_mark='person', tag='PPL'):
+    all_index = zip(begin_index, end_index)
+
+    b_tag, i_tag, l_tag, u_tag = 'B-' + tag, 'I-' + tag, 'L-' + tag, 'U-' + tag
+    entity_anchor = [i for (i, t) in enumerate(sent) if (end_mark + '|||') in t]
+    # may have a punc after '|||'
+
+    entity_index = [i for i in all_index if i[-1] in entity_anchor]
+    for index in entity_index:
+        if index[-1] - index[0] == 0:
+            ner_list[index[0]] = u_tag
+        elif index[-1] - index[0] == 1:
+            ner_list[index[0]] = b_tag
+            ner_list[index[-1]] = l_tag
+        elif index[-1] - index[0] > 1:
+            ner_list[index[0]] = b_tag
+            ner_list[index[-1]] = l_tag
+            for i in range(index[0] + 1, index[-1]):
+                ner_list[i] = i_tag
+    return ner_list
