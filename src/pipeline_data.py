@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from scipy import stats
-from copy import deepcopy
+
 from .arsenal_nlp import *
 from .arsenal_spacy import *
 from .arsenal_stats import *
@@ -288,18 +288,16 @@ def extract_entity(begin_index, end_index, ner_list, sent, end_mark='person', ta
 
     b_tag, i_tag, l_tag, u_tag = 'B-' + tag, 'I-' + tag, 'L-' + tag, 'U-' + tag
     entity_anchor = [i for (i, t) in enumerate(sent) if (end_mark + '|||') in t]
-    # may have a punc after '|||'
+    # may have a punctuation after '|||'
 
     entity_index = [i for i in all_index if i[-1] in entity_anchor]
     for index in entity_index:
         if index[-1] - index[0] == 0:
             ner_list[index[0]] = u_tag
         elif index[-1] - index[0] == 1:
-            ner_list[index[0]] = b_tag
-            ner_list[index[-1]] = l_tag
+            ner_list[index[0]], ner_list[index[-1]] = b_tag, l_tag
         elif index[-1] - index[0] > 1:
-            ner_list[index[0]] = b_tag
-            ner_list[index[-1]] = l_tag
+            ner_list[index[0]], ner_list[index[-1]] = b_tag, l_tag
             for i in range(index[0] + 1, index[-1]):
                 ner_list[i] = i_tag
     return ner_list
