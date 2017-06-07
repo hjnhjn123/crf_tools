@@ -15,7 +15,7 @@ import joblib as jl
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, report_type, window_size):
+def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -24,7 +24,6 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
-    :param report_type: 'spc' for a specific report and 'bin' for binary report
     """
     basic_logging('loading conf begins')
     _, f_dics = batch_loading('', hdf_f, hdf_key)
@@ -51,7 +50,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     return crf, result
 
 
-def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, report_type, cv, iteration,
+def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
                           window_size):
     """
     A pipeline for CRF training
@@ -61,7 +60,6 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
-    :param report_type: 'spc' for a specific report and 'bin' for binary report
     :param cv: cv scale
     :param iteration: iteration time
     """
@@ -96,7 +94,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_validate(validate_f, model_f, feature_conf, hdf_f, result_f, hdf_key, report_type, window_size):
+def pipeline_validate(validate_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size):
     """
     A pipeline for CRF training
     :param validate_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -104,7 +102,6 @@ def pipeline_validate(validate_f, model_f, feature_conf, hdf_f, result_f, hdf_ke
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
-    :param report_type: 'spc' for a specific report and 'bin' for binary report
     """
     basic_logging('loading conf begins')
     crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
@@ -137,21 +134,18 @@ def main(argv):
         'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
                                         result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
                                         feature_conf=FEATURE_CONF,
-                                        report_type=REPORT_TYPE,
                                         window_size=WINDOW_SIZE),
         'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F,
                                             model_f=MODEL_F,
                                             result_f=RESULT_F, hdf_f=HDF_F,
                                             hdf_key=HDF_KEY,
                                             feature_conf=FEATURE_CONF,
-                                            report_type=REPORT_TYPE,
                                             window_size=WINDOW_SIZE, cv=CV,
                                             iteration=ITERATION),
         'validate': lambda: pipeline_validate(validate_f=VALIDATE_F, model_f=MODEL_F,
                                               result_f=RESULT_F, hdf_f=HDF_F,
                                               hdf_key=HDF_KEY,
                                               feature_conf=FEATURE_CONF,
-                                              report_type=REPORT_TYPE,
                                               window_size=WINDOW_SIZE)
     }
     dic[argv]()
