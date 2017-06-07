@@ -11,7 +11,7 @@ HEADER_SN = ['factset_entity_id', 'short_name']
 HEADER_SN_TYPE = ['entity_type', 'short_name']
 HEADER_SCHWEB = ['Language', 'Title', 'Type']
 HEADER_EXTRACTED = ['Count', 'Token', 'POS', 'NER']
-HEADER_ANNOTATION = ['TOKEN', 'POS', 'NER']
+HEADER_ANNOTATION = ['TOKEN', 'NER', 'POS']
 
 LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 'TRU', 'OPD', 'PEF', 'FND', 'FNS',
                  'JVT', 'VEN', 'HED', 'UIT', 'MUE', 'ABS', 'GOV', 'ESP', 'PRO', 'FAF', 'SOV', 'COR', 'IDX', 'BAS',
@@ -19,6 +19,14 @@ LABEL_COMPANY = ['PUB', 'EXT', 'SUB', 'PVT', 'MUT', 'UMB', 'PVF', 'HOL', 'MUC', 
 LABEL_ANS = ['category', 'nname_en']
 
 HDF_KEY_20170425 = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfdf', 'tfidf']
+
+NON_PPL_COM_DIC = {'U-GPE': 'O', 'B-GPE': 'O', 'I-GPE': 'O', 'L-GPE': 'O', 'B-GOV': 'O', 'L-GOV': 'O',
+                   'I-GOV': 'O', 'U-ACA': 'O', 'B-ACA': 'O', 'L-ACA': 'O', 'I-ACA': 'O', 'U-GOV': 'O'}
+
+FULL_NER_DIC = {'U-COM': 'U-COM', 'O': 'O', 'B-COM': 'B-COM', 'I-COM': 'I-COM', 'L-COM': 'L-COM', 'B-PPL': 'B-PPL',
+                'I-PPL': 'I-PPL', 'L-PPL': 'L-PPL', 'U-PPL': 'U-PPL', 'U-GPE': 'O', 'B-GPE': 'O', 'I-GPE': 'O',
+                'L-GPE': 'O', 'B-GOV': 'O', 'L-GOV': 'O', 'I-GOV': 'O', 'U-ACA': 'O', 'B-ACA': 'O', 'L-ACA': 'O',
+                'I-ACA': 'O', 'U-GOV': 'O'}
 
 
 ##############################################################################
@@ -316,3 +324,13 @@ def extract_entity(begin_index, end_index, ner_list, sent, end_mark='person', ta
             for i in range(index[0] + 1, index[-1]):
                 ner_list[i] = i_tag
     return ner_list
+
+
+##############################################################################
+
+
+def replalce_ner(in_file, out_file):
+    df = pd.read_csv(in_file, engine='c', header=None)
+    df.columns = HEADER_ANNOTATION
+    df['NER'] = df['NER'].map(FULL_NER_DIC)
+    df.to_csv(out_file, header=None, index=False)
