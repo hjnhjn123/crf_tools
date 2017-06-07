@@ -29,7 +29,7 @@ def cal_metrics(true_positive, all_positive, T):
     precision = true_positive / all_positive if all_positive else 0
     recall = true_positive / T if T else 0
     f_score = 2 * precision * recall / (precision + recall) if precision + recall else 0
-    return precision, recall, f_score
+    return round(precision, 4), round(recall, 4), round(f_score, 4)
 
 
 def evaluate_ner_result(y_pred, y_test):
