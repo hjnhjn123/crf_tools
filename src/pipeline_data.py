@@ -258,25 +258,31 @@ def prepare_feature_hdf(output_f, hdf_kesys, *files, mode='a'):
 
 
 def extract_labeled_ner(text):
+    """
+    :param text: a long string
+    :return:
+    """
     ner_text = (i for i in spacy_parser(text, 'chk', '') if '||' in i)
     crf_texts = [extract_ner_from_sent(sent) for sent in ner_text]
     return [i + [('##END', 'O', '###')] for i in crf_texts]
 
 
-def extract_ner_from_sent(ner_sent):
+def extract_ner_from_sent(entity_sent):
     """
+    :param entity_sent: str, sentences containing entities
+    :return: [(token, ner, pos)]
     """
-    ner_sent = ner_sent.split()
-    clean_list = [i.replace('||person', '').replace('||company', '').replace('|', '') for i in ner_sent]
+    entity_sent = entity_sent.split()
+    clean_list = [i.replace('||person', '').replace('||company', '').replace('|', '') for i in entity_sent]
     # remove NER tags
-    ner_list = ['O' for i in range(len(ner_sent))]
+    ner_list = ['O' for i in range(len(entity_sent))]
     # add default tags
 
-    begin_index = [i for (i, t) in enumerate(ner_sent) if t.startswith('||')]
-    end_index = [i for (i, t) in enumerate(ner_sent) if ('|||') in t]  # may have a punc after '|||'
+    begin_index = [i for (i, t) in enumerate(entity_sent) if t.startswith('||')]
+    end_index = [i for (i, t) in enumerate(entity_sent) if ('|||') in t]  # may have a punc after '|||'
 
-    ner_list = extract_entity(begin_index, end_index, ner_list, ner_sent, 'person', 'PPL')
-    ner_list = extract_entity(begin_index, end_index, ner_list, ner_sent, 'company', 'COM')
+    ner_list = extract_entity(begin_index, end_index, ner_list, entity_sent, 'person', 'PPL')
+    ner_list = extract_entity(begin_index, end_index, ner_list, entity_sent, 'company', 'COM')
     pos_text = spacy_parser(' '.join(clean_list), 'txt+pos', '')
     crf_text = ((m,) + n for m, n in zip(ner_list, pos_text))
     crf_text = [(b, a, c) for (a, b, c) in crf_text]
@@ -284,6 +290,15 @@ def extract_ner_from_sent(ner_sent):
 
 
 def extract_entity(begin_index, end_index, ner_list, sent, end_mark='person', tag='PPL'):
+    """
+    :param begin_index: list, index of entity beginnings
+    :param end_index: list, index of entity endings
+    :param ner_list: list, list of ner tags
+    :param sent: list, list of tokens
+    :param end_mark: str, tag in the original text
+    :param tag: str, end of ner tags
+    :return: list, updated ner list
+    """
     all_index = zip(begin_index, end_index)
 
     b_tag, i_tag, l_tag, u_tag = 'B-' + tag, 'I-' + tag, 'L-' + tag, 'U-' + tag
