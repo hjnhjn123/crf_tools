@@ -280,7 +280,7 @@ def extract_ner_from_sent(entity_sent):
     :param entity_sent: str, sentences containing entities
     :return: [(token, ner, pos)]
     """
-    entity_sent = entity_sent.split()
+    entity_sent = spacy_parser(entity_sent, 'txt', '')
     clean_list = [i.replace('||person', '').replace('||company', '').replace('|', '') for i in entity_sent]
     # remove NER tags
     ner_list = ['O' for i in range(len(entity_sent))]
