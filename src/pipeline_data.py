@@ -28,6 +28,14 @@ FULL_NER_DIC = {'U-COM': 'U-COM', 'O': 'O', 'B-COM': 'B-COM', 'I-COM': 'I-COM', 
                 'L-GPE': 'O', 'B-GOV': 'O', 'L-GOV': 'O', 'I-GOV': 'O', 'U-ACA': 'O', 'B-ACA': 'O', 'L-ACA': 'O',
                 'I-ACA': 'O', 'U-GOV': 'O'}
 
+DIC_CONLL_SPACY = {'NNP': 'PROPN', 'VBZ': 'VERB', 'JJ': 'ADJ', 'NN': 'NOUN', 'TO': 'PART', 'VB': 'VERB', '.': 'PUNCT',
+                   'CD': 'NUM', 'DT': 'DET', 'VBD': 'VERB', 'IN': 'ADP', 'PRP': 'PRON', 'NNS': 'PROPN', 'VBP': 'VERB',
+                   'MD': 'VERB', 'VBN': 'VERB', 'POS': 'PART', 'JJR': 'ADJ', 'O': '##', 'RB': ' PART', ',': 'PUNCT',
+                   'FW': 'X', 'CC': 'CONJ', 'WDT': 'ADJ', '(': 'PUNCT', ')': 'PUNCT', ':': 'PUNCT', 'PRP$': 'ADJ',
+                   'RBR': 'ADV', 'VBG': 'VERB', 'EX': 'ADV', 'WP': 'NOUN', 'WRB': 'ADV', '$': 'SYM', 'RP': 'ADV',
+                   'NNPS': 'PROPN', 'SYM': 'SYM', 'RBS': 'ADV', 'UH': 'INTJ', 'PDT': 'ADJ', "''": 'PUNCT',
+                   'LS': 'PUNCT', 'JJS': 'ADJ', 'WP$': 'ADJ', 'NN|SYM': 'X'}
+
 
 ##############################################################################
 
@@ -326,6 +334,16 @@ def extract_entity(begin_index, end_index, ner_list, sent, end_mark='person', ta
     return ner_list
 
 
+def pipeline_extract_nyt(nyt_data, start, end, out_file):
+    df = pd.read_json(nyt_data)
+    df.columns = ['text']
+    tt = df.text.tolist()
+    text = ' '.join(tt[start: end])
+    result = extract_labeled_ner(text)
+    result_df = pd.DataFrame([i for j in result for i in j])
+    result_df.to_csv(out_file, index=False, header=None)
+
+
 ##############################################################################
 
 
@@ -334,3 +352,18 @@ def replalce_ner(in_file, out_file):
     df.columns = HEADER_ANNOTATION
     df['NER'] = df['NER'].map(FULL_NER_DIC)
     df.to_csv(out_file, header=None, index=False)
+
+
+##############################################################################
+
+
+def convert_conll2bilou(in_f, out_f):
+    df = pd.read_table(in_f, header=None, delimiter=' ', skip_blank_lines=False, skiprows=2)
+    df.columns = ['TOKEN', 'POS', 'POS1', 'NER']
+    df = df[df.TOKEN != '-DOCSTART-']
+    tt = df[['TOKEN', 'NER', 'POS']]
+    tt['NER'] = tt['NER'].fillna('O')
+    tt['TOKEN'] = tt['TOKEN'].fillna('##END')
+    tt['POS'] = tt['POS'].fillna('NIL')
+    tt['POS'] = tt['POS'].map(DIC_CONLL_SPACY)
+    tt_list = zip(tt.TOKEN.tolist(), tt.NER.tolist(), tt.POS.tolist())
