@@ -366,4 +366,11 @@ def convert_conll2bilou(in_f, out_f):
     tt['TOKEN'] = tt['TOKEN'].fillna('##END')
     tt['POS'] = tt['POS'].fillna('NIL')
     tt['POS'] = tt['POS'].map(DIC_CONLL_SPACY)
-    tt_list = zip(tt.TOKEN.tolist(), tt.NER.tolist(), tt.POS.tolist())
+    tt_list = list(zip(tt.TOKEN.tolist(), tt.NER.tolist(), tt.POS.tolist()))
+    for i in range(len(tt_list)):
+        if tt_list[i][1].startswith('B') and tt_list[i+1][1].startswith('O'):
+            tt_list[i][1].replace('B-', 'U-')
+        elif tt_list[i][1].startswith('B') and tt_list[i+1][1].startswith('I') and tt_list[i+2][1].startswith('O'):
+            tt_list[i+1][1].replace('I-', 'L-')
+
+
