@@ -3,6 +3,7 @@
 from collections import OrderedDict, defaultdict
 from copy import deepcopy
 from itertools import chain, groupby
+from functools import reduce
 
 import joblib as jl
 import pandas as pd
@@ -14,7 +15,7 @@ from sklearn_crfsuite import metrics
 
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df
 
-HEADER_CRF = ['TOKEN', 'POS', 'NER']
+HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
 HEADER_REPORT = ['tag', 'precision', 'recall', 'f1', 'support']
 
@@ -259,3 +260,25 @@ def crf_result2json(crf_result, raw_df, col):
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
     return json_result
+
+
+##############################################################################
+
+
+def merge_ner_tags(df, col, ner_tags):
+    tags = df[col].unique()
+    tag_dicts = [dict([(i, i) if i.endswith(t) else (i, 'O') for i in tags]) for t in ner_tags]
+    dic = reduce(merge_dict_values, tag_dicts)
+    df[col] = df[col].map(dic)
+    return df
+
+
+def merge_dict_values(d1, d2, tag='O'):
+    dd = defaultdict()
+    for k, v in d1.items():
+        if v != d2[k]:
+            dd[k] = v if v != tag else d2[k]
+        else:
+            dd[k] = tag
+    return dd
+
