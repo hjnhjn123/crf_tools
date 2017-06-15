@@ -36,13 +36,15 @@ DIC_CONLL_SPACY = {'NNP': 'PROPN', 'VBZ': 'VERB', 'JJ': 'ADJ', 'NN': 'NOUN', 'TO
                    'NNPS': 'PROPN', 'SYM': 'SYM', 'RBS': 'ADV', 'UH': 'INTJ', 'PDT': 'ADJ', "''": 'PUNCT',
                    'LS': 'PUNCT', 'JJS': 'ADJ', 'WP$': 'ADJ', 'NN|SYM': 'X'}
 
+DIC_CONLL_CRF = {'U-ORG': 'U-COM', 'U-LOC': 'U-GPE', 'B-MISC': 'O', 'L-MISC': 'O', 'B-PER': 'B-PPL', 'L-PER': 'L-PPL',
+                 'B-LOC': 'B-GPE', 'L-LOC': 'L-GPE', 'U-PER': 'U-PPL', 'U-MISC': 'O', 'I-MISC': 'O', 'B-ORG': 'B-COM',
+                 'I-ORG': 'I-COM', 'L-ORG': 'L-COM', 'I-PER': 'I-PPL', 'I-LOC': 'I-GPE', 'O':'O'}
 
 ##############################################################################
 
 
 def prepare_ans_dataset(in_file, out_file, col_list=LABEL_ANS):
     """
-    It read ANS dataset
     :param in_file: an ANS json file
     :param col_list:
     :return: a df for gold parser to train
@@ -278,9 +280,13 @@ def extract_labeled_ner(text):
     :param text: a long string
     :return:
     """
-    ner_text = (i for i in spacy_parser(text, 'chk', '') if '||' in i)
+    ner_text = [i for i in spacy_parser(text, 'chk', '') if '||' in i]
+    print('ner sentences:', len(ner_text))
     crf_texts = [extract_ner_from_sent(sent) for sent in ner_text]
-    return [i + [('##END', 'O', '###')] for i in crf_texts]
+    result =  [i + [('##END', 'O', '###')] for i in crf_texts]
+    print('entity counts', (len([ner for  i in result for (token, ner, pos) in i if ner.startswith('B') or
+                                 ner.startswith('I-')])))
+    return result
 
 
 def extract_ner_from_sent(entity_sent):
@@ -334,14 +340,14 @@ def extract_entity(begin_index, end_index, ner_list, sent, end_mark='person', ta
     return ner_list
 
 
-def pipeline_extract_nyt(nyt_data, start, end, out_file):
-    df = pd.read_json(nyt_data)
+def pipeline_extract_nyt(in_f, start, end, out_f):
+    df = pd.read_json(in_f)
     df.columns = ['text']
     tt = df.text.tolist()
     text = ' '.join(tt[start: end])
     result = extract_labeled_ner(text)
     result_df = pd.DataFrame([i for j in result for i in j])
-    result_df.to_csv(out_file, index=False, header=None)
+    result_df.to_csv(out_f, index=False, header=None)
 
 
 ##############################################################################
@@ -361,16 +367,19 @@ def convert_conll2bilou(in_f, out_f):
     df = pd.read_table(in_f, header=None, delimiter=' ', skip_blank_lines=False, skiprows=2)
     df.columns = ['TOKEN', 'POS', 'POS1', 'NER']
     df = df[df.TOKEN != '-DOCSTART-']
-    tt = df[['TOKEN', 'NER', 'POS']]
+    tt = df[HEADER_ANNOTATION]
     tt['NER'] = tt['NER'].fillna('O')
     tt['TOKEN'] = tt['TOKEN'].fillna('##END')
     tt['POS'] = tt['POS'].fillna('NIL')
     tt['POS'] = tt['POS'].map(DIC_CONLL_SPACY)
-    tt_list = list(zip(tt.TOKEN.tolist(), tt.NER.tolist(), tt.POS.tolist()))
+    tt_list = [list(i) for i in zip(tt.TOKEN.tolist(), tt.NER.tolist(), tt.POS.tolist())]
     for i in range(len(tt_list)):
-        if tt_list[i][1].startswith('B') and tt_list[i+1][1].startswith('O'):
-            tt_list[i][1].replace('B-', 'U-')
-        elif tt_list[i][1].startswith('B') and tt_list[i+1][1].startswith('I') and tt_list[i+2][1].startswith('O'):
-            tt_list[i+1][1].replace('I-', 'L-')
-
-
+        if tt_list[i][1].startswith('B') and tt_list[i + 1][1].startswith('O'):
+            tt_list[i][1] = tt_list[i][1].replace('B-', 'U-')
+        elif tt_list[i][1].startswith('I') and tt_list[i + 1][1].startswith('O'):
+            tt_list[i][1] = tt_list[i][1].replace('I-', 'L-')
+    result = pd.DataFrame(tt_list)
+    result.columns = HEADER_ANNOTATION
+    result['NER'] = result['NER'].map(DIC_CONLL_CRF)
+    result['POS'] = result['POS'].fillna('###')
+    result.to_csv(out_f, index=False, header=None)
