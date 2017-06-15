@@ -43,7 +43,45 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     basic_logging('training ends')
     y_pred = crf.predict(X_test)
     result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
-    # result.to_csv(result_f, index=False)
+    result.to_csv(result_f, index=False)
+    basic_logging('testing ends')
+    if model_f:
+        jl.dump(crf, model_f)
+    return crf, result
+
+
+def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tag, *train_fs):
+    """
+    A pipeline for CRF training
+    :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param model_f: model file
+    :param feature_conf: feature configurations
+    :param hdf_f: feature HDF5 file
+    :param hdf_key: keys of feature HDF5 file
+    """
+    basic_logging('loading conf begins')
+    _, f_dics = batch_loading('', hdf_f, hdf_key)
+    basic_logging('loading conf ends')
+    train_df = pd.concat([process_annotated(f) for f in train_fs])
+    test_df = process_annotated(test_f)
+    basic_logging('loading data ends')
+    train_df = merge_ner_tags(train_df, 'NER', ner_tag)
+    test_df = merge_ner_tags(test_df, 'NER', ner_tag)
+    train_df = batch_add_features(train_df, f_dics)
+    test_df = batch_add_features(test_df, f_dics)
+    basic_logging('adding features ends')
+    train_sents = df2crfsuite(train_df)
+    test_sents = df2crfsuite(test_df)
+    basic_logging('converting to crfsuite ends')
+    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    basic_logging('computing features ends')
+    crf = train_crf(X_train, y_train)
+    basic_logging('training ends')
+    y_pred = crf.predict(X_test)
+    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+    result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
         jl.dump(crf, model_f)
@@ -94,30 +132,32 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_validate(validate_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size):
+def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags):
     """
     A pipeline for CRF training
-    :param validate_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param valid_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
+    :param window_size:
+    :param ner_tags: a list of tags
     """
     basic_logging('loading conf begins')
     crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    test_df = process_annotated(validate_f)
-    test_df = batch_add_features(test_df, f_dics)
+    valid_df = process_annotated(valid_f)
+    if ner_tags:
+        valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
+    valid_df = batch_add_features(valid_df, f_dics)
     basic_logging('adding features ends')
-    test_sents = df2crfsuite(test_df)
+    test_sents = df2crfsuite(valid_df)
     basic_logging('converting to crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     basic_logging('Conversion ends')
-
     y_pred = crf.predict(X_test)
     result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
-
-    # result.to_csv(result_f, index=False)
+    result.to_csv(result_f, index=False)
     return result
 
 
@@ -131,7 +171,7 @@ def main(argv):
     print(argv)
     print()
     dic = {
-        'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
+        'train': lambda: pipeline_train(train_fs=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
                                         result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
                                         feature_conf=FEATURE_CONF,
                                         window_size=WINDOW_SIZE),
@@ -142,7 +182,7 @@ def main(argv):
                                             feature_conf=FEATURE_CONF,
                                             window_size=WINDOW_SIZE, cv=CV,
                                             iteration=ITERATION),
-        'validate': lambda: pipeline_validate(validate_f=VALIDATE_F, model_f=MODEL_F,
+        'validate': lambda: pipeline_validate(valid_f=VALIDATE_F, model_f=MODEL_F,
                                               result_f=RESULT_F, hdf_f=HDF_F,
                                               hdf_key=HDF_KEY,
                                               feature_conf=FEATURE_CONF,
