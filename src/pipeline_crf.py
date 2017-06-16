@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
-    make_param_space, make_f1_scorer, search_param
+    make_param_space, make_f1_scorer, search_param, merge_ner_tags
 from .arsenal_logging import basic_logging
 from .arsenal_test import show_crf_label, evaluate_ner_result
 from .settings import *
@@ -42,7 +42,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
     y_pred = crf.predict(X_test)
-    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+    result = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
@@ -64,10 +64,12 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
     _, f_dics = batch_loading('', hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df = pd.concat([process_annotated(f) for f in train_fs])
+    print(train_df.info())
     test_df = process_annotated(test_f)
     basic_logging('loading data ends')
-    train_df = merge_ner_tags(train_df, 'NER', ner_tag)
-    test_df = merge_ner_tags(test_df, 'NER', ner_tag)
+    if ner_tags:
+        train_df = merge_ner_tags(train_df, 'NER', ner_tag)
+        test_df = merge_ner_tags(test_df, 'NER', ner_tag)
     train_df = batch_add_features(train_df, f_dics)
     test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
@@ -80,7 +82,7 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
     y_pred = crf.predict(X_test)
-    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+    result = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
@@ -124,7 +126,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
     y_pred = crf.predict(X_test)
-    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+    result = evaluate_ner_result(y_pred, y_test)
     # result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
@@ -156,7 +158,7 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     basic_logging('Conversion ends')
     y_pred = crf.predict(X_test)
-    result = evaluate_ner_result([i for j in y_pred for i in j], [i for j in y_test for i in j])
+    result = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     return result
 

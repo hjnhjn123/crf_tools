@@ -38,9 +38,11 @@ def evaluate_ner_result(y_pred, y_test):
     :param y_test: [y_test]
     :return: {}
     """
-    test_ners = [i for i in enumerate(y_test) if i[1] != 'O']
-    pred_ners = [i for i in enumerate(y_pred) if i[1] != 'O']
-    both_ners = [i for i in zip(y_pred, y_test) if i[1] != 'O']
+    flattern_pred = [i for j in y_pred for i in j]
+    flattern_test = [i for j in y_test for i in j]
+    test_ners = [i for i in enumerate(flattern_test) if i[1] != 'O']
+    pred_ners = [i for i in enumerate(flattern_pred) if i[1] != 'O']
+    both_ners = [i for i in zip(flattern_pred, flattern_test) if i[1] != 'O']
 
     evaluate_list = extract_entity(both_ners)
     test_entities = extract_entity(test_ners)
