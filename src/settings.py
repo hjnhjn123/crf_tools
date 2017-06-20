@@ -45,11 +45,10 @@ VALIDATE_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
              '/zdnet_test_20170518.csv'
 
 # Set HDF5 DIR
-HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170425.h5'
+HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170619.h5'
 
 # Set model DIR
-MODEL_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170602' \
-          '.joblib'
+MODEL_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170602.joblib'
 
 # Set output DIR
 OUT_F = ''
@@ -98,7 +97,7 @@ CONTENT_COL = 'DETAIL'
 # MISC
 
 # Set HDF5 key to extract feature dicts
-HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker', 'tfidf']
+HDF_KEY = ['aca', 'com_single', 'com_suffix', 'location', 'name', 'ticker']
 
 # Set header for train/test/validate dataset
 HEADER = ['TOKEN', 'NER', 'POS']
