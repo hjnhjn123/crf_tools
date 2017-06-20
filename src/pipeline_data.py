@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from scipy import stats
+import os
+from json import load
+from pandas.io.json import json_normalize
 
 from .arsenal_nlp import *
 from .arsenal_spacy import *
@@ -382,4 +385,16 @@ def convert_conll2bilou(in_f, out_f):
     result.columns = HEADER_ANNOTATION
     result['NER'] = result['NER'].map(DIC_CONLL_CRF)
     result['POS'] = result['POS'].fillna('###')
+    result.to_csv(out_f, index=False, header=None)
+
+
+##############################################################################
+
+
+def extract_owler(owler_dir, out_f):
+    file_dir = ['/'.join((owler_dir, f)) for f in os.listdir(owler_dir)]
+    files = [pd.read_json(f, lines=True) for f in file_dir]
+    df = pd.concat(files)
+    companies = [i['company_details']['name'] for i in df['company_info'].tolist()]
+    result = pd.DataFrame(list(set([i for i in companies if len(i.split()) == 1])))
     result.to_csv(out_f, index=False, header=None)
