@@ -43,6 +43,8 @@ def evaluate_ner_result(y_pred, y_test):
     test_ners = [i for i in enumerate(flattern_test) if i[1] != 'O']
     pred_ners = [i for i in enumerate(flattern_pred) if i[1] != 'O']
     both_ners = [i for i in zip(flattern_pred, flattern_test) if i[1] != 'O']
+    indexed_ner = [(a, (b, c)) for ((a, b), c) in zip(enumerate(flattern_pred), flattern_test) if b != 'O' or c != 'O']
+
 
     evaluate_list = extract_entity(both_ners)
     test_entities = extract_entity(test_ners)
@@ -51,6 +53,7 @@ def evaluate_ner_result(y_pred, y_test):
     true_positive_list = [ner_can for ner_can in evaluate_list if
                           len([(a, b) for a, b in ner_can if a == b]) == len(ner_can) and ner_can != [
                               ('##split', '##split')]]
+
     test_total = [ner_can for ner_can in test_entities if ner_can != [('##split', '##split')]]
     pred_total = [ner_can for ner_can in pred_entities if ner_can != [('##split', '##split')]]
 
@@ -66,11 +69,19 @@ def evaluate_ner_result(y_pred, y_test):
     final_result.update({'Total': total_result + (sum(relevant_elements.values()),)})
     output = pd.DataFrame(final_result).T.reset_index()
     output.columns = ['Label', 'Precision', 'Recall', 'F1_score', 'Support']
-    return output
+    return output, indexed_ner
 
 
 ##############################################################################
 
+
+def compare_pred_test(X_test, indexed_ner):
+    original = list(enumerate([i for l in X_test for i in l]))
+    result = [(v, v2) for k, v in original for k2, v2 in indexed_ner if k == k2 and v2[0] != v2[1]]
+    return result
+
+
+##############################################################################
 
 def convert_tags(data):
     converted = []
