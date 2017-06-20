@@ -68,7 +68,7 @@ def quickest_read_csv(in_file, column_names):
 ## HDF5 Processing
 
 
-def df2hdf(out_hdf, dfs, hdf_keys, mode='a'):
+def df2hdf(out_hdf, hdf_keys, mode='a', *dfs):
     """
     Store single or multiple dfs to one hdf5 file
     :param dfs: single of multiple dfs
