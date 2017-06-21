@@ -185,7 +185,7 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags):
+def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, diff_f):
     """
     A pipeline for CRF training
     :param valid_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -210,6 +210,8 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     basic_logging('Conversion ends')
     y_pred = crf.predict(X_test)
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
+    diff = compare_pred_test(X_test, indexed_ner)
+    diff.to_csv(diff_f, index=False)
     result.to_csv(result_f, index=False)
     return result
 
