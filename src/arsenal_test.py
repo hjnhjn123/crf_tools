@@ -76,9 +76,12 @@ def evaluate_ner_result(y_pred, y_test):
 
 
 def compare_pred_test(X_test, indexed_ner):
-    original = list(enumerate([i for l in X_test for i in l]))
-    result = [(v, v2) for k, v in original for k2, v2 in indexed_ner if k == k2 and v2[0] != v2[1]]
-    return result
+    original = list(enumerate([i['current_original'] for l in X_test for i in l]))
+    # original = list(enumerate([i for l in X_test for i in l]))
+    result = [(v, vk, vv) for k, v in original for k2, (vk, vv) in indexed_ner if k == k2 and vk != vv]
+    df = pd.DataFrame(result)
+    df.columns = ['TOKEN', 'PRED', 'TRUTH']
+    return df
 
 
 ##############################################################################
