@@ -398,3 +398,13 @@ def extract_owler(owler_dir, out_f):
     companies = [i['company_details']['name'] for i in df['company_info'].tolist()]
     result = pd.DataFrame(list(set([i for i in companies if len(i.split()) == 1])))
     result.to_csv(out_f, index=False, header=None)
+
+
+def swap_ner_pos(in_f):
+    """
+    swap the column of ner and pos
+    :param in_f: [token, pos, ner]
+    """
+    df = pd.read_csv(in_f, engine='c', header=None)
+    df.columns = ['TOKEN', 'POS', 'NER']
+    df[['TOKEN', 'NER', 'POS']].to_csv(in_f, index=False, header=None)
