@@ -43,6 +43,11 @@ DIC_CONLL_CRF = {'U-ORG': 'U-COM', 'U-LOC': 'U-GPE', 'B-MISC': 'O', 'L-MISC': 'O
                  'B-LOC': 'B-GPE', 'L-LOC': 'L-GPE', 'U-PER': 'U-PPL', 'U-MISC': 'O', 'I-MISC': 'O', 'B-ORG': 'B-COM',
                  'I-ORG': 'I-COM', 'L-ORG': 'L-COM', 'I-PER': 'I-PPL', 'I-LOC': 'I-GPE', 'O':'O'}
 
+
+DIC_CONLL_CRF_ = {'U-ORG': 'U-COM', 'U-LOC': 'U-GPE', 'B-MISC': 'B-MISC', 'L-MISC': 'L-MISC', 'B-PER': 'B-PPL',
+                  'L-PER': 'L-PPL','B-LOC': 'B-GPE', 'L-LOC': 'L-GPE', 'U-PER': 'U-PPL', 'U-MISC': 'U-MISC', 'I-MISC': 'I-MISC',
+                  'B-ORG': 'B-COM','I-ORG': 'I-COM', 'L-ORG': 'L-COM', 'I-PER': 'I-PPL', 'I-LOC': 'I-GPE', 'O':'O'}
+
 ##############################################################################
 
 
@@ -383,7 +388,7 @@ def convert_conll2bilou(in_f, out_f):
             tt_list[i][1] = tt_list[i][1].replace('I-', 'L-')
     result = pd.DataFrame(tt_list)
     result.columns = HEADER_ANNOTATION
-    result['NER'] = result['NER'].map(DIC_CONLL_CRF)
+    result['NER'] = result['NER'].map(DIC_CONLL_CRF_)
     result['POS'] = result['POS'].fillna('###')
     result.to_csv(out_f, index=False, header=None)
 
