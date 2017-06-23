@@ -35,17 +35,16 @@ def process_annotated(in_file, col_names=HEADER_CRF):
     return data
 
 
-def batch_loading(crf_f, feature_hdf, hdf_keys):
+def batch_loading(feature_hdf, hdf_keys):
     """
     :param crf_f: model file
     :param feature_hdf: feature dict file
     :param hdf_keys: hdfkey to extract dicts
     :return: 
     """
-    crf = jl.load(crf_f) if crf_f else None
     loads = hdf2df(feature_hdf, hdf_keys)
     f_dics = prepare_features(loads)
-    return crf, f_dics
+    return f_dics
 
 
 def prepare_features(dfs):
