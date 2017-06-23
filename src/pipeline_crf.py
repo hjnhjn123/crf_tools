@@ -28,7 +28,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     :param hdf_key: keys of feature HDF5 file
     """
     basic_logging('loading conf begins')
-    _, f_dics = batch_loading('', hdf_f, hdf_key)
+    f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
@@ -63,7 +63,7 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
     :param hdf_key: keys of feature HDF5 file
     """
     basic_logging('loading conf begins')
-    _, f_dics = batch_loading('', hdf_f, hdf_key)
+    f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df = pd.concat([process_annotated(f) for f in train_fs])
     print(train_df.info())
@@ -106,7 +106,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     :param iteration: iteration time
     """
     basic_logging('loading conf begins')
-    _, f_dics = batch_loading('', hdf_f, hdf_key)
+    f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
@@ -150,7 +150,7 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     :param iteration: iteration time
     """
     basic_logging('loading conf begins')
-    _, f_dics = batch_loading('', hdf_f, hdf_key)
+    f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df = pd.concat([process_annotated(f) for f in train_fs])
     print(train_df.info())
@@ -197,7 +197,8 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     :param ner_tags: a list of tags
     """
     basic_logging('loading conf begins')
-    crf, f_dics = batch_loading(model_f, hdf_f, hdf_key)
+    crf = jl.load(model_f)
+    f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     valid_df = process_annotated(valid_f)
     if ner_tags:
