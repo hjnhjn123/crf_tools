@@ -215,6 +215,7 @@ def crf_predict(crf, test_sents, X_test):
 
 ##############################################################################
 
+
 def crf_result2dict(crf_result):
     clean_sent = [(token, ner) for token, _, ner in crf_result if token != '##END']
     ner_candidate = [(index, token, ner) for index, (token, ner) in enumerate(clean_sent) if ner[0] != 'O']
@@ -229,29 +230,9 @@ def extract_ner_result(ner_candidate, new_index):
     new_candidate, final_dics = deepcopy(ner_candidate), defaultdict(list)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split', '##split')]
-    ner_result_0 = (
-        '##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
-    ner_result_1 = ([i.strip(' ') for i in ner_result_0 if i and i != '##'])
+    ner_result = ('##'.join((i[1].strip(), i[2].strip()) for i in new_candidate if i[2]).split('##split'))
 
-    for result in ner_result_1:
-
-        result = result.lstrip('##')
-        result_split = result.split('##')[:-1]
-        if len(result_split) == 3:
-            token, ner = result_split[0], result_split[1][-3:]
-            begin_index, end_index = result_split[-1], result_split[-1]
-            final_dics['##'.join((token, ner))].append((begin_index, end_index))
-
-        elif len(result_split) > 3:
-            token, ner = result_split[0::3], result_split[1][-3:]
-            begin_index, end_index = result_split[2], result_split[-1]
-            final_dics['##'.join((' '.join(token), ner))].append((begin_index, end_index))
-
-    final_lens = {k: str(len(v)) for (k, v) in final_dics.items()}
-    final_result = {'##'.join((k, final_lens[k])): v for (k, v) in final_dics.items()}
-    # print(final_result)
     return final_result
-
 
 def crf_result2json(crf_result, raw_df, col):
     ner_phrase = crf_result2dict(crf_result)
@@ -281,3 +262,44 @@ def merge_dict_values(d1, d2, tag='O'):
             dd[k] = tag
     return dd
 
+
+##############################################################################
+
+
+# def crf_result2dict_(crf_result):
+#     clean_sent = [(token, ner) for token, _, ner in crf_result if token != '##END']
+#     ner_candidate = [(index, token, ner) for index, (token, ner) in enumerate(clean_sent) if ner[0] != 'O']
+#     ner_index = [i for i in range(len(ner_candidate)) if
+#                  ner_candidate[i][2][0] == 'U' or ner_candidate[i][2][0] == 'L']
+#     new_index = [a + b for a, b in enumerate(ner_index)]
+#     ner_result = extract_ner_result(ner_candidate, new_index)
+#     return ner_result
+
+
+# def extract_ner_result_(ner_candidate, new_index):
+#     new_candidate, final_dics = deepcopy(ner_candidate), defaultdict(list)
+#     for i in new_index:
+#         new_candidate[i + 1:i + 1] = [('##split', '##split', '##split')]
+#     ner_result_0 = (
+#         '##'.join(['##'.join((i[1].strip(), i[2].strip(), str(i[0]))) for i in new_candidate if i[2]]).split('##split'))
+#     ner_result_1 = ([i.strip(' ') for i in ner_result_0 if i and i != '##'])
+
+#     # extract entity index
+#     for result in ner_result_1:
+
+#         result = result.lstrip('##')
+#         result_split = result.split('##')[:-1]
+#         if len(result_split) == 3:
+#             token, ner = result_split[0], result_split[1][-3:]
+#             begin_index, end_index = result_split[-1], result_split[-1]
+#             final_dics['##'.join((token, ner))].append((begin_index, end_index))
+
+#         elif len(result_split) > 3:
+#             token, ner = result_split[0::3], result_split[1][-3:]
+#             begin_index, end_index = result_split[2], result_split[-1]
+#             final_dics['##'.join((' '.join(token), ner))].append((begin_index, end_index))
+
+#     final_lens = {k: str(len(v)) for (k, v) in final_dics.items()}
+#     final_result = {'##'.join((k, final_lens[k])): v for (k, v) in final_dics.items()}
+#     # print(final_result)
+#     return final_result
