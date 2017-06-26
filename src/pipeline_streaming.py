@@ -9,7 +9,6 @@ from .arsenal_boto import sqs_get_msgs, sqs_send_msg, s3_get_file
 from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json, df2crfsuite
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
-from .arsenal_stats import combine_multi_df
 from .settings import *
 
 
