@@ -216,7 +216,7 @@ def crf_predict(crf, test_sents, X_test):
 ##############################################################################
 
 
-def crf_result2dict(crf_result):
+def crf2dict(crf_result):
     """
     :param crf_result: [[token, pos, ner]]
     :return: 
@@ -226,11 +226,11 @@ def crf_result2dict(crf_result):
     ner_index = [i for i in range(len(ner_candidate)) if
         ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = [a + b for a, b in enumerate(ner_index)]
-    ner_result = extract_ner_result(ner_candidate, new_index)
+    ner_result = extract_ner(ner_candidate, new_index)
     return ner_result
 
 
-def extract_ner_result(ner_candidate, new_index):
+def extract_ner(ner_candidate, new_index):
     new_candidate = deepcopy(ner_candidate)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split')]
@@ -243,7 +243,7 @@ def extract_ner_result(ner_candidate, new_index):
 
 
 def crf_result2json(crf_result, raw_df, col):
-    ner_phrase = crf_result2dict(crf_result)
+    ner_phrase = crf2dict(crf_result)
     raw_df[col].to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
