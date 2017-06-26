@@ -50,6 +50,8 @@ HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170619.
 # Set model DIR
 MODEL_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170602.joblib'
 
+MODEL_FS = ['/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170602.joblib', '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170619.joblib']
+
 # Set output DIR
 OUT_F = ''
 
