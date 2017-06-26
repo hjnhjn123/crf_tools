@@ -217,13 +217,17 @@ def crf_predict(crf, test_sents, X_test):
 
 
 def crf_result2dict(crf_result):
+    """
+    :param crf_result: [[token, pos, ner]]
+    :return: 
+    """
     clean_sent = [(token, ner) for token, _, ner in crf_result if token != '##END']
     ner_candidate = [(token, ner) for token, ner in clean_sent if ner[0] != 'O']
     ner_index = [i for i in range(len(ner_candidate)) if
         ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = [a + b for a, b in enumerate(ner_index)]
     ner_result = extract_ner_result(ner_candidate, new_index)
-    return ner_result, new_index
+    return ner_result
 
 
 def extract_ner_result(ner_candidate, new_index):
@@ -271,6 +275,9 @@ def merge_dict_values(d1, d2, tag='O'):
 
 
 # def crf_result2dict_(crf_result):
+#     """
+#     Output with index   
+#     """   
 #     clean_sent = [(token, ner) for token, _, ner in crf_result if token != '##END']
 #     ner_candidate = [(index, token, ner) for index, (token, ner) in enumerate(clean_sent) if ner[0] != 'O']
 #     ner_index = [i for i in range(len(ner_candidate)) if
@@ -281,6 +288,9 @@ def merge_dict_values(d1, d2, tag='O'):
 
 
 # def extract_ner_result_(ner_candidate, new_index):
+#     """
+#     Output with index   
+#     """
 #     new_candidate, final_dics = deepcopy(ner_candidate), defaultdict(list)
 #     for i in new_index:
 #         new_candidate[i + 1:i + 1] = [('##split', '##split', '##split')]
