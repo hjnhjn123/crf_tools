@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict, defaultdict, Counter
 from copy import deepcopy
 from itertools import chain, groupby
 from functools import reduce
@@ -208,7 +208,8 @@ def crf_predict(crf, test_sents, X_test):
     result = crf.predict(X_test)
     length = len(list(test_sents))
     crf_result = (
-        [(test_sents[j][i][:2] + (result[j][i],)) for i in range(len(test_sents[j]))] for j in range(length))
+        # [((test_sents[j][i][0], test_sents[j][i][2]) + (result[j][i],)) for i in range(len(test_sents[j]))] for j in range(length))
+        [((test_sents[j][i][0], result[j][i], test_sents[j][i][2]))  for i in range(len(test_sents[j]))] for j in range(length))        
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
 
@@ -221,7 +222,7 @@ def crf2dict(crf_result):
     :param crf_result: [[token, pos, ner]]
     :return: 
     """
-    clean_sent = [(token, ner) for token, _, ner in crf_result if token != '##END']
+    clean_sent = [(token, ner) for token, ner, _ in crf_result if token != '##END']
     ner_candidate = [(token, ner) for token, ner in clean_sent if ner[0] != 'O']
     ner_index = [i for i in range(len(ner_candidate)) if
         ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
@@ -234,11 +235,15 @@ def extract_ner(ner_candidate, new_index):
     new_candidate = deepcopy(ner_candidate)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split')]
-    ner_result = ('##'.join((j.strip(), k.strip())) for j, k in new_candidate if k.split('##split'))
-    grouped_ner = (list(x[1]) for x in groupby(ner_result, lambda x: x == '##split####split'))
-    ner_counts = Counter(''.join(i) for i in grouped_ner if i != ['##split####split'])
-    clean_counts = {'##'.join((k.split('##')[0], k.split('##')[1].split('-')[1])): v for k, v in ner_counts.items()}
-    final_result = {'##'.join((k, str(v))):[] for k, v in clean_counts.items()}
+    grouped_ner = [list(x[1]) for x in groupby(new_candidate, lambda x: x == ('##split', '##split'))]
+    ner_result = []
+    for group in grouped_ner:
+        if group != [('##split', '##split')]:
+            phrase = ' '.join([k for k, v in group])
+            tag = [v.split('-')[1] for k, v in group][0]
+            ner_result.append('##'.join((phrase, tag)))
+    ner_counts = Counter(ner_result)
+    final_result = {'##'.join((k, str(v))):[] for k, v in ner_counts.items()}
     return final_result
 
 
