@@ -60,6 +60,10 @@ def voting(crf_results):
     return list(zip(combined[0].tolist(), combined[1].tolist(), vote_result))
 
 
+def load_multi_models(model_fs):
+    return {model.split('.')[0].split('_')[-1]: jl.load(model) for model in model_fs}
+
+
 ##############################################################################
 
 
