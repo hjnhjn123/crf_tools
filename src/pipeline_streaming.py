@@ -47,7 +47,6 @@ def voting(crf_results):
     cols = [i for i in combined.columns if i.startswith('NER')]
     # to_vote = combined[cols].apply(tuple, axis=1).tolist()  # convert a df to zipped list
     to_vote = sort_dic({col.split('_')[1]: combined[col].tolist() for col in cols})
-    to_vote = sort_dic(to_vote)
     if len(cols) == 2:
         vote_result = merge_list_dic(to_vote)
     elif len(cols) > 2:
@@ -59,6 +58,7 @@ def voting(crf_results):
 def merge_list_dic(list_dict):
     l1, l2 = list_dict.values()
     name1, name2 = list_dict.keys()
+    l2 = ['O' if i.endswith(name1) else i for i in l2]
     return [l1[i] if l1[i].endswith(name1) else l2[i] for i in range(len(l1))]
     
 
@@ -109,8 +109,6 @@ def main():
     s3_get_file(S3_BUCKET, MODEL_KEY, MODEL_FILE)
     s3_get_file(S3_BUCKET, HDF_FILE_KEY, HDF_FILE)
     basic_logging('Queue prepared')
-    pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE,
-                               CONTENT_COL, MODEL_FS)
+    pipeline_multi_streaming_sqs(IN_QUEUE, OUT_QUQUE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL, MODEL_FS)
 
-    # pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE,
-    #                            CONTENT_COL)
+    # pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL)
