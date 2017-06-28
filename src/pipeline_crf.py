@@ -5,7 +5,7 @@ import pandas as pd
 from os import listdir
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
-    make_param_space, make_f1_scorer, search_param, merge_ner_tags
+    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, merge_list_dic, load_multi_models
 from .arsenal_logging import basic_logging
 from .arsenal_stats import get_now
 from .arsenal_test import show_crf_label, evaluate_ner_result
