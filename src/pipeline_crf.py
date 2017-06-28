@@ -132,7 +132,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     best_predictor = rs_cv.best_estimator_
     y_pred = crf.predict(X_test)
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    # result.to_csv(result_f, index=False)
+    result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
         jl.dump(best_predictor, model_f)
@@ -182,7 +182,7 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     best_predictor = rs_cv.best_estimator_
     y_pred = crf.predict(X_test)
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    # result.to_csv(result_f, index=False)
+    result.to_csv(result_f, index=False)
     basic_logging('testing ends')
     if model_f:
         jl.dump(best_predictor, model_f)
