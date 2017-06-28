@@ -2,6 +2,7 @@
 
 import joblib as jl
 import pandas as pd
+from os import listdir
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
     make_param_space, make_f1_scorer, search_param, merge_ner_tags
@@ -216,6 +217,22 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     result.to_csv(result_f, index=False)
     return result
 
+
+def pipelinne_batch_annotate(in_folder, out_f, model_fs, col):
+    model_dics = load_multi_models(model_fs)
+    f_dics = batch_loading(hdf_f, hdf_key)
+    raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
+    print('files: ', len(raw_list))
+    raw_df = pd.concat(raw_list, axis=0)
+    raw_df['content'] = raw_df[col].to_dict()[0]['content']
+    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
+    prepared_data = pd.DataFrame(list(parsed_data))
+    test_df = batch_add_features(prepared_data, f_dics)
+    test_sents = df2crfsuite(test_df)
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
+    final_result = voting(crf_results)
+    final_result.to_csv(out_f, index=False, head=None)
 
 ##############################################################################
 
