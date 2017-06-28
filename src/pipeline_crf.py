@@ -3,6 +3,7 @@
 import joblib as jl
 import pandas as pd
 from os import listdir
+import gc
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
     make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, merge_list_dic, load_multi_models
@@ -124,6 +125,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
+    gc.collect()    
     basic_logging('cv begins')
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
@@ -173,6 +175,7 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
+    gc.collect()
     basic_logging('cv begins')
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
