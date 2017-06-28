@@ -50,7 +50,7 @@ def pipeline_streaming_sqs(in_queue, out_queue, model_f, hdf_f, hdf_key, feature
     f_dics = batch_loading(hdf_f, hdf_key)
 
     while True:
-        for q in sqs_queues.receive_messages():
+        for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
             json_input = q.body
             crf_result, raw_df = streaming_pos_crf(json_input, model, f_dics, feature_conf, hdf_key, window_size, col)
             json_result = crf_result2json(crf_result, raw_df, col)
@@ -66,7 +66,7 @@ def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_co
     f_dics = batch_loading(hdf_f, hdf_key)
 
     while True:
-        for q in sqs_queues.receive_messages():
+        for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
             json_input = q.body
             
             crf_results, raw_df = streaming_pos_crf_multi(json_input, f_dics, feature_conf, hdf_key, window_size,col, model_dics)
