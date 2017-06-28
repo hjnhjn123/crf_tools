@@ -7,7 +7,7 @@ import pandas as pd
 import joblib as jl
 
 from .arsenal_boto import sqs_get_msgs, sqs_send_msg, s3_get_file
-from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json, df2crfsuite
+from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json, df2crfsuite, voting, merge_list_dic, load_multi_models
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import sort_dic
@@ -40,31 +40,6 @@ def streaming_pos_crf_multi(in_f, f_dics, feature_conf, hdf_key, window_size, co
     crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
     return crf_results, raw_df
 
-
-def voting(crf_results):
-    crf_dfs = [pd.DataFrame(crf_list, columns=HEADER).add_suffix('_'+name) for name, crf_list in crf_results.items()]
-    combined = pd.concat(crf_dfs, axis=1)
-    cols = [i for i in combined.columns if i.startswith('NER')]
-    # to_vote = combined[cols].apply(tuple, axis=1).tolist()  # convert a df to zipped list
-    to_vote = sort_dic({col.split('_')[1]: combined[col].tolist() for col in cols})
-    if len(cols) == 2:
-        vote_result = merge_list_dic(to_vote)
-    elif len(cols) > 2:
-       specific = {name: lst for name, lst in to_vote.items() if name != 'NER_GEN'}
-       pass # todo fix more than three models
-    return list(zip(combined.iloc[:,0].tolist(), vote_result, combined.iloc[:,2].tolist(), ))
-
-
-def merge_list_dic(list_dict):
-    l1, l2 = list_dict.values()
-    name1, name2 = list_dict.keys()
-    l2 = ['O' if i.endswith(name1) else i for i in l2]
-    return [l1[i] if l1[i].endswith(name1) else l2[i] for i in range(len(l1))]
-    
-
-def load_multi_models(model_fs):
-    model_dics = {model.split('.')[0].split('_')[-1]: jl.load(model) for model in model_fs}
-    return model_dics
 
 ##############################################################################
 

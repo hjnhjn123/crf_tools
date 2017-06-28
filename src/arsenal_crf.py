@@ -276,6 +276,32 @@ def merge_dict_values(d1, d2, tag='O'):
     return dd
 
 
+def voting(crf_results):
+    crf_dfs = [pd.DataFrame(crf_list, columns=HEADER).add_suffix('_'+name) for name, crf_list in crf_results.items()]
+    combined = pd.concat(crf_dfs, axis=1)
+    cols = [i for i in combined.columns if i.startswith('NER')]
+    # to_vote = combined[cols].apply(tuple, axis=1).tolist()  # convert a df to zipped list
+    to_vote = sort_dic({col.split('_')[1]: combined[col].tolist() for col in cols})
+    if len(cols) == 2:
+        vote_result = merge_list_dic(to_vote)
+    elif len(cols) > 2:
+       specific = {name: lst for name, lst in to_vote.items() if name != 'NER_GEN'}
+       pass # todo fix more than three models
+    return list(zip(combined.iloc[:,0].tolist(), vote_result, combined.iloc[:,2].tolist(), ))
+
+
+def merge_list_dic(list_dict):
+    l1, l2 = list_dict.values()
+    name1, name2 = list_dict.keys()
+    l2 = ['O' if i.endswith(name1) else i for i in l2]
+    return [l1[i] if l1[i].endswith(name1) else l2[i] for i in range(len(l1))]
+    
+
+def load_multi_models(model_fs):
+    model_dics = {model.split('.')[0].split('_')[-1]: jl.load(model) for model in model_fs}
+    return model_dics
+
+
 ##############################################################################
 
 
