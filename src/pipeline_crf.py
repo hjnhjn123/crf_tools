@@ -4,6 +4,7 @@ import joblib as jl
 import pandas as pd
 from os import listdir
 import gc
+from itertools import chain
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
     make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, merge_list_dic, load_multi_models

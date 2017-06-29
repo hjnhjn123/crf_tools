@@ -13,7 +13,7 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df
+from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
