@@ -221,7 +221,7 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     return result
 
 
-def pipelinne_batch_annotate(in_folder, out_f, model_fs, col):
+def pipelinne_batch_annotate(in_folder, out_f, model_fs, col, hdf_f, hdf_key):
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
     raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
@@ -235,7 +235,7 @@ def pipelinne_batch_annotate(in_folder, out_f, model_fs, col):
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
     final_result = voting(crf_results)
-    final_result.to_csv(out_f, index=False, head=None)
+    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
 
 ##############################################################################
 
