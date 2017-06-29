@@ -276,8 +276,8 @@ def merge_dict_values(d1, d2, tag='O'):
     return dd
 
 
-def voting(crf_results):
-    crf_dfs = [pd.DataFrame(crf_list, columns=HEADER).add_suffix('_'+name) for name, crf_list in crf_results.items()]
+def voting(crf_results, head=HEADER_CRF):
+    crf_dfs = [pd.DataFrame(crf_list, columns=head).add_suffix('_'+name) for name, crf_list in crf_results.items()]
     combined = pd.concat(crf_dfs, axis=1)
     cols = [i for i in combined.columns if i.startswith('NER')]
     # to_vote = combined[cols].apply(tuple, axis=1).tolist()  # convert a df to zipped list
