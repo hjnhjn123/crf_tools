@@ -9,7 +9,7 @@ from itertools import chain
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
     make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, merge_list_dic, load_multi_models
 from .arsenal_logging import basic_logging
-from .arsenal_stats import get_now
+from .arsenal_stats import get_now, sort_dic
 from .arsenal_test import show_crf_label, evaluate_ner_result, compare_pred_test
 from .settings import *
 
@@ -224,7 +224,30 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
 def extract_dic(dic):
         return dic['content']
 
-def pipelinne_batch_annotate(in_folder, out_f, model_fs, col, hdf_f, hdf_key):
+
+def pipelinne_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key):
+    model = jl.load(model_f)
+    f_dics = batch_loading(hdf_f, hdf_key)
+    raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
+    print('files: ', len(raw_list))
+    
+    raw_df = pd.concat(raw_list, axis=0)
+
+    raw_df['content'] = raw_df[col].apply(extract_dic)
+    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
+    prepared_data = pd.DataFrame(list(parsed_data))
+    test_df = batch_add_features(prepared_data, f_dics)
+    test_sents = df2crfsuite(test_df)
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    y_pred = model.predict(X_test)
+    recovered_pred = [i + ['O'] for i in y_pred]
+    crf_result = [i for j in recovered_pred for i in j]
+    final_result = pd.concat([prepared_data[0], pd.DataFrame(crf_result), prepared_data[2]], axis=1)
+
+    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+
+
+def pipelinne_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key):
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
     raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
@@ -235,10 +258,13 @@ def pipelinne_batch_annotate(in_folder, out_f, model_fs, col, hdf_f, hdf_key):
     prepared_data = pd.DataFrame(list(parsed_data))
     test_df = batch_add_features(prepared_data, f_dics)
     test_sents = df2crfsuite(test_df)
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)    
     crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
     final_result = voting(crf_results)
     pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+
+
+
 
 ##############################################################################
 
