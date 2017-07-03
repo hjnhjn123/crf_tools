@@ -11,6 +11,7 @@ from .arsenal_crf import process_annotated, batch_add_features, batch_loading, f
 from .arsenal_logging import basic_logging
 from .arsenal_stats import get_now, sort_dic, random_rows
 from .arsenal_test import show_crf_label, evaluate_ner_result, compare_pred_test
+from .arsenal_spacy import spacy_batch_processing
 from .settings import *
 
 
