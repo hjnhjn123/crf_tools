@@ -589,7 +589,7 @@ def random_pick(df, size=10):
     return random.sample(range(0, len(df) - 1), size)
 
 
-def random_rows(df, size, col_name):
+def random_rows(df, size):
     row_number = random_pick(df, size)
     result = df.iloc[row_number]
     return result
