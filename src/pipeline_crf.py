@@ -225,16 +225,15 @@ def extract_dic(dic):
         return dic['content']
 
 
-def pipelinne_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key):
+def pipelinne_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count):
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
     print('files: ', len(raw_list))
-
     raw_df = pd.concat(raw_list, axis=0)
-
-    raw_df['content'] = raw_df[col].apply(extract_dic)
-    parsed_data = chain.from_iterable(spacy_batch_processing(raw_df, '', 'content', ['content'], 'crf'))
+    random_df = random_rows(raw_df, row_count)
+    random_df['content'] = random_df[col].apply(extract_dic)
+    parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     test_df = batch_add_features(prepared_data, f_dics)
     test_sents = df2crfsuite(test_df)
