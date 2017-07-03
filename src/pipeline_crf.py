@@ -228,7 +228,7 @@ def extract_dic(dic):
     return dic['content']
 
 
-def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf):
+def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf, window_size):
     basic_logging('loading conf begins')
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
@@ -256,7 +256,7 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
 
 
-def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf):
+def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf, window_size):
     basic_logging('loading conf begins')
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
