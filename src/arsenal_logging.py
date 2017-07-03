@@ -35,6 +35,7 @@ def do_cprofile(func):
     :param func: 
     :return: 
     """
+
     def profiled_func(*args, **kwargs):
         profile = cProfile.Profile()
         try:
@@ -48,15 +49,16 @@ def do_cprofile(func):
     return profiled_func
 
 
-
 def do_profile(follow=[]):
     def inner(func):
         def profiled_func(*args, **kwargs):
-                profiler = LineProfiler()
-                profiler.add_function(func)
-                for f in follow:
-                    profiler.add_function(f)
-                profiler.enable_by_count()
-                return func(*args, **kwargs)
+            profiler = LineProfiler()
+            profiler.add_function(func)
+            for f in follow:
+                profiler.add_function(f)
+            profiler.enable_by_count()
+            return func(*args, **kwargs)
+
         return profiled_func
+
     return inner
