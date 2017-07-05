@@ -57,7 +57,8 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     return crf, result
 
 
-def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags, *train_fs):
+def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags,
+                       in_folder, *train_fs):
     """
     A pipeline for CRF training
     :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -70,9 +71,11 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    train_df = pd.concat([process_annotated(f) for f in train_fs])
+    # train_df = pd.concat([process_annotated(f) for f in train_fs])
+    train_df = pd.concat([process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
     print(train_df.info())
-    test_df = process_annotated(test_f)
+    # test_df = process_annotated(test_f)
+    test_df = pd.concat([process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
     basic_logging('loading data ends')
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
@@ -237,9 +240,11 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     basic_logging('reading files ends')
     print('files: ', len(raw_list))
     raw_df = pd.concat(raw_list, axis=0)
+
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
     random_df['content'] = random_df[col].apply(extract_dic)
+
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
