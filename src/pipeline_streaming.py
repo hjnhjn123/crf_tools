@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 
 from itertools import chain
-from collections import defaultdict, Counter
 
-import pandas as pd
 import joblib as jl
+import pandas as pd
 
 from .arsenal_boto import sqs_get_msgs, sqs_send_msg, s3_get_file
-from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json, df2crfsuite, voting, merge_list_dic, load_multi_models
+from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, crf_predict, crf_result2json, \
+    df2crfsuite, voting, load_multi_models
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
-from .arsenal_stats import sort_dic
 from .settings import *
 
 
@@ -68,8 +67,9 @@ def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_co
     while True:
         for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
             json_input = q.body
-            
-            crf_results, raw_df = streaming_pos_crf_multi(json_input, f_dics, feature_conf, hdf_key, window_size,col, model_dics)
+
+            crf_results, raw_df = streaming_pos_crf_multi(json_input, f_dics, feature_conf, hdf_key, window_size, col,
+                                                          model_dics)
             final_result = voting(crf_results)
             json_result = crf_result2json(final_result, raw_df, col)
 
@@ -84,6 +84,7 @@ def main():
     s3_get_file(S3_BUCKET, MODEL_KEY, MODEL_FILE)
     s3_get_file(S3_BUCKET, HDF_FILE_KEY, HDF_FILE)
     basic_logging('Queue prepared')
-    pipeline_multi_streaming_sqs(IN_QUEUE, OUT_QUQUE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL, MODEL_FS)
+    pipeline_multi_streaming_sqs(IN_QUEUE, OUT_QUQUE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL,
+                                 MODEL_FS)
 
     # pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL)
