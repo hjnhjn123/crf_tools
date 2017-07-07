@@ -7,7 +7,7 @@ from os import listdir
 import joblib as jl
 import pandas as pd
 
-from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
+from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
     make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, crf_train, crf_fit
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
@@ -60,11 +60,11 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    # train_df = pd.concat([process_annotated(f) for f in train_fs])
-    train_df = pd.concat([process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
+    train_df = pd.concat(
+        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
     print(train_df.info())
-    # test_df = process_annotated(test_f)
-    test_df = pd.concat([process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
+    test_df = pd.concat(
+        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
     basic_logging('loading data ends')
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
@@ -187,7 +187,8 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     return result
 
 
-def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf, window_size):
+def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
+                                         window_size):
     basic_logging('loading conf begins')
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
@@ -214,7 +215,8 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
 
 
-def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf, window_size):
+def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf,
+                                        window_size):
     basic_logging('loading conf begins')
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
@@ -249,21 +251,15 @@ def main(argv):
     print(argv)
     print()
     dic = {
-        'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F,
-                                        result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                        feature_conf=FEATURE_CONF,
-                                        window_size=WINDOW_SIZE),
-        'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F,
-                                            model_f=MODEL_F,
-                                            result_f=RESULT_F, hdf_f=HDF_F,
-                                            hdf_key=HDF_KEY,
-                                            feature_conf=FEATURE_CONF,
-                                            window_size=WINDOW_SIZE, cv=CV,
-                                            iteration=ITERATION),
-        'validate': lambda: pipeline_validate(valid_f=VALIDATE_F, model_f=MODEL_F,
-                                              result_f=RESULT_F, hdf_f=HDF_F,
-                                              hdf_key=HDF_KEY,
-                                              feature_conf=FEATURE_CONF,
-                                              window_size=WINDOW_SIZE)
+        'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
+                                        hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
+        'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F,
+                                            hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
+                                            window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION),
+        'validate': lambda: pipeline_validate(valid_f=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
+                                              hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
+        'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
+                                                                 result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
     }
     dic[argv]()
