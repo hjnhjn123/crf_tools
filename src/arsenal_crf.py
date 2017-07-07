@@ -15,7 +15,8 @@ from sklearn_crfsuite import metrics
 
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 from .arsenal_logging import basic_logging
-from .arsenal_test import evaluate_ner_result
+from .arsenal_test import evaluate_ner_result, show_crf_label
+
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
@@ -192,6 +193,17 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
                             n_iter=iteration,
                             scoring=f1_scorer)
     return rs.fit(X_train, y_train)
+
+
+def crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
+    train_df = batch_add_features(train_df, f_dics)
+    basic_logging('adding train features ends')
+    train_sents = df2crfsuite(train_df)
+    basic_logging('converting train to crfsuite ends')
+    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
+    basic_logging('computing train features ends')
+    crf = train_crf(X_train, y_train)
+    return crf
 
 
 ##############################################################################

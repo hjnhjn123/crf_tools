@@ -8,7 +8,7 @@ import joblib as jl
 import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, train_crf, \
-    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models
+    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, crf_train, crf_fit
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import get_now, random_rows
@@ -38,14 +38,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
 
-    train_df = batch_add_features(train_df, f_dics)
-    basic_logging('adding features ends')
-    train_sents = df2crfsuite(train_df)
-    basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    basic_logging('computing features ends')
-    crf = train_crf(X_train, y_train)
-
+    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
     _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
 
     if model_f:
@@ -76,13 +69,8 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
-    train_df = batch_add_features(train_df, f_dics)
-    basic_logging('adding features ends')
-    train_sents = df2crfsuite(train_df)
-    basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    crf = train_crf(X_train, y_train)
-    basic_logging('training ends')
+
+    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
 
@@ -110,13 +98,9 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
-    train_df = batch_add_features(train_df, f_dics)
-    basic_logging('adding features ends')
-    train_sents = df2crfsuite(train_df)
-    basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    basic_logging('Conversion ends')
-    crf = train_crf(X_train, y_train)
+
+    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
@@ -156,13 +140,9 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
-    train_df = batch_add_features(train_df, f_dics)
-    basic_logging('adding features ends')
-    train_sents = df2crfsuite(train_df)
-    basic_logging('converting to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    basic_logging('Conversion ends')
-    crf = train_crf(X_train, y_train)
+
+    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+
     labels = show_crf_label(crf)
     params_space = make_param_space()
     f1_scorer = make_f1_scorer(labels)
@@ -207,12 +187,6 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     return result
 
 
-
-
-def extract_dic(dic):
-    return dic['content']
-
-
 def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf, window_size):
     basic_logging('loading conf begins')
     model = jl.load(model_f)
@@ -225,7 +199,7 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
 
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
-    random_df['content'] = random_df[col].apply(extract_dic)
+    random_df['content'] = random_df[col].apply(lambda x: x['dic'])
 
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
@@ -251,7 +225,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     raw_df = pd.concat(raw_list, axis=0)
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
-    random_df['content'] = random_df[col].apply(extract_dic)
+    random_df['content'] = random_df[col].apply(lambda x: x['dic'])
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
