@@ -15,6 +15,7 @@ from sklearn_crfsuite import metrics
 
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 from .arsenal_logging import basic_logging
+from .arsenal_test import evaluate_ner_result
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
@@ -215,15 +216,20 @@ def crf_predict(crf, test_sents, X_test):
     return list(chain.from_iterable(crf_result))
 
 
-def crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size):
+def crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
     test = batch_add_features(df, f_dics)
-    basic_logging('adding features ends')
+    basic_logging('adding test features ends')
     test_sents = df2crfsuite(test)
-    basic_logging('converting to crfsuite ends')
+    basic_logging('converting to test crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    basic_logging('Conversion ends')
+    basic_logging('test conversion ends')
     y_pred = crf.predict(X_test)
-    return X_test, y_pred, y_test
+    basic_logging('testing ends')
+    if result_f:
+        result, indexed_ner = evaluate_ner_result(y_pred, y_test)
+        result.to_csv(result_f, index=False)
+        basic_logging('testing ends')
+    return y_pred
 
 
 ##############################################################################

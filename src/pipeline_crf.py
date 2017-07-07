@@ -37,21 +37,17 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     basic_logging('loading conf ends')
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
+
     train_df = batch_add_features(train_df, f_dics)
-    test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
-    test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
-    basic_logging('training ends')
-    y_pred = crf.predict(X_test)
-    result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    result.to_csv(result_f, index=False)
-    basic_logging('testing ends')
+
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+
     if model_f:
         jl.dump(crf, model_f)
     return crf, result
@@ -81,22 +77,18 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
     train_df = batch_add_features(train_df, f_dics)
-    test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
-    test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    basic_logging('computing features ends')
     crf = train_crf(X_train, y_train)
     basic_logging('training ends')
-    y_pred = crf.predict(X_test)
-    result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    result.to_csv(result_f, index=False)
-    basic_logging('testing ends')
+
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+
     if model_f:
         jl.dump(crf, model_f)
+
     return crf, result
 
 
@@ -119,13 +111,10 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
     train_df = batch_add_features(train_df, f_dics)
-    test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
-    test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
@@ -136,10 +125,9 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
-    y_pred = crf.predict(X_test)
-    result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    result.to_csv(result_f, index=False)
-    basic_logging('testing ends')
+
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+
     if model_f:
         jl.dump(best_predictor, model_f)
     return crf, best_predictor, rs_cv, result
@@ -169,13 +157,10 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
     train_df = batch_add_features(train_df, f_dics)
-    test_df = batch_add_features(test_df, f_dics)
     basic_logging('adding features ends')
     train_sents = df2crfsuite(train_df)
-    test_sents = df2crfsuite(test_df)
     basic_logging('converting to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     basic_logging('Conversion ends')
     crf = train_crf(X_train, y_train)
     labels = show_crf_label(crf)
@@ -186,10 +171,9 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
-    y_pred = crf.predict(X_test)
-    result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    result.to_csv(result_f, index=False)
-    basic_logging('testing ends')
+
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+
     if model_f:
         jl.dump(best_predictor, model_f)
     return crf, best_predictor, rs_cv, result
@@ -213,15 +197,8 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     valid_df = process_annotated(valid_f)
     if ner_tags:
         valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
-    # valid_df = batch_add_features(valid_df, f_dics)
-    # basic_logging('adding features ends')
-    # test_sents = df2crfsuite(valid_df)
-    # basic_logging('converting to crfsuite ends')
-    # X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    # basic_logging('Conversion ends')
-    # y_pred = crf.predict(X_test)
 
-    X_test, y_pred, y_test = crf_fit(X_test, crf, f_dics, feature_conf, hdf_key, valid_df, window_size, y_pred, y_test)
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
 
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
     diff = compare_pred_test(X_test, indexed_ner)
@@ -253,12 +230,9 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
-    test_df = batch_add_features(prepared_data, f_dics)
-    test_sents = df2crfsuite(test_df)
-    basic_logging('converting features ends')
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    y_pred = model.predict(X_test)
-    basic_logging('predicitng ends')
+
+    y_pred = crf_fit(df, model, f_dics, feature_conf, hdf_key, window_size, result_f)
+
     recovered_pred = [i + ['O'] for i in y_pred]
     crf_result = [i for j in recovered_pred for i in j]
     final_result = pd.concat([prepared_data[0], pd.DataFrame(crf_result), prepared_data[2]], axis=1)
