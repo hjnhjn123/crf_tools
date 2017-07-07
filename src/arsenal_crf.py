@@ -14,6 +14,7 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
+from .arsenal_logging import basic_logging
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
@@ -212,6 +213,17 @@ def crf_predict(crf, test_sents, X_test):
         [((test_sents[j][i][0], result[j][i], test_sents[j][i][2]))  for i in range(len(test_sents[j]))] for j in range(length))        
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
+
+
+def crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size):
+    test = batch_add_features(df, f_dics)
+    basic_logging('adding features ends')
+    test_sents = df2crfsuite(test)
+    basic_logging('converting to crfsuite ends')
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    basic_logging('Conversion ends')
+    y_pred = crf.predict(X_test)
+    return X_test, y_pred, y_test
 
 
 ##############################################################################

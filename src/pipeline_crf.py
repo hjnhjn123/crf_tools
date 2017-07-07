@@ -213,18 +213,23 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     valid_df = process_annotated(valid_f)
     if ner_tags:
         valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
-    valid_df = batch_add_features(valid_df, f_dics)
-    basic_logging('adding features ends')
-    test_sents = df2crfsuite(valid_df)
-    basic_logging('converting to crfsuite ends')
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    basic_logging('Conversion ends')
-    y_pred = crf.predict(X_test)
+    # valid_df = batch_add_features(valid_df, f_dics)
+    # basic_logging('adding features ends')
+    # test_sents = df2crfsuite(valid_df)
+    # basic_logging('converting to crfsuite ends')
+    # X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    # basic_logging('Conversion ends')
+    # y_pred = crf.predict(X_test)
+
+    X_test, y_pred, y_test = crf_fit(X_test, crf, f_dics, feature_conf, hdf_key, valid_df, window_size, y_pred, y_test)
+
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
     diff = compare_pred_test(X_test, indexed_ner)
     diff.to_csv(diff_f, index=False)
     result.to_csv(result_f, index=False)
     return result
+
+
 
 
 def extract_dic(dic):
