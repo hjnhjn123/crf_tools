@@ -2,8 +2,8 @@
 
 from collections import OrderedDict, defaultdict, Counter
 from copy import deepcopy
-from itertools import chain, groupby
 from functools import reduce
+from itertools import chain, groupby
 
 import joblib as jl
 import pandas as pd
@@ -13,10 +13,9 @@ from sklearn.metrics import make_scorer
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
-from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
 from .arsenal_logging import basic_logging
-from .arsenal_test import evaluate_ner_result, show_crf_label
-
+from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
+from .arsenal_test import evaluate_ner_result
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
@@ -126,12 +125,11 @@ def word2features(sent, i, feature_conf, hdf_key, window_size):
 
 
 def sent2features(line, feature_conf, hdf_key, window_size):
-    return [word2features(line, i, feature_conf, hdf_key, window_size) for i in
-            range(len(line))]
+    return (word2features(line, i, feature_conf, hdf_key, window_size) for i in range(len(line)))
 
 
 def sent2labels(line):
-    return [i[1] for i in line]  # Use the correct column
+    return (i[1] for i in line)  # Use the correct column
 
 
 ##############################################################################
@@ -223,7 +221,8 @@ def crf_predict(crf, test_sents, X_test):
     length = len(list(test_sents))
     crf_result = (
         # [((test_sents[j][i][0], test_sents[j][i][2]) + (result[j][i],)) for i in range(len(test_sents[j]))] for j in range(length))
-        [((test_sents[j][i][0], result[j][i], test_sents[j][i][2]))  for i in range(len(test_sents[j]))] for j in range(length))        
+        [((test_sents[j][i][0], result[j][i], test_sents[j][i][2])) for i in range(len(test_sents[j]))] for j in
+    range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
 
@@ -255,7 +254,7 @@ def crf2dict(crf_result):
     clean_sent = [(token, ner) for token, ner, _ in crf_result if token != '##END']
     ner_candidate = [(token, ner) for token, ner in clean_sent if ner[0] != 'O']
     ner_index = [i for i in range(len(ner_candidate)) if
-        ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
+                 ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
     new_index = [a + b for a, b in enumerate(ner_index)]
     ner_result = extract_ner(ner_candidate, new_index)
     return ner_result
@@ -273,7 +272,7 @@ def extract_ner(ner_candidate, new_index):
             tag = [v.split('-')[1] for k, v in group][0]
             ner_result.append('##'.join((phrase, tag)))
     ner_counts = Counter(ner_result)
-    final_result = {'##'.join((k, str(v))):[] for k, v in ner_counts.items()}
+    final_result = {'##'.join((k, str(v))): [] for k, v in ner_counts.items()}
     return final_result
 
 
@@ -307,7 +306,7 @@ def merge_dict_values(d1, d2, tag='O'):
 
 
 def voting(crf_results, head=HEADER_CRF):
-    crf_dfs = [pd.DataFrame(crf_list, columns=head).add_suffix('_'+name) for name, crf_list in crf_results.items()]
+    crf_dfs = [pd.DataFrame(crf_list, columns=head).add_suffix('_' + name) for name, crf_list in crf_results.items()]
     combined = pd.concat(crf_dfs, axis=1)
     cols = [i for i in combined.columns if i.startswith('NER')]
     # to_vote = combined[cols].apply(tuple, axis=1).tolist()  # convert a df to zipped list
@@ -315,9 +314,9 @@ def voting(crf_results, head=HEADER_CRF):
     if len(cols) == 2:
         vote_result = merge_list_dic(to_vote)
     elif len(cols) > 2:
-       specific = {name: lst for name, lst in to_vote.items() if name != 'NER_GEN'}
-       pass # todo fix more than three models
-    return list(zip(combined.iloc[:,0].tolist(), vote_result, combined.iloc[:,2].tolist(), ))
+        specific = {name: lst for name, lst in to_vote.items() if name != 'NER_GEN'}
+        pass  # todo fix more than three models
+    return list(zip(combined.iloc[:, 0].tolist(), vote_result, combined.iloc[:, 2].tolist(), ))
 
 
 def merge_list_dic(list_dict):
@@ -325,7 +324,7 @@ def merge_list_dic(list_dict):
     name1, name2 = list_dict.keys()
     l2 = ['O' if i.endswith(name1) else i for i in l2]
     return [l1[i] if l1[i].endswith(name1) else l2[i] for i in range(len(l1))]
-    
+
 
 def load_multi_models(model_fs):
     model_dics = {model.split('.')[0].split('_')[-1]: jl.load(model) for model in model_fs}
