@@ -46,8 +46,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     return crf
 
 
-def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags,
-                       test_f, *train_fs):
+def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags):
     """
     A pipeline for CRF training                                                                                                         
     :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -110,7 +109,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    _ = crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, '')
+    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     if model_f:
         jl.dump(best_predictor, model_f)
@@ -118,7 +117,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
 
 
 def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
-                              ner_tags, *train_fs, test_f):
+                              ner_tags):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -149,7 +148,7 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
-    crf = crf_fit(train_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     labels = show_crf_label(crf)
     params_space = make_param_space()
