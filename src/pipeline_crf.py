@@ -117,8 +117,8 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
-                              ner_tags, *train_fs):
+def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
+                              ner_tags, *train_fs, test_f):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -133,9 +133,17 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    train_df = pd.concat([process_annotated(f) for f in train_fs])
+    # train_df = pd.concat([process_annotated(f) for f in train_fs])
+    # test_df = process_annotated(test_f)
+
+    train_df = pd.concat(
+        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
     print(train_df.info())
-    test_df = process_annotated(test_f)
+    test_df = pd.concat(
+        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
+    basic_logging('loading data ends')
+    print(train_df.info())
+
     basic_logging('loading data ends')
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
