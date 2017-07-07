@@ -39,15 +39,15 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     basic_logging('loading data ends')
 
     crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
-    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
         jl.dump(crf, model_f)
-    return crf, result
+    return crf
 
 
-def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags,
-                       in_folder, *train_fs):
+def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags,
+                       test_f, *train_fs):
     """
     A pipeline for CRF training                                                                                                         
     :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -72,12 +72,12 @@ def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, 
 
     crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
-    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
         jl.dump(crf, model_f)
 
-    return crf, result
+    return crf
 
 
 def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
@@ -110,7 +110,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+    _ = crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, '')
 
     if model_f:
         jl.dump(best_predictor, model_f)
@@ -141,7 +141,7 @@ def pipeline_best_predict_mix(test_f, model_f, result_f, feature_conf, hdf_f, hd
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
-    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf = crf_fit(train_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -178,7 +178,7 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     if ner_tags:
         valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
 
-    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
     diff = compare_pred_test(X_test, indexed_ner)
@@ -206,7 +206,7 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
 
-    y_pred = crf_fit(df, model, f_dics, feature_conf, hdf_key, window_size, result_f)
+    y_pred = crf_fit(df, model, f_dics, feature_conf, hdf_key, window_size, '')
 
     recovered_pred = [i + ['O'] for i in y_pred]
     crf_result = [i for j in recovered_pred for i in j]
