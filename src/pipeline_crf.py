@@ -60,12 +60,12 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
 def pipeline_train_mix(test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags,
                        in_folder, *train_fs):
     """
-    A pipeline for CRF training
+    A pipeline for CRF training                                                                                                         
     :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param model_f: model file
     :param feature_conf: feature configurations
-    :param hdf_f: feature HDF5 file
+    :param                                                                                                                                                                               hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     """
     basic_logging('loading conf begins')
@@ -236,7 +236,7 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
+    raw_list = (pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
     print('files: ', len(raw_list))
     raw_df = pd.concat(raw_list, axis=0)
@@ -266,7 +266,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    raw_list = [pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder)]
+    raw_list = (pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
     print('files: ', len(raw_list))
     raw_df = pd.concat(raw_list, axis=0)
