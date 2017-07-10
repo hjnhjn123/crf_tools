@@ -145,8 +145,8 @@ def feed_crf_trainer(in_data, feature_conf, hdf_key, window_size):
     :param window_size: window size
     :return:
     """
-    feature_conf = [sent2features(s, feature_conf, hdf_key, window_size) for s in in_data]
-    labels = [sent2labels(s) for s in in_data]
+    feature_conf = (sent2features(s, feature_conf, hdf_key, window_size) for s in in_data)
+    labels = (sent2labels(s) for s in in_data)
     return feature_conf, labels
 
 
@@ -220,9 +220,10 @@ def crf_predict(crf, test_sents, X_test):
     result = crf.predict(X_test)
     length = len(list(test_sents))
     crf_result = (
-        # [((test_sents[j][i][0], test_sents[j][i][2]) + (result[j][i],)) for i in range(len(test_sents[j]))] for j in range(length))
         [((test_sents[j][i][0], result[j][i], test_sents[j][i][2])) for i in range(len(test_sents[j]))] for j in
-    range(length))
+        range(length))
+    # crf_result = [((test_sents[j][i][0], test_sents[j][i][2]) + (result[j][i],)) for i in range(len(test_sents[j]))] for j in
+    # range(length))
     crf_result = [i + [('##END', '###', 'O')] for i in crf_result]
     return list(chain.from_iterable(crf_result))
 
