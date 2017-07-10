@@ -38,7 +38,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
 
-    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
     _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
@@ -69,7 +69,7 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
-    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
@@ -98,7 +98,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     train_df, test_df = process_annotated(train_f), process_annotated(test_f)
     basic_logging('loading data ends')
 
-    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, X_train, y_train = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -109,7 +109,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
 
     if model_f:
         jl.dump(best_predictor, model_f)
@@ -118,7 +118,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
 
 def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
                               ner_tags):
-    """
+    """q
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
     :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -141,14 +141,14 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
     test_df = pd.concat(
         [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
     basic_logging('loading data ends')
-    print(train_df.info())
+    print(test_df.info())
 
     basic_logging('loading data ends')
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
-    crf = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, X_train, y_train = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     labels = show_crf_label(crf)
     params_space = make_param_space()

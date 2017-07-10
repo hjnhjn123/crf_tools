@@ -201,7 +201,7 @@ def crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
     basic_logging('computing train features ends')
     crf = train_crf(X_train, y_train)
-    return crf
+    return crf, X_train, y_train
 
 
 ##############################################################################
