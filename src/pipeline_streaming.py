@@ -78,6 +78,23 @@ def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_co
             q.delete()
 
 
+def pipeline_offline_single(in_file, out_file, hdf_f, hdf_key, feature_conf, window_size, col, model_f):
+    model = jl.load(model_f)
+    f_dics = batch_loading(hdf_f, hdf_key)
+
+    with open(in_file, 'r') as ff:
+        result = []
+        count = 0
+        out = open(out_file, 'w')
+        for json_input in ff:
+            crf_result, raw_df = streaming_pos_crf(json_input, model, f_dics, feature_conf, hdf_key, window_size, col)
+            json_result = crf_result2json(crf_result, raw_df, col)
+            out.write(json_result + '\n')
+            if count%100 == 0:
+                basic_logging('Processed ' + str(count) + ' lines')
+            count+=1
+
+
 ##############################################################################
 
 def main():
