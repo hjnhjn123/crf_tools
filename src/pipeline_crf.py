@@ -213,7 +213,7 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
 
-    y_pred = crf_fit(df, model, f_dics, feature_conf, hdf_key, window_size, '')
+    y_pred = crf_fit(prepared_data, model, f_dics, feature_conf, hdf_key, window_size, '')
 
     recovered_pred = [i + ['O'] for i in y_pred]
     crf_result = [i for j in recovered_pred for i in j]
