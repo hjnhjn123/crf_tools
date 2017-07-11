@@ -10,6 +10,7 @@ from .arsenal_crf import batch_add_features, batch_loading, feed_crf_trainer, cr
     df2crfsuite, voting, load_multi_models
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
+from .arsenal_stats import get_now
 from .settings import *
 
 
@@ -83,7 +84,6 @@ def pipeline_offline_single(in_file, out_file, hdf_f, hdf_key, feature_conf, win
     f_dics = batch_loading(hdf_f, hdf_key)
 
     with open(in_file, 'r') as ff:
-        result = []
         count = 0
         out = open(out_file, 'w')
         for json_input in ff:
@@ -91,7 +91,7 @@ def pipeline_offline_single(in_file, out_file, hdf_f, hdf_key, feature_conf, win
             json_result = crf_result2json(crf_result, raw_df, col)
             out.write(json_result + '\n')
             if count%100 == 0:
-                basic_logging('Processed ' + str(count) + ' lines')
+                print(get_now(), ': Processed ' + str(count) + ' lines')
             count+=1
 
 
