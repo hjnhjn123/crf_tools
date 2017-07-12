@@ -275,9 +275,16 @@ def extract_mutual(in_f1, in_f2, out_f1, out_f2):
 ##############################################################################
 
 
-def prepare_feature_hdf(output_f, hdf_kesys, *files, mode='a'):
+def prepare_feature_hdf(output_f, hdf_keys, *files, mode='a'):
+    """
+    If you have an HDF file on your disk, please remove it first.
+    :param output_f: the output file
+    :param hdf_keys: list of hdf keys
+    :param files: input file, one column or two columns
+    :param mode: append mode
+    """
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
-    df2hdf(output_f, datas, hdf_kesys, mode)
+    df2hdf(output_f, datas, hdf_keys, mode)
 
 
 ##############################################################################
