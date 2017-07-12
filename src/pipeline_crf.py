@@ -202,12 +202,13 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     basic_logging('loading conf ends')
     raw_list = (pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
-    print('files: ', len(raw_list))
     raw_df = pd.concat(raw_list, axis=0)
+    print('files: ', len(raw_df))
+
 
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
-    random_df['content'] = random_df[col].apply(lambda x: x['dic'])
+    random_df['content'] = random_df[col].apply(lambda x: x['content'])
 
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
@@ -234,7 +235,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     raw_df = pd.concat(raw_list, axis=0)
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
-    random_df['content'] = random_df[col].apply(lambda x: x['dic'])
+    random_df['content'] = random_df[col].apply(lambda x: x['content'])
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
