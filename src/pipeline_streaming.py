@@ -90,9 +90,9 @@ def pipeline_offline_single(in_file, out_file, hdf_f, hdf_key, feature_conf, win
             crf_result, raw_df = streaming_pos_crf(json_input, model, f_dics, feature_conf, hdf_key, window_size, col)
             json_result = crf_result2json(crf_result, raw_df, col)
             out.write(json_result + '\n')
-            if count%100 == 0:
+            if count % 100 == 0:
                 print(get_now(), ': Processed ' + str(count) + ' lines')
-            count+=1
+            count += 1
 
 
 ##############################################################################
