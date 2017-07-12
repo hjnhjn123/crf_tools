@@ -125,7 +125,7 @@ def word2features(sent, i, feature_conf, hdf_key, window_size):
 
 
 def sent2features(line, feature_conf, hdf_key, window_size):
-    return (word2features(line, i, feature_conf, hdf_key, window_size) for i in range(len(line)))
+    return [word2features(line, i, feature_conf, hdf_key, window_size) for i in range(len(line))]
 
 
 def sent2labels(line):
