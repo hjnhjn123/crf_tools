@@ -22,7 +22,7 @@ from .settings import *
 # Pipelines
 
 
-def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size):
+def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, col_names):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -35,7 +35,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    train_df, test_df = process_annotated(train_f), process_annotated(test_f)
+    train_df, test_df = process_annotated(train_f, col_names), process_annotated(test_f, col_names)
     basic_logging('loading data ends')
 
     crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
@@ -46,7 +46,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     return crf
 
 
-def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags):
+def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags, col_names):
     """
     A pipeline for CRF training                                                                                                         
     :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -60,10 +60,10 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
     print(train_df.info())
     test_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
     basic_logging('loading data ends')
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
@@ -80,7 +80,7 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
 
 
 def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
-                          window_size):
+                          window_size, col_names):
     """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -95,7 +95,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    train_df, test_df = process_annotated(train_f), process_annotated(test_f)
+    train_df, test_df = process_annotated(train_f, col_names), process_annotated(test_f, col_names)
     basic_logging('loading data ends')
 
     crf, X_train, y_train = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
@@ -117,7 +117,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
 
 
 def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
-                              ner_tags):
+                              ner_tags, col_names):
     """q
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -136,10 +136,10 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
     # test_df = process_annotated(test_f)
 
     train_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
     print(train_df.info())
     test_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f))) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
     basic_logging('loading data ends')
     print(test_df.info())
 
@@ -166,7 +166,7 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, diff_f):
+def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, diff_f, col_names):
     """
     A pipeline for CRF training
     :param valid_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -181,7 +181,7 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     crf = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    valid_df = process_annotated(valid_f)
+    valid_df = process_annotated(valid_f, col_names)
     if ner_tags:
         valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
 
@@ -195,12 +195,12 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
 
 
 def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
-                                         window_size):
+                                         window_size, col_names):
     basic_logging('loading conf begins')
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    raw_list = (pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder))
+    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
     raw_df = pd.concat(raw_list, axis=0)
     print('files: ', len(raw_df))
@@ -224,12 +224,12 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
 
 
 def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf,
-                                        window_size):
+                                        window_size, col_names):
     basic_logging('loading conf begins')
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    raw_list = (pd.read_json('/'.join((in_folder, in_f))) for in_f in listdir(in_folder))
+    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
     print('files: ', len(raw_list))
     raw_df = pd.concat(raw_list, axis=0)
@@ -260,14 +260,15 @@ def main(argv):
     print()
     dic = {
         'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
-                                        hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
+                                        hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
+                                        col_names=HEADER),
         'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F,
                                             hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
-                                            window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION),
+                                            window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION, col_names=HEADER),
         'validate': lambda: pipeline_validate(valid_f=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                               hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
         'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
                                                                  result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
+                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE, col_names=HEADER),
     }
     dic[argv]()
