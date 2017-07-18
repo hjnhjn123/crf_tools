@@ -45,7 +45,6 @@ def evaluate_ner_result(y_pred, y_test):
     both_ners = [i for i in zip(flattern_pred, flattern_test) if i[1] != 'O']
     indexed_ner = [(a, (b, c)) for ((a, b), c) in zip(enumerate(flattern_pred), flattern_test) if b != 'O' or c != 'O']
 
-
     evaluate_list = extract_entity(both_ners)
     test_entities = extract_entity(test_ners)
     pred_entities = extract_entity(pred_ners)
