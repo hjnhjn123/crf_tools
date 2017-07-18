@@ -242,7 +242,7 @@ def crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
         result, indexed_ner = evaluate_ner_result(y_pred, y_test)
         result.to_csv(result_f, index=False)
         basic_logging('testing ends')
-    return y_pred
+    return y_pred, y_test
 
 
 ##############################################################################
