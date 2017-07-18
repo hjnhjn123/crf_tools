@@ -284,7 +284,7 @@ def prepare_feature_hdf(output_f, hdf_keys, *files, mode='a'):
     :param mode: append mode
     """
     datas = [pd.read_csv(f, engine='c', quoting=0) for f in files]
-    df2hdf(output_f, datas, hdf_keys, mode)
+    df2hdf(output_f, hdf_keys, datas, mode)
 
 
 ##############################################################################
