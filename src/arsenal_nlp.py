@@ -6,6 +6,7 @@ from math import log
 from operator import itemgetter
 from string import punctuation
 
+import numpy as np
 import pandas as pd
 from sklearn.feature_extraction import text
 from zhon import hanzi
@@ -161,6 +162,17 @@ def cal_brand_entropy(topic_brand_prob_dic):
         freq_list = [i[1] for i in brand_freq]
         topic_entropy_dic[keyword] = cal_entropy(freq_list)
     return topic_entropy_dic
+
+
+def entropy(labels):
+    """
+    https://stackoverflow.com/questions/15450192/fastest-way-to-compute-entropy-in-python#
+    :param labels:
+    :return:
+    """
+    prob_dict = {x: labels.count(x) / len(labels) for x in labels}
+    probs = np.array(list(prob_dict.values()))
+    return - probs.dot(np.log2(probs))
 
 
 def clean_pos_dic(dic, stop_list):
