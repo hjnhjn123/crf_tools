@@ -118,6 +118,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
 
 def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
                               ner_tags, col_names):
+
     """q
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -196,6 +197,19 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
 
 def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
                                          window_size, col_names):
+    """
+    It reads all files in a single folder, and randomly select of them to annotate
+    :param in_folder: DIR, the folder waiting for annotation
+    :param out_f: CSV FILE, the ouptut file
+    :param model_f: NUMPY PICKLE FILE, the model file
+    :param col: LIST, the column used to annotate
+    :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
+    :param hdf_key: LIST, the key to extract hdf file
+    :param row_count: INT, random rows
+    :param feature_conf: DICT, features used to compute
+    :param window_size: INT, set window size for CRF tagging
+    :param col_names: LIST, the column in json file to be used
+    """
     basic_logging('loading conf begins')
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
@@ -225,6 +239,19 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
 
 def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf,
                                         window_size, col_names):
+    """
+    It reads all files in a single folder, and randomly select of them to annotate
+    :param in_folder: DIR, the folder waiting for annotation
+    :param out_f: CSV FILE, the ouptut file
+    :param model_fs: NUMPY PICKLE FILES, the model files
+    :param col: LIST, the column used to annotate
+    :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
+    :param hdf_key: LIST, the key to extract hdf file
+    :param row_count: INT, random rows
+    :param feature_conf: DICT, features used to compute
+    :param window_size: INT, set window size for CRF tagging
+    :param col_names: LIST, the column in json file to be used
+    """
     basic_logging('loading conf begins')
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
