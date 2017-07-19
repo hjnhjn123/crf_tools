@@ -113,11 +113,12 @@ def pipeline_cv(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    _, _, _ = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
-
+    y_pred, _, y_test = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    result, _ = evaluate_ner_result(y_pred, y_test)
+    result.to_csv(result_f, index=False)
     if model_f:
         jl.dump(best_predictor, model_f)
-    return crf, best_predictor, rs_cv, result
+    return crf, best_predictor, rs_cv
 
 
 def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
@@ -164,11 +165,12 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    _, _, _ = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
-
+    y_pred, _, y_test = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    result, _ = evaluate_ner_result(y_pred, y_test)
+    result.to_csv(result_f, index=False)
     if model_f:
         jl.dump(best_predictor, model_f)
-    return crf, best_predictor, rs_cv, result
+    return crf, best_predictor, rs_cv
 
 
 ##############################################################################
