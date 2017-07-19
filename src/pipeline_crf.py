@@ -98,7 +98,7 @@ def pipeline_cv(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key
     result.to_csv(result_f, index=False)
     if model_f:
         jl.dump(best_predictor, model_f)
-    return crf, best_predictor, rs_cv
+    return crf, best_predictor
 
 
 def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
@@ -127,7 +127,7 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
     result.to_csv(result_f, index=False)
     if model_f:
         jl.dump(best_predictor, model_f)
-    return crf, best_predictor, rs_cv
+    return crf, best_predictor
 
 
 ##############################################################################
