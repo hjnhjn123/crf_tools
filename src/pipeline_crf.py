@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import gc
-from itertools import chain
 from os import listdir
 
 import joblib as jl
 import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
-    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, module_crf_train, module_crf_fit
+    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, module_crf_train, \
+    module_crf_fit
 from .arsenal_logging import basic_logging
-from .arsenal_spacy import spacy_batch_processing
-from .arsenal_stats import get_now, random_rows
+from .arsenal_stats import get_now
 from .arsenal_test import show_crf_label, evaluate_ner_result
 from .settings import *
 
@@ -177,7 +176,7 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
 # Validation
 
 
-def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
+def pipeline_validate(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
     """
     A pipeline for CRF validating
     :param valid_df: validate dataset with at least two columns (TOKEN, LABEL)
@@ -201,7 +200,67 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
 ##############################################################################
 
 
-def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
+def module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
+                                       col_names):
+    """
+    :param prepared_df: a df with at-least wo columns
+    :param out_f: CSV FILE, the ouptut file
+    :param model_f: NUMPY PICKLE FILE, the model file
+    :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
+    :param hdf_key: LIST, the key to extract hdf file
+    :param feature_conf: DICT, features used to compute
+    :param window_size: INT, set window size for CRF tagging
+    :param col_names: LIST, the column in json file to be used
+    """
+    basic_logging('loading conf begins')
+    model = jl.load(model_f)
+    f_dics = batch_loading(hdf_f, hdf_key)
+    basic_logging('loading conf ends')
+
+    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
+    basic_logging('reading files ends')
+
+    y_pred, _, _ = module_crf_fit(prepared_df, model, f_dics, feature_conf, hdf_key, window_size, '')
+
+    recovered_pred = [i + ['O'] for i in y_pred]
+    crf_result = [i for j in recovered_pred for i in j]
+    final_result = pd.concat([prepared_data[0], pd.DataFrame(crf_result), prepared_data[2]], axis=1)
+    basic_logging('converting results ends')
+    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+
+
+def module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size):
+    """
+    :param prepared_df: a df with at-least wo columns
+    :param out_f: CSV FILE, the ouptut file
+    :param model_fs: NUMPY PICKLE FILES, the model files
+    :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
+    :param hdf_key: LIST, the key to extract hdf file
+    :param feature_conf: DICT, features used to compute
+    :param window_size: INT, set window size for CRF tagging
+    :param col_names: LIST, the column in json file to be used
+    """
+
+    basic_logging('loading conf begins')
+    model_dics = load_multi_models(model_fs)
+    f_dics = batch_loading(hdf_f, hdf_key)
+    basic_logging('loading conf ends')
+
+    test_df = batch_add_features(prepared_df, f_dics)
+    test_sents = df2crfsuite(test_df)
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    basic_logging('converting features ends')
+
+    crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
+    final_result = voting(crf_results)
+    basic_logging('converting results ends')
+    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+
+
+##############################################################################
+
+
+def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
                                          window_size, col_names):
     """
     It reads all files in a single folder, and randomly select of them to annotate
@@ -216,29 +275,9 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     :param window_size: INT, set window size for CRF tagging
     :param col_names: LIST, the column in json file to be used
     """
-    basic_logging('loading conf begins')
-    model = jl.load(model_f)
-    f_dics = batch_loading(hdf_f, hdf_key)
-    basic_logging('loading conf ends')
-
-    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
-    basic_logging('reading files ends')
-    raw_df = pd.concat(raw_list, axis=0)
-    print('files: ', len(raw_df))
-    random_df = random_rows(raw_df, row_count)
-    basic_logging('selecting lines ends')
-    random_df['content'] = random_df[col].apply(lambda x: x['content'])
-    parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
-    prepared_data = pd.DataFrame(list(parsed_data))
-    basic_logging('extracting data ends')
-
-    y_pred, _, _ = module_crf_fit(prepared_data, model, f_dics, feature_conf, hdf_key, window_size, '')
-
-    recovered_pred = [i + ['O'] for i in y_pred]
-    crf_result = [i for j in recovered_pred for i in j]
-    final_result = pd.concat([prepared_data[0], pd.DataFrame(crf_result), prepared_data[2]], axis=1)
-    basic_logging('converting results ends')
-    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+    prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
+    module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
+                                       col_names)
 
 
 def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf,
@@ -256,31 +295,8 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     :param window_size: INT, set window size for CRF tagging
     :param col_names: LIST, the column in json file to be used
     """
-    basic_logging('loading conf begins')
-    model_dics = load_multi_models(model_fs)
-    f_dics = batch_loading(hdf_f, hdf_key)
-    basic_logging('loading conf ends')
-
-    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
-    basic_logging('reading files ends')
-    print('files: ', len(raw_list))
-    raw_df = pd.concat(raw_list, axis=0)
-    random_df = random_rows(raw_df, row_count)
-    basic_logging('selecting lines ends')
-    random_df['content'] = random_df[col].apply(lambda x: x['content'])
-    parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
-    prepared_data = pd.DataFrame(list(parsed_data))
-    basic_logging('extracting data ends')
-
-    test_df = batch_add_features(prepared_data, f_dics)
-    test_sents = df2crfsuite(test_df)
-    basic_logging('converting features ends')
-
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
-    final_result = voting(crf_results)
-    basic_logging('converting results ends')
-    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+    prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
+    module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size)
 
 
 ##############################################################################
@@ -300,7 +316,7 @@ def main(argv):
                                   hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
                                   window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION, col_names=HEADER),
         'validate': lambda: pipeline_validate(valid_df=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
-                                                  hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
+                                              hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
         'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
                                                                  result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
                                                                  feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,

@@ -4,6 +4,7 @@ from collections import OrderedDict, defaultdict, Counter
 from copy import deepcopy
 from functools import reduce
 from itertools import chain, groupby, tee
+from os import listdir
 
 import joblib as jl
 import pandas as pd
@@ -14,7 +15,8 @@ from sklearn.model_selection import RandomizedSearchCV
 from sklearn_crfsuite import metrics
 
 from .arsenal_logging import basic_logging
-from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic
+from .arsenal_spacy import spacy_batch_processing
+from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic, random_rows
 from .arsenal_test import evaluate_ner_result
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
@@ -217,9 +219,6 @@ def crf_predict(crf, test_sents, X_test):
     return list(chain.from_iterable(crf_result))
 
 
-
-
-
 ##############################################################################
 
 
@@ -341,3 +340,16 @@ def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
     basic_logging('computing train features ends')
     crf = train_crf(X_a, y_a)
     return crf, list(X_b), list(y_b)
+
+
+def module_prepare_news_jsons(in_folder, col, row_count, col_names):
+    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
+    basic_logging('reading files ends')
+    raw_df = pd.concat(raw_list, axis=0)
+    random_df = random_rows(raw_df, row_count)
+    basic_logging('selecting lines ends')
+    random_df['content'] = random_df[col].apply(lambda x: x['content'])
+    parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
+    prepared_df = pd.DataFrame(list(parsed_data))
+    basic_logging('extracting data ends')
+    return prepared_df
