@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 
-import gc
 from os import listdir
 
 import joblib as jl
 import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
-    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, module_crf_train, \
-    module_crf_fit
+    voting, load_multi_models, module_crf_train, \
+    module_crf_fit, module_prepare_folder
 from .arsenal_logging import basic_logging
 from .arsenal_stats import get_now
-from .arsenal_test import show_crf_label, evaluate_ner_result
+from .arsenal_test import evaluate_ner_result
 from .settings import *
 
 
@@ -58,18 +57,8 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    train_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f],
-        axis=0)
-    print(train_df.info())
-    test_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f],
-        axis=0)
-    basic_logging('loading data ends')
-    if ner_tags:
-        train_df = merge_ner_tags(train_df, 'NER', ner_tags)
-        test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
+    test_df, train_df = module_prepare_folder(col_names, in_folder, ner_tags)
     crf, _, _ = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
     _, _, _ = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
@@ -102,17 +91,9 @@ def pipeline_cv(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key
     basic_logging('loading data ends')
 
     crf, X_train, y_train = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    best_predictor = module_crf_cv(crf, X_train, y_train, cv, iteration)
+    y_pred, _, y_test = module_crf_fit(test_df, best_predictor, f_dics, feature_conf, hdf_key, window_size, result_f)
 
-    labels = show_crf_label(crf)
-    params_space = make_param_space()
-    f1_scorer = make_f1_scorer(labels)
-    gc.collect()
-    basic_logging('cv begins')
-    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    basic_logging('cv ends')
-    best_predictor = rs_cv.best_estimator_
-
-    y_pred, _, y_test = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
     result, _ = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     if model_f:
@@ -137,33 +118,11 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
 
-    train_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f],
-        axis=0)
-    print(train_df.info())
-    test_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f],
-        axis=0)
-    basic_logging('loading data ends')
-    print(test_df.info())
-
-    basic_logging('loading data ends')
-    if ner_tags:
-        train_df = merge_ner_tags(train_df, 'NER', ner_tags)
-        test_df = merge_ner_tags(test_df, 'NER', ner_tags)
-
+    test_df, train_df = module_prepare_folder(col_names, in_folder, ner_tags)
     crf, X_train, y_train = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    best_predictor = module_crf_cv(crf, X_train, y_train, cv, iteration)
+    y_pred, _, y_test = module_crf_fit(test_df, best_predictor, f_dics, feature_conf, hdf_key, window_size, result_f)
 
-    labels = show_crf_label(crf)
-    params_space = make_param_space()
-    f1_scorer = make_f1_scorer(labels)
-    gc.collect()
-    basic_logging('cv begins')
-    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
-    basic_logging('cv ends')
-    best_predictor = rs_cv.best_estimator_
-
-    y_pred, _, y_test = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
     result, _ = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     if model_f:
@@ -261,7 +220,7 @@ def module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_k
 
 
 def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
-                                         window_size, col_names):
+                                        window_size, col_names):
     """
     It reads all files in a single folder, and randomly select of them to annotate
     :param in_folder: DIR, the folder waiting for annotation
@@ -318,8 +277,8 @@ def main(argv):
         'validate': lambda: pipeline_validate(valid_df=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                               hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
         'annotate': lambda: pipeline_predict_jsons_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
-                                                                 result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
-                                                                 col_names=HEADER),
+                                                                result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                                                feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
+                                                                col_names=HEADER),
     }
     dic[argv]()
