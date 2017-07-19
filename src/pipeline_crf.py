@@ -8,7 +8,7 @@ import joblib as jl
 import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
-    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, crf_train, module_crf_fit
+    make_param_space, make_f1_scorer, search_param, merge_ner_tags, voting, load_multi_models, module_crf_train, module_crf_fit
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import get_now, random_rows
@@ -38,7 +38,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     train_df, test_df = process_annotated(train_f, col_names), process_annotated(test_f, col_names)
     basic_logging('loading data ends')
 
-    crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, _, _ = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
     _, _, _ = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
@@ -71,7 +71,7 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
-    crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, _, _ = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
     _, _, _ = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
@@ -102,7 +102,7 @@ def pipeline_cv(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key
     train_df, test_df = process_annotated(train_f, col_names), process_annotated(test_f, col_names)
     basic_logging('loading data ends')
 
-    crf, X_train, y_train = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, X_train, y_train = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     labels = show_crf_label(crf)
     params_space = make_param_space()
@@ -153,7 +153,7 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
-    crf, X_train, y_train = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
+    crf, X_train, y_train = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
 
     labels = show_crf_label(crf)
     params_space = make_param_space()

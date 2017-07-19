@@ -192,17 +192,6 @@ def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteratio
     return rs.fit(X_train, y_train)
 
 
-def crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
-    train_df = batch_add_features(train_df, f_dics)
-    basic_logging('adding train features ends')
-    train_sents = df2crfsuite(train_df)
-    basic_logging('converting train to crfsuite ends')
-    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
-    basic_logging('computing train features ends')
-    crf = train_crf(X_train, y_train)
-    return crf, X_train, y_train
-
-
 ##############################################################################
 
 
@@ -339,3 +328,14 @@ def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f
         result.to_csv(result_f, index=False)
         basic_logging('testing ends')
     return y_pred, list(y_b), list(X_b)
+
+
+def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
+    train_df = batch_add_features(train_df, f_dics)
+    basic_logging('adding train features ends')
+    train_sents = df2crfsuite(train_df)
+    basic_logging('converting train to crfsuite ends')
+    X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
+    basic_logging('computing train features ends')
+    crf = train_crf(X_train, y_train)
+    return crf, X_train, y_train
