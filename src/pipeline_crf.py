@@ -117,7 +117,8 @@ def pipeline_cross_validation(train_f, test_f, model_f, result_f, feature_conf, 
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_cross_validation_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
+def pipeline_cross_validation_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
+                                  window_size,
                                   ner_tags, col_names):
     """q
     A pipeline for CRF training
@@ -179,7 +180,7 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     :param window_size:
-    :param ner_tags: a list of tags
+    :param ner_tags: a list of tags to be used
     """
     basic_logging('loading conf begins')
     crf = jl.load(model_f)
@@ -198,29 +199,25 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     return result
 
 
-def pipeline_validate_df(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, col_names):
+def pipeline_validate_df(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
     """
     A pipeline for CRF validating, the df should be preprocessed as a 
-    :param valid_df: validate dataset in a 3-column df (TOKEN, LABEL)
+    :param valid_df: validate dataset with at least two columns (TOKEN, LABEL)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     :param window_size:
-    :param ner_tags: a list of tags to be used
     """
     basic_logging('loading conf begins')
     crf = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    if ner_tags:
-        valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
-
     y_pred, y_test, X_test = crf_fit(valid_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
-
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     return result
+
 
 def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
                                          window_size, col_names):
