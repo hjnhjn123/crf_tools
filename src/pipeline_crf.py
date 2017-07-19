@@ -186,11 +186,11 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     if ner_tags:
         valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
 
-    y_pred, y_test = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    y_pred, y_test, X_test = crf_fit(valid_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     result, indexed_ner = evaluate_ner_result(y_pred, y_test)
-    diff = compare_pred_test(X_test, indexed_ner)
-    diff.to_csv(diff_f, index=False)
+    # diff = compare_pred_test(X_test, indexed_ner)
+    # diff.to_csv(diff_f, index=False)
     result.to_csv(result_f, index=False)
     return result
 

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict, defaultdict, Counter
+from collections import OrderedDict, defaultdict, Counter,
 from copy import deepcopy
 from functools import reduce
-from itertools import chain, groupby
+from itertools import chain, groupby, tee
 
 import joblib as jl
 import pandas as pd
@@ -129,7 +129,7 @@ def sent2features(line, feature_conf, hdf_key, window_size):
 
 
 def sent2labels(line):
-    return (i[1] for i in line)  # Use the correct column
+    return [i[1] for i in line]  # Use the correct column
 
 
 ##############################################################################
@@ -146,7 +146,7 @@ def feed_crf_trainer(in_data, X, hdf_key, window_size):
     :return:
     """
     X_set = (sent2features(s, X, hdf_key, window_size) for s in in_data)
-    y_set = (sent2labels(s) for s in in_data)
+    y_set = [sent2labels(s) for s in in_data]
     return X_set, y_set
 
 
@@ -235,14 +235,16 @@ def crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
     test_sents = df2crfsuite(test)
     basic_logging('converting to test crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    X_a, X_b = tee(X_test, 2)
+    y_a, y_b = tee(y_test, 2)
     basic_logging('test conversion ends')
-    y_pred = crf.predict(X_test)
+    y_pred = crf.predict(X_a)
     basic_logging('testing ends')
     if result_f:
-        result, indexed_ner = evaluate_ner_result(y_pred, y_test)
+        result, indexed_ner = evaluate_ner_result(y_pred, y_a)
         result.to_csv(result_f, index=False)
         basic_logging('testing ends')
-    return y_pred, y_test
+    return y_pred, list(y_b), list(X_b)
 
 
 ##############################################################################
