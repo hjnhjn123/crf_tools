@@ -365,3 +365,18 @@ def module_prepare_news_jsons(in_folder, col, row_count, col_names):
     prepared_df = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
     return prepared_df
+
+
+def module_prepare_folder(col_names, in_folder, ner_tags):
+    train_df = pd.concat(
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f],
+        axis=0)
+    print(train_df.info())
+    test_df = pd.concat(
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f],
+        axis=0)
+    basic_logging('loading data ends')
+    if ner_tags:
+        train_df = merge_ner_tags(train_df, 'NER', ner_tags)
+        test_df = merge_ner_tags(test_df, 'NER', ner_tags)
+    return test_df, train_df
