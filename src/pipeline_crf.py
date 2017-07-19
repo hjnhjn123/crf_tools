@@ -122,8 +122,7 @@ def pipeline_cv(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key
 
 
 def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
-                    window_size,
-                    ner_tags, col_names):
+                    window_size, ner_tags, col_names):
     """q
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, LABEL, POS)
@@ -178,7 +177,7 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
 # Validation
 
 
-def pipeline_validate(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
+def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
     """
     A pipeline for CRF validating
     :param valid_df: validate dataset with at least two columns (TOKEN, LABEL)
@@ -221,15 +220,14 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
+
     raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
     raw_df = pd.concat(raw_list, axis=0)
     print('files: ', len(raw_df))
-
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
     random_df['content'] = random_df[col].apply(lambda x: x['content'])
-
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
@@ -262,6 +260,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
+
     raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
     basic_logging('reading files ends')
     print('files: ', len(raw_list))
@@ -272,9 +271,11 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     parsed_data = chain.from_iterable(spacy_batch_processing(random_df, '', 'content', ['content'], 'crf'))
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
+
     test_df = batch_add_features(prepared_data, f_dics)
     test_sents = df2crfsuite(test_df)
     basic_logging('converting features ends')
+
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
     final_result = voting(crf_results)
@@ -298,7 +299,7 @@ def main(argv):
         'cv': lambda: pipeline_cv(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F,
                                   hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
                                   window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION, col_names=HEADER),
-        'validate': lambda: pipeline_validate_ner(valid_df=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
+        'validate': lambda: pipeline_validate(valid_df=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                                   hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
         'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
                                                                  result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
