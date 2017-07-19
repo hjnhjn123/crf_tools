@@ -17,7 +17,7 @@ from sklearn_crfsuite import metrics
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic, random_rows
-from .arsenal_test import evaluate_ner_result
+from .arsenal_test import evaluate_ner_result, show_crf_label
 
 HEADER_CRF = ['TOKEN', 'NER', 'POS']
 
@@ -340,6 +340,18 @@ def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
     basic_logging('computing train features ends')
     crf = train_crf(X_a, y_a)
     return crf, list(X_b), list(y_b)
+
+
+def module_crf_cv(crf, X_train, y_train, cv, iteration):
+    labels = show_crf_label(crf)
+    params_space = make_param_space()
+    f1_scorer = make_f1_scorer(labels)
+    gc.collect()
+    basic_logging('cv begins')
+    rs_cv = search_param(X_train, y_train, crf, params_space, f1_scorer, cv, iteration)
+    basic_logging('cv ends')
+    best_predictor = rs_cv.best_estimator_
+    return best_predictor
 
 
 def module_prepare_news_jsons(in_folder, col, row_count, col_names):
