@@ -266,7 +266,7 @@ def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, h
     It reads all files in a single folder, and randomly select of them to annotate
     :param in_folder: DIR, the folder waiting for annotation
     :param out_f: CSV FILE, the ouptut file
-    :param model_f: NUMPY PICKLE FILE, the model file
+    :param model_fs: LIST, the model files
     :param col: LIST, the column used to annotate
     :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
     :param hdf_key: LIST, the key to extract hdf file
@@ -286,7 +286,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     It reads all files in a single folder, and randomly select of them to annotate
     :param in_folder: DIR, the folder waiting for annotation
     :param out_f: CSV FILE, the ouptut file
-    :param model_fs: NUMPY PICKLE FILES, the model files
+    :param model_fs: LIST, the model files
     :param col: LIST, the column used to annotate
     :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
     :param hdf_key: LIST, the key to extract hdf file
@@ -312,12 +312,12 @@ def main(argv):
         'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                         hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
                                         col_names=HEADER),
-        'cv': lambda: pipeline_cv(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F,
-                                  hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
-                                  window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION, col_names=HEADER),
+        'cv': lambda: pipeline_cv(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
+                                  hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE, cv=CV,
+                                  iteration=ITERATION, col_names=HEADER),
         'validate': lambda: pipeline_validate(valid_df=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                               hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
-        'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
+        'annotate': lambda: pipeline_predict_jsons_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
                                                                  result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
                                                                  feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
                                                                  col_names=HEADER),
