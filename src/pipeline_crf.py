@@ -191,7 +191,7 @@ def pipeline_validate(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key,
     crf = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    y_pred, y_test, X_test = module_crf_fit(valid_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    y_pred, X_test, y_test = module_crf_fit(valid_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
     result, _ = evaluate_ner_result(y_pred, y_test)
     result.to_csv(result_f, index=False)
     return result

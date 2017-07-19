@@ -327,7 +327,7 @@ def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f
         result, indexed_ner = evaluate_ner_result(y_pred, y_a)
         result.to_csv(result_f, index=False)
         basic_logging('testing ends')
-    return y_pred, list(y_b), list(X_b)
+    return y_pred, list(X_b), list(y_b)
 
 
 def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
@@ -340,4 +340,4 @@ def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
     y_a, y_b = tee(y_train, 2)
     basic_logging('computing train features ends')
     crf = train_crf(X_a, y_a)
-    return crf, X_b, y_b
+    return crf, list(X_b), list(y_b)
