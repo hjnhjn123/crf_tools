@@ -39,7 +39,6 @@ def process_annotated(in_file, col_names=HEADER_CRF):
 
 def batch_loading(feature_hdf, hdf_keys):
     """
-    :param crf_f: model file
     :param feature_hdf: feature dict file
     :param hdf_keys: hdfkey to extract dicts
     :return: 
@@ -229,22 +228,7 @@ def crf_predict(crf, test_sents, X_test):
     return list(chain.from_iterable(crf_result))
 
 
-def crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
-    test = batch_add_features(df, f_dics)
-    basic_logging('adding test features ends')
-    test_sents = df2crfsuite(test)
-    basic_logging('converting to test crfsuite ends')
-    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
-    X_a, X_b = tee(X_test, 2)
-    y_a, y_b = tee(y_test, 2)
-    basic_logging('test conversion ends')
-    y_pred = crf.predict(X_a)
-    basic_logging('testing ends')
-    if result_f:
-        result, indexed_ner = evaluate_ner_result(y_pred, y_a)
-        result.to_csv(result_f, index=False)
-        basic_logging('testing ends')
-    return y_pred, list(y_b), list(X_b)
+
 
 
 ##############################################################################
@@ -333,3 +317,25 @@ def merge_list_dic(list_dict):
 def load_multi_models(model_fs):
     model_dics = {model.split('.')[0].split('_')[-1]: jl.load(model) for model in model_fs}
     return model_dics
+
+
+##############################################################################
+
+# Modules
+
+def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
+    test = batch_add_features(df, f_dics)
+    basic_logging('adding test features ends')
+    test_sents = df2crfsuite(test)
+    basic_logging('converting to test crfsuite ends')
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    X_a, X_b = tee(X_test, 2)
+    y_a, y_b = tee(y_test, 2)
+    basic_logging('test conversion ends')
+    y_pred = crf.predict(X_a)
+    basic_logging('testing ends')
+    if result_f:
+        result, indexed_ner = evaluate_ner_result(y_pred, y_a)
+        result.to_csv(result_f, index=False)
+        basic_logging('testing ends')
+    return y_pred, list(y_b), list(X_b)
