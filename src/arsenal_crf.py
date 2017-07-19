@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from collections import OrderedDict, defaultdict, Counter,
+from collections import OrderedDict, defaultdict, Counter
 from copy import deepcopy
 from functools import reduce
 from itertools import chain, groupby, tee

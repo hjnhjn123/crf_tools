@@ -12,7 +12,7 @@ from .arsenal_crf import process_annotated, batch_add_features, batch_loading, f
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import get_now, random_rows
-from .arsenal_test import show_crf_label, evaluate_ner_result, compare_pred_test
+from .arsenal_test import show_crf_label, evaluate_ner_result
 from .settings import *
 
 
@@ -39,7 +39,7 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     basic_logging('loading data ends')
 
     crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
-    _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    _, _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
         jl.dump(crf, model_f)
@@ -60,18 +60,19 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
     train_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f],
+        axis=0)
     print(train_df.info())
     test_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f],
+        axis=0)
     basic_logging('loading data ends')
     if ner_tags:
         train_df = merge_ner_tags(train_df, 'NER', ner_tags)
         test_df = merge_ner_tags(test_df, 'NER', ner_tags)
 
     crf, _, _ = crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
-
-    _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    _, _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
         jl.dump(crf, model_f)
@@ -109,7 +110,7 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+    _, _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
         jl.dump(best_predictor, model_f)
@@ -118,7 +119,6 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
 
 def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
                               ner_tags, col_names):
-
     """q
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -137,10 +137,12 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
     # test_df = process_annotated(test_f)
 
     train_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'train' in in_f],
+        axis=0)
     print(train_df.info())
     test_df = pd.concat(
-        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f], axis=0)
+        [process_annotated('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder) if 'test' in in_f],
+        axis=0)
     basic_logging('loading data ends')
     print(test_df.info())
 
@@ -160,14 +162,15 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
     basic_logging('cv ends')
     best_predictor = rs_cv.best_estimator_
 
-    _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size)
+    _, _, _ = crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
 
     if model_f:
         jl.dump(best_predictor, model_f)
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, diff_f, col_names):
+def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, diff_f,
+                      col_names):
     """
     A pipeline for CRF training
     :param valid_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
@@ -219,7 +222,6 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     raw_df = pd.concat(raw_list, axis=0)
     print('files: ', len(raw_df))
 
-
     random_df = random_rows(raw_df, row_count)
     basic_logging('selecting lines ends')
     random_df['content'] = random_df[col].apply(lambda x: x['content'])
@@ -228,7 +230,7 @@ def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, 
     prepared_data = pd.DataFrame(list(parsed_data))
     basic_logging('extracting data ends')
 
-    y_pred, _ = crf_fit(prepared_data, model, f_dics, feature_conf, hdf_key, window_size, '')
+    y_pred, _, _ = crf_fit(prepared_data, model, f_dics, feature_conf, hdf_key, window_size, '')
 
     recovered_pred = [i + ['O'] for i in y_pred]
     crf_result = [i for j in recovered_pred for i in j]
@@ -296,6 +298,7 @@ def main(argv):
                                               hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
         'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
                                                                  result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
-                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE, col_names=HEADER),
+                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
+                                                                 col_names=HEADER),
     }
     dic[argv]()
