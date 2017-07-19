@@ -336,6 +336,8 @@ def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
     train_sents = df2crfsuite(train_df)
     basic_logging('converting train to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
+    X_a, X_b = tee(X_train, 2)
+    y_a, y_b = tee(y_train, 2)
     basic_logging('computing train features ends')
-    crf = train_crf(X_train, y_train)
-    return crf, X_train, y_train
+    crf = train_crf(X_a, y_a)
+    return crf, X_b, y_b
