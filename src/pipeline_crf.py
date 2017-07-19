@@ -25,8 +25,8 @@ from .settings import *
 def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, col_names):
     """
     A pipeline for CRF training
-    :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
-    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param train_f: train dataset in a 3-column csv (TOKEN, LABEL, POS)
+    :param test_f: test dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
@@ -49,8 +49,8 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
 def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags, col_names):
     """
     A pipeline for CRF training                                                                                                         
-    :param train_fs: train dataset in a 3-column csv (TOKEN, POS, LABEL)
-    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param train_fs: train dataset in a 3-column csv (TOKEN, LABEL, POS)
+    :param test_f: test dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param                                                                                                                                                                               hdf_f: feature HDF5 file
@@ -80,12 +80,12 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
     return crf
 
 
-def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
-                          window_size, col_names):
+def pipeline_cross_validation(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
+                              window_size, col_names):
     """
     A pipeline for CRF training
-    :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
-    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param train_f: train dataset in a 3-column csv (TOKEN, LABEL, POS)
+    :param test_f: test dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
@@ -117,12 +117,12 @@ def pipeline_best_predict(train_f, test_f, model_f, result_f, feature_conf, hdf_
     return crf, best_predictor, rs_cv, result
 
 
-def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
-                              ner_tags, col_names):
+def pipeline_cross_validation_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration, window_size,
+                                  ner_tags, col_names):
     """q
     A pipeline for CRF training
-    :param train_f: train dataset in a 3-column csv (TOKEN, POS, LABEL)
-    :param test_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    :param train_f: train dataset in a 3-column csv (TOKEN, LABEL, POS)
+    :param test_f: test dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
@@ -172,8 +172,8 @@ def pipeline_best_predict_mix(in_folder, model_f, result_f, feature_conf, hdf_f,
 def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, diff_f,
                       col_names):
     """
-    A pipeline for CRF training
-    :param valid_f: test dataset in a 3-column csv (TOKEN, POS, LABEL)
+    A pipeline for CRF validating
+    :param valid_f: validate dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param model_f: model file
     :param feature_conf: feature configurations
     :param hdf_f: feature HDF5 file
@@ -197,6 +197,30 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
     result.to_csv(result_f, index=False)
     return result
 
+
+def pipeline_validate_df(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, ner_tags, col_names):
+    """
+    A pipeline for CRF validating, the df should be preprocessed as a 
+    :param valid_df: validate dataset in a 3-column df (TOKEN, LABEL)
+    :param model_f: model file
+    :param feature_conf: feature configurations
+    :param hdf_f: feature HDF5 file
+    :param hdf_key: keys of feature HDF5 file
+    :param window_size:
+    :param ner_tags: a list of tags to be used
+    """
+    basic_logging('loading conf begins')
+    crf = jl.load(model_f)
+    f_dics = batch_loading(hdf_f, hdf_key)
+    basic_logging('loading conf ends')
+    if ner_tags:
+        valid_df = merge_ner_tags(valid_df, 'NER', ner_tags)
+
+    y_pred, y_test, X_test = crf_fit(valid_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+
+    result, indexed_ner = evaluate_ner_result(y_pred, y_test)
+    result.to_csv(result_f, index=False)
+    return result
 
 def pipeline_batch_annotate_single_model(in_folder, out_f, model_f, col, hdf_f, hdf_key, row_count, feature_conf,
                                          window_size, col_names):
@@ -291,10 +315,10 @@ def main(argv):
         'train': lambda: pipeline_train(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                         hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
                                         col_names=HEADER),
-        'cv': lambda: pipeline_best_predict(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F,
-                                            hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
-                                            window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION, col_names=HEADER),
-        'validate': lambda: pipeline_validate(valid_f=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
+        'cv': lambda: pipeline_cross_validation(train_f=TRAIN_F, test_f=TEST_F, model_f=MODEL_F, result_f=RESULT_F,
+                                                hdf_f=HDF_F, hdf_key=HDF_KEY, feature_conf=FEATURE_CONF,
+                                                window_size=WINDOW_SIZE, cv=CV, iteration=ITERATION, col_names=HEADER),
+        'validate': lambda: pipeline_validate(valid_df=VALIDATE_F, model_f=MODEL_F, result_f=RESULT_F, hdf_f=HDF_F,
                                               hdf_key=HDF_KEY, feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE),
         'annotate': lambda: pipeline_batch_annotate_single_model(in_folder=TRAIN_F, out_f=TEST_F, model_f=MODEL_F,
                                                                  result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
