@@ -4,8 +4,8 @@ import joblib as jl
 import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
-    voting, load_multi_models, module_crf_train, \
-    module_crf_fit, module_prepare_folder
+    voting, load_multi_models, module_crf_train, module_crf_fit, module_prepare_folder, module_prepare_news_jsons, \
+    module_crf_cv
 from .arsenal_logging import basic_logging
 from .arsenal_stats import get_now
 from .arsenal_test import evaluate_ner_result
@@ -157,8 +157,7 @@ def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, 
 ##############################################################################
 
 
-def module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
-                                       col_names):
+def module_batch_annotate_single_model(prepared_df, model_f, hdf_f, hdf_key, feature_conf, window_size):
     """
     :param prepared_df: a df with at-least two columns
     :param out_f: CSV FILE, the ouptut file
@@ -186,7 +185,7 @@ def module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_k
     return pd.DataFrame(final_result)
 
 
-def module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size):
+def module_batch_annotate_multi_model(prepared_df, model_fs, hdf_f, hdf_key, feature_conf, window_size):
     """
     :param prepared_df: a df with at-least wo columns
     :param out_f: CSV FILE, the ouptut file
@@ -233,8 +232,7 @@ def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, h
     :param col_names: LIST, the column in json file to be used
     """
     prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
-    result = module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
-                                                col_names)
+    result = module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size)
     result.to_csv(out_f, index=False, header=None)
 
 
