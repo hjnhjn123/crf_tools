@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import gc
 from collections import OrderedDict, defaultdict, Counter
 from copy import deepcopy
 from functools import reduce
@@ -8,7 +9,6 @@ from os import listdir
 
 import joblib as jl
 import pandas as pd
-import gc
 import scipy.stats as sstats
 import sklearn_crfsuite
 from sklearn.metrics import make_scorer
