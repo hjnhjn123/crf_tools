@@ -103,7 +103,7 @@ def pipeline_cv(train_f, test_f, model_f, result_f, feature_conf, hdf_f, hdf_key
 
 def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, cv, iteration,
                     window_size, ner_tags, col_names):
-    """q
+    """
     A pipeline for CRF training
     :param train_f: train dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param test_f: test dataset in a 3-column csv (TOKEN, LABEL, POS)
@@ -135,7 +135,7 @@ def pipeline_cv_mix(in_folder, model_f, result_f, feature_conf, hdf_f, hdf_key, 
 # Validation
 
 
-def pipeline_validate(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
+def pipeline_validate(valid_f, model_f, feature_conf, hdf_f, result_f, hdf_key, window_size, col_names):
     """
     A pipeline for CRF validating
     :param valid_df: validate dataset with at least two columns (TOKEN, LABEL)
@@ -162,7 +162,7 @@ def pipeline_validate(valid_df, model_f, feature_conf, hdf_f, result_f, hdf_key,
 def module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
                                        col_names):
     """
-    :param prepared_df: a df with at-least wo columns
+    :param prepared_df: a df with at-least two columns
     :param out_f: CSV FILE, the ouptut file
     :param model_f: NUMPY PICKLE FILE, the model file
     :param hdf_f: HDF FILE, the hdf file of feature dicts or lists
@@ -176,8 +176,8 @@ def module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_k
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
 
-    raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
-    basic_logging('reading files ends')
+    # raw_list = (pd.read_json('/'.join((in_folder, in_f)), col_names) for in_f in listdir(in_folder))
+    # basic_logging('reading files ends')
 
     y_pred, _, _ = module_crf_fit(prepared_df, model, f_dics, feature_conf, hdf_key, window_size, '')
 
@@ -185,7 +185,7 @@ def module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_k
     crf_result = [i for j in recovered_pred for i in j]
     final_result = pd.concat([prepared_data[0], pd.DataFrame(crf_result), prepared_data[2]], axis=1)
     basic_logging('converting results ends')
-    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+    return pd.DataFrame(final_result)
 
 
 def module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size):
@@ -213,7 +213,7 @@ def module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_k
     crf_results = {name: crf_predict(model, test_sents, X_test) for name, model in model_dics.items()}
     final_result = voting(crf_results)
     basic_logging('converting results ends')
-    pd.DataFrame(final_result).to_csv(out_f, index=False, header=None)
+    return pd.DataFrame(final_result)
 
 
 ##############################################################################
@@ -235,8 +235,10 @@ def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, h
     :param col_names: LIST, the column in json file to be used
     """
     prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
-    module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
+    result = module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size,
                                        col_names)
+    result.to_csv(out_f, index=False, header=None)
+
 
 
 def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, hdf_key, row_count, feature_conf,
@@ -255,7 +257,9 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     :param col_names: LIST, the column in json file to be used
     """
     prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
-    module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size)
+    result = module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size)
+    result.to_csv(out_f, index=False, header=None)
+
 
 
 ##############################################################################
