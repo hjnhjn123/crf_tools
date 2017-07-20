@@ -231,7 +231,7 @@ def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, h
     :param window_size: INT, set window size for CRF tagging
     :param col_names: LIST, the column in json file to be used
     """
-    prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
+    prepared_df = module_prepare_news_jsons(in_folder, col, row_count, col_names)
     result = module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size)
     result.to_csv(out_f, index=False, header=None)
 
@@ -251,7 +251,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     :param window_size: INT, set window size for CRF tagging
     :param col_names: LIST, the column in json file to be used
     """
-    prepared_df = module_prepare_news_jsons(in_folder, col, row_count, feature_conf, col_names)
+    prepared_df = module_prepare_news_jsons(in_folder, col, row_count, col_names)
     result = module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size)
     result.to_csv(out_f, index=False, header=None)
 
