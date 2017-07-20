@@ -180,7 +180,7 @@ def module_batch_annotate_single_model(prepared_df, model_f, hdf_f, hdf_key, fea
 
     recovered_pred = [i + ['O'] for i in y_pred]
     crf_result = [i for j in recovered_pred for i in j]
-    final_result = pd.concat([prepared_data[0], pd.DataFrame(crf_result), prepared_data[2]], axis=1)
+    final_result = pd.concat([prepared_df[0], pd.DataFrame(crf_result), prepared_df[2]], axis=1)
     basic_logging('converting results ends')
     return pd.DataFrame(final_result)
 
@@ -232,7 +232,7 @@ def pipeline_predict_jsons_single_model(in_folder, out_f, model_f, col, hdf_f, h
     :param col_names: LIST, the column in json file to be used
     """
     prepared_df = module_prepare_news_jsons(in_folder, col, row_count, col_names)
-    result = module_batch_annotate_single_model(prepared_df, out_f, model_f, hdf_f, hdf_key, feature_conf, window_size)
+    result = module_batch_annotate_single_model(prepared_df, model_f, hdf_f, hdf_key, feature_conf, window_size)
     result.to_csv(out_f, index=False, header=None)
 
 
@@ -252,7 +252,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
     :param col_names: LIST, the column in json file to be used
     """
     prepared_df = module_prepare_news_jsons(in_folder, col, row_count, col_names)
-    result = module_batch_annotate_multi_model(prepared_df, out_f, model_fs, hdf_f, hdf_key, feature_conf, window_size)
+    result = module_batch_annotate_multi_model(prepared_df, model_fs, hdf_f, hdf_key, feature_conf, window_size)
     result.to_csv(out_f, index=False, header=None)
 
 
