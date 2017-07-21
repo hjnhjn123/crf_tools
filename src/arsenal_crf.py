@@ -253,8 +253,22 @@ def extract_ner(ner_candidate, new_index):
     return final_result
 
 
-def crf_result2json(crf_result, raw_df, col):
+def prepare_remap(remap_f):
+    remap_df = pd.read_csv(remap_f, engine='c')
+    remap_dic = {k: v for (k, v) in zip(remap_df.Wrong.tolist(), remap_df.Correct.tolist())}
+    return remap_dic
+
+
+def remap_ner(ner_phrase, remap_dic):
+    temp = (('##'.join(i.split('##')[:2]), i.split('##')[2]) for i in ner_phrase.keys())
+    result = ((remap_dic[k], v) if k in remap_dic.keys() else (k, v) for k, v in temp)
+    final = {'##'.join((m,n)): [] for m, n in result}
+    return final
+
+
+def crf_result2json(crf_result, raw_df, col, remap_dic):
     ner_phrase = crf2dict(crf_result)
+    ner_phrase = remap_ner(ner_phrase, remap_dic) if remap_dic else ner_phrase
     raw_df[col].to_dict()[0]['ner_phrase'] = ner_phrase
     raw_df = raw_df.drop(['content'], axis=1)
     json_result = raw_df.to_json(orient='records', lines=True)
