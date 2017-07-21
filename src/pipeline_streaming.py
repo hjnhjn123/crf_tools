@@ -44,26 +44,30 @@ def streaming_pos_crf_multi(in_f, f_dics, feature_conf, hdf_key, window_size, co
 ##############################################################################
 
 
-def pipeline_streaming_sqs(in_queue, out_queue, model_f, hdf_f, hdf_key, feature_conf, window_size, col):
+def pipeline_streaming_sqs(in_queue, out_queue, model_f, hdf_f, hdf_key, feature_conf, window_size, col, remap_f):
     sqs_queues = sqs_get_msgs(in_queue)
     model = jl.load(model_f)
     f_dics = batch_loading(hdf_f, hdf_key)
+    remap_dic = prepare_remap(remap_f)
+
 
     while True:
         for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
             json_input = q.body
             crf_result, raw_df = streaming_pos_crf(json_input, model, f_dics, feature_conf, hdf_key, window_size, col)
-            json_result = crf_result2json(crf_result, raw_df, col)
+            json_result = crf_result2json(crf_result, raw_df, col, remap_dic)
             sqs_send_msg(json_result, queue_name=out_queue)
             basic_logging('Queue output')
             q.delete()
 
 
-def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_conf, window_size, col, *model_fs):
+def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_conf, window_size, col, remap_f, *model_fs):
     sqs_queues = sqs_get_msgs(in_queue)
     # models = [jl.load(model) for model in model_fs]
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
+    remap_dic = prepare_remap(remap_f)
+
 
     while True:
         for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
@@ -72,7 +76,7 @@ def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_co
             crf_results, raw_df = streaming_pos_crf_multi(json_input, f_dics, feature_conf, hdf_key, window_size, col,
                                                           model_dics)
             final_result = voting(crf_results)
-            json_result = crf_result2json(final_result, raw_df, col)
+            json_result = crf_result2json(final_result, raw_df, col, remap_dic)
 
             sqs_send_msg(json_result, queue_name=out_queue)
             basic_logging('Queue output')
@@ -103,6 +107,6 @@ def main():
     s3_get_file(S3_BUCKET, HDF_FILE_KEY, HDF_FILE)
     basic_logging('Queue prepared')
     pipeline_multi_streaming_sqs(IN_QUEUE, OUT_QUQUE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL,
-                                 MODEL_FS)
+                                 REMAP_F, MODEL_FS)
 
     # pipeline_streaming_sqs(IN_QUEUE, OUT_QUQUE, MODEL_FILE, HDF_FILE, HDF_KEY, FEATURE_CONF, WINDOW_SIZE, CONTENT_COL)

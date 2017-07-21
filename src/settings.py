@@ -58,6 +58,8 @@ OUT_F = ''
 # Set result DIR
 RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
 
+REMAP_F = 'src/conf/remap_dic.csv'
+
 ##############################################################################
 
 # AWS Conf
