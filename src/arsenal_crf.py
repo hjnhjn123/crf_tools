@@ -226,7 +226,7 @@ def crf_predict(crf, test_sents, X_test):
 def crf2dict(crf_result):
     """
     :param crf_result: [[token, pos, ner]]
-    :return: 
+    :return: DICT {ENTITY##NER##COUNT:[]}
     """
     clean_sent = [(token, ner) for token, ner, _ in crf_result if token != '##END']
     ner_candidate = [(token, ner) for token, ner in clean_sent if ner[0] != 'O']
@@ -238,6 +238,11 @@ def crf2dict(crf_result):
 
 
 def extract_ner(ner_candidate, new_index):
+    """
+    :param ner_candidate:
+    :param new_index:
+    :return: DICT {ENTITY##NER##COUNT:[]}
+    """
     new_candidate = deepcopy(ner_candidate)
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split')]
@@ -254,12 +259,23 @@ def extract_ner(ner_candidate, new_index):
 
 
 def prepare_remap(remap_f):
+    """
+    Prepare remap dict from file
+    :param remap_f:
+    :return:
+    """
     remap_df = pd.read_csv(remap_f, engine='c')
     remap_dic = {k: v for (k, v) in zip(remap_df.Wrong.tolist(), remap_df.Correct.tolist())}
     return remap_dic
 
 
 def remap_ner(ner_phrase, remap_dic):
+    """
+    Add rule-based mapping
+    :param ner_phrase: DICT {ENTITY##NER##COUNT:[]} processed ner phrases
+    :param remap_dic: DICT DICT {ENTITY##WRONG_NER: ENTITY##CORRECT_NER}
+    :return: DICT {ENTITY##NER##COUNT:[]}
+    """
     temp = (('##'.join(i.split('##')[:2]), i.split('##')[2]) for i in ner_phrase.keys())
     result = ((remap_dic[k], v) if k in remap_dic.keys() else (k, v) for k, v in temp)
     final = {'##'.join((m,n)): [] for m, n in result}

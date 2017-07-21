@@ -50,7 +50,6 @@ def pipeline_streaming_sqs(in_queue, out_queue, model_f, hdf_f, hdf_key, feature
     f_dics = batch_loading(hdf_f, hdf_key)
     remap_dic = prepare_remap(remap_f)
 
-
     while True:
         for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
             json_input = q.body
@@ -61,13 +60,12 @@ def pipeline_streaming_sqs(in_queue, out_queue, model_f, hdf_f, hdf_key, feature
             q.delete()
 
 
-def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_conf, window_size, col, remap_f, *model_fs):
+def pipeline_multi_streaming_sqs(in_queue, out_queue, hdf_f, hdf_key, feature_conf, window_size, col, remap_f,
+                                 *model_fs):
     sqs_queues = sqs_get_msgs(in_queue)
-    # models = [jl.load(model) for model in model_fs]
     model_dics = load_multi_models(model_fs)
     f_dics = batch_loading(hdf_f, hdf_key)
     remap_dic = prepare_remap(remap_f)
-
 
     while True:
         for q in sqs_queues.receive_messages(WaitTimeSeconds=10):
