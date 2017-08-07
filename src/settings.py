@@ -54,11 +54,11 @@ FEATURE_CONF = {
 # FILE DIR
 
 # Set train DIR
-TRAIN_F = '/home/hujianan/data/token_data/orgin_data/new_train_7000.txt'
+TRAIN_F = 'G:/Data/token_data/orgin_data/new_train_7000.txt'
 # TRAIN_F = '/home/hujianan/data/token_data/process_data/new_train.txt'
 
 # Set test DIR
-TEST_F = '/home/hujianan/data/token_data/orgin_data/new_mark_data.txt'
+TEST_F = 'G:/Data/token_data/orgin_data/new_mark_data.txt'
 # TEST_F = '/home/hujianan/data/token_data/process_data/new_mark_data.txt'
 
 # Set validate DIR
@@ -67,11 +67,11 @@ VALIDATE_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/annotated_data' \
 
 # Set HDF5 DIR
 # HDF_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/dicts/features_20170619.h5'
-HDF_F = '/home/hujianan/data/token_data/process_data/Chemical_dic.h5'
+HDF_F = 'G:/Data/token_data/process_data/Chemical_dic.h5'
 
 # Set model DIR
 # MODEL_F = '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170602.joblib'
-MODEL_F = '/home/hujianan/data/token_data/process_data/crf_model_20170731.joblib'
+MODEL_F = 'G:/Data/token_data/process_data/crf_model_20170731.joblib'
 
 MODEL_FS = ['/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170602.joblib',
             '/Users/acepor/Work/patsnap/data/pat360ner_data/model/crf_en_model_20170619.joblib']
@@ -81,11 +81,11 @@ OUT_F = ''
 
 # Set result DIR
 # RESULT_F = '/Users/acepor/Work/patsnap/code/pat360ner/log/train_result'
-RESULT_F = '/home/hujianan/data/token_data/process_data'
+RESULT_F = 'G:/Data/token_data/process_data'
 
 REMAP_F = 'src/conf/remap_dic.csv'
 
-PREDICT_FILE = '/home/hujianan/data/token_data/process_data/predict.csv'
+PREDICT_FILE = 'G:/Data/token_data/process_data/predict.csv'
 ##############################################################################
 
 # AWS Conf
