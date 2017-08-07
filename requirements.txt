@@ -1,0 +1,5 @@
+numexpr==2.6.2
+numpy==1.13.1
+pkg-resources==0.0.0
+six==1.10.0
+tables==3.4.2

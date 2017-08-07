@@ -1,0 +1,11 @@
+test_read:
+  address: 192.168.26.43
+  port: 6379
+  db: 15
+  key: nlp
+
+test_write:
+  address: 192.168.26.43
+  port: 6379
+  db: 14
+  key: nlp

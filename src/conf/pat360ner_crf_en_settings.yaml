@@ -1,0 +1,44 @@
+current:
+  - bias
+  - current_word.lower()
+  - current_word[-3]
+  - current_word[-2]
+  - current_word.isupper()
+  - current_word.istitle()
+  - current_word.isdigit()
+  - current_word.islower()
+  - current_postag
+  - current_aca
+  - current_com_single
+  - current_comp_suffix
+  - current_location
+  - current_name
+  - current_ticker
+  - current_tfidf
+  - current_tfdf
+previous:
+  - previous_word.lower()
+  - previous_word.istitle()
+  - previous_word.isupper()
+  - previous_postag
+  - previous_aca
+  - previous_com_single
+  - previous_com_suffix  
+  - previous_location
+  - previous_name  
+  - previous_ticker
+  - previous_tfidf
+  - previous_tfdf
+next:
+  - next_word.lower()
+  - next_word.istitle()
+  - next_word.isupper()
+  - next_postag
+  - next_aca
+  - next_com_single  
+  - next_com_suffix
+  - next_location  
+  - next_name
+  - next_ticker
+  - next_tfidf
+  - next_tfdf
