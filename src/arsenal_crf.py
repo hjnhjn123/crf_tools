@@ -6,6 +6,8 @@ from copy import deepcopy
 from functools import reduce
 from itertools import chain, groupby, tee
 from os import listdir
+from zhon.hanzi import punctuation
+from string import punctuation as Enpun
 
 import joblib as jl
 import pandas as pd
@@ -18,14 +20,71 @@ from sklearn_crfsuite import metrics
 from .arsenal_logging import basic_logging
 from .arsenal_spacy import spacy_batch_processing
 from .arsenal_stats import hdf2df, df2dic, df2set, map_dic2df, sort_dic, random_rows
-from .arsenal_test import evaluate_ner_result, show_crf_label
+from .arsenal_test import evaluate_ner_result, show_crf_label, evaluate_reslt
+from .settings import *
 
-HEADER_CRF = ['TOKEN', 'NER', 'POS']
+# HEADER_CRF = ['TOKEN', 'NER', 'POS']
+HEADER_CRF = ['TOKEN', 'NER']
 
 HEADER_REPORT = ['tag', 'precision', 'recall', 'f1', 'support']
+CHAR_PUN = punctuation + Enpun
 
 
 ##############################################################################
+def tag_convert(filename, mode):
+    '''
+    data processing:transform the data into [Token,tag]
+    :param filename: input file
+    :return: dataframe:[Token,tag]
+    '''
+    text_list = []
+    tag_list = []
+    with open(filename) as file:
+        for line in file.readlines():
+            if not line.strip():
+                continue
+            line_tag, line_list = line_process(line, mode)
+            tag_list.append(line_tag)
+            # line_list.append(['##END'])
+            text_list.append(line_list)
+    text_list = [k for j in text_list for i in j for k in i]
+    tag_list = [k for j in tag_list for i in j for k in i]
+    text_df = pd.DataFrame(list(zip(text_list, tag_list)))
+    text_df.columns = HEADER_CRF
+    # text_df.to_csv(DATA_PROCESS + filename, header=False, index=False)
+
+    return text_df
+
+
+def line_process(line, mode):
+    '''
+    transform the line into [word,tag]
+    :param line:
+    :param mode: train:spilt by space or test:normal text
+    :return: [word,tag]
+    '''
+    line_tag = []
+    if mode == 'train':
+        line_list = line.strip('\n').strip().split(' ')
+    elif mode == 'test':
+        line_list = line.strip('\n').strip().split()
+    for token in line_list:
+        if len(token) == 1:
+            if token not in CHAR_PUN:
+                line_tag.append(['U-w'])
+            elif token in CHAR_PUN:
+                line_tag.append('O')
+        elif len(token) == 2:
+            line_tag.append(['B-w', 'L-w'])
+        else:
+            line_tag.append(['B-w'])
+            line_tag.append(['I-w'] * (len(token) - 2))
+            line_tag.append(['L-w'])
+    line_tag.append('O')
+    line_list.append(['##END'])
+
+    return line_tag, line_list
+
 
 
 def process_annotated(in_file, col_names=HEADER_CRF):
@@ -81,11 +140,12 @@ def df2crfsuite(df, delim='##END'):
     :param delim:
     :return:[[(word, label, features)]]
     """
+    index = [i for i, x in enumerate(df['TOKEN'].tolist()) if x == delim]
     delimiter = tuple(df[df.iloc[:, 0] == delim].iloc[0, :].tolist())
     sents = zip(*[df[i].tolist() for i in df.columns])  # Use * to unpack a list
     sents = (list(x[1]) for x in groupby(sents, lambda x: x == delimiter))
     result = [i for i in sents if i != [] and i != [(delimiter)]]
-    return result
+    return result, index
 
 
 ##############################################################################
@@ -113,16 +173,17 @@ def feature_selector(word_tuple, feature_conf, window, hdf_key):
 def word2features(sent, i, feature_conf, hdf_key, window_size):
     features = feature_selector(sent[i], feature_conf, 'current', hdf_key)
     features.update({'bias': 1.0})
-    if i > window_size - 1:
-        features.update(
-            feature_selector(sent[i - window_size], feature_conf, 'previous', hdf_key))
-    else:
-        features['BOS'] = True
-    if i < len(sent) - window_size:
-        features.update(
-            feature_selector(sent[i + window_size], feature_conf, 'next', hdf_key))
-    else:
-        features['EOS'] = True
+    sentence = [i[0] for i in sent]
+    for j in range(window_size):
+        win = window_size - j
+        if i >= win:
+            features.update({'previous' + str(win) + 'cur': ''.join(sentence[i - win:i + 1])})
+        elif i < win - window_size + 1:
+            features['BOS'] = True
+        if i < len(sent) - win:
+            features.update({'cur_' + 'next' + str(win): ''.join(sentence[i:win + 1 + i])})
+        elif i - window_size + 1 >= len(sent) - win:
+            features['EOS'] = True
     return features
 
 
@@ -185,7 +246,7 @@ def make_f1_scorer(labels, avg='weighted'):
     return make_scorer(metrics.flat_f1_score, average=avg, labels=labels)
 
 
-def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=10, iteration=50):
+def search_param(X_train, y_train, crf, params_space, f1_scorer, cv=3, iteration=50):
     rs = RandomizedSearchCV(crf, params_space,
                             cv=cv,
                             verbose=1,
@@ -222,16 +283,50 @@ def crf_predict(crf, test_sents, X_test):
 
 ##############################################################################
 
+# todo add /n according to the index
+def token_text(test_df, y_pred, space_index):
+    text_df = test_df[test_df["TOKEN"] != '##END']
+    # flattern_test = [i for j in y_pred for i in j]
+    # crf_results = list(zip(text_df["TOKEN"].tolist(), flattern_test))
+    crf_results = list(zip(text_df["TOKEN"].tolist(), y_pred))
+    # text=[]
+    # for i, index in enumerate(space_index):
+    #     if i == 0:
+    #         sentence = crf_results[:index]
+    #     else:
+    #         sentence = crf_results[space_index[i - 1] - (i - 1):index - i]
+    #     text.append(' '.join(token_generate(sentence)))
+    text = [' '.join(token_generate(crf_results[:index])) if i == 0 else ' '.join(
+        token_generate(crf_results[space_index[i - 1] - (i - 1):index - i])) for i, index in enumerate(space_index)]
+    pd.DataFrame(text).to_csv(PREDICT_FILE, header=False, index=False)
+    basic_logging('writting data ends')
+
+
+#
+def token_generate(sentence):
+    token = ''
+    phrase = []
+    for word_tag in sentence:
+        if word_tag[1] not in ['L-w', 'U-w', 'O']:
+            token += word_tag[0]
+        else:
+            token += word_tag[0]
+            phrase.append(token)
+            token = ''
+    return phrase
+
 
 def crf2dict(crf_result):
     """
     :param crf_result: [[token, pos, ner]]
     :return: DICT {ENTITY##NER##COUNT:[]}
     """
-    clean_sent = [(token, ner) for token, ner, _ in crf_result if token != '##END']
-    ner_candidate = [(token, ner) for token, ner in clean_sent if ner[0] != 'O']
+    # clean_sent = [(token, ner) for token, ner, _ in crf_result if token != '##END']
+    clean_sent = [(token, ner) for token, ner in crf_result]
+    # ner_candidate = [(token, ner) for token, ner in clean_sent if ner[0] != 'O']
+    ner_candidate = [(token, ner) for token, ner in clean_sent]
     ner_index = [i for i in range(len(ner_candidate)) if
-                 ner_candidate[i][1][0] == 'U' or ner_candidate[i][1][0] == 'L']
+                 ner_candidate[i][1] == 'U-w' or ner_candidate[i][1] == 'L-w' or ner_candidate[i][1] == 'O']
     new_index = [a + b for a, b in enumerate(ner_index)]
     ner_result = extract_ner(ner_candidate, new_index)
     return ner_result
@@ -247,15 +342,22 @@ def extract_ner(ner_candidate, new_index):
     for i in new_index:
         new_candidate[i + 1:i + 1] = [('##split', '##split')]
     grouped_ner = [list(x[1]) for x in groupby(new_candidate, lambda x: x == ('##split', '##split'))]
-    ner_result = []
-    for group in grouped_ner:
-        if group != [('##split', '##split')]:
-            phrase = ' '.join([k for k, v in group])
-            tag = [v.split('-')[1] for k, v in group][0]
-            ner_result.append('##'.join((phrase, tag)))
-    ner_counts = Counter(ner_result)
-    final_result = {'##'.join((k, str(v))): [] for k, v in ner_counts.items()}
-    return final_result
+    ner_result = [''.join([k for k, v in group]) for group in grouped_ner if group != [('##split', '##split')]]
+    basic_logging('add index ends')
+    text = []
+    sentence = []
+    # todo see the structure of grouped_ner
+    for token in ner_result:
+        if token != '##END':
+            sentence.append(token)
+        else:
+            text.append(sentence)
+            sentence = []
+    text_line = [' '.join(i) for i in text]
+    pd.DataFrame(text_line).to_csv(PREDICT_FILE, header=False, index=False)
+    basic_logging('writting data ends')
+
+    return ner_result
 
 
 def prepare_remap(remap_f):
@@ -278,7 +380,7 @@ def remap_ner(ner_phrase, remap_dic):
     """
     temp = (('##'.join(i.split('##')[:2]), i.split('##')[2]) for i in ner_phrase.keys())
     result = ((remap_dic[k], v) if k in remap_dic.keys() else (k, v) for k, v in temp)
-    final = {'##'.join((m,n)): [] for m, n in result}
+    final = {'##'.join((m, n)): [] for m, n in result}
     return final
 
 
@@ -341,11 +443,12 @@ def load_multi_models(model_fs):
 ##############################################################################
 
 # Modules
-
-def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
+#line_crf_fit
+def line_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
     test = batch_add_features(df, f_dics)
+    # print(test)
     basic_logging('adding test features ends')
-    test_sents = df2crfsuite(test)
+    test_sents, index_line = df2crfsuite(test)
     basic_logging('converting to test crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     X_a, X_b = tee(X_test, 2)
@@ -359,11 +462,29 @@ def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f
         basic_logging('testing ends')
     return y_pred, list(X_b), list(y_b)
 
+def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
+    test = batch_add_features(df, f_dics)
+    basic_logging('adding test features ends')
+    test_sents, index_line = df2crfsuite(test)
+    basic_logging('converting to test crfsuite ends')
+    X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
+    X_a, X_b = tee(X_test, 2)
+    y_a, y_b = tee(y_test, 2)
+    basic_logging('test conversion ends')
+    y_pred = crf.predict(X_a)
+    basic_logging('testing ends')
+    if result_f:
+        result, indexed_ner = evaluate_ner_result(y_pred, y_a)
+        result.to_csv(result_f, index=False)
+        basic_logging('testing ends')
+    return y_pred, list(X_b), list(y_b), index_line
+
 
 def module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size):
     train_df = batch_add_features(train_df, f_dics)
     basic_logging('adding train features ends')
-    train_sents = df2crfsuite(train_df)
+    train_sents, _ = df2crfsuite(train_df)
+    # print(train_sents)
     basic_logging('converting train to crfsuite ends')
     X_train, y_train = feed_crf_trainer(train_sents, feature_conf, hdf_key, window_size)
     X_a, X_b = tee(X_train, 2)

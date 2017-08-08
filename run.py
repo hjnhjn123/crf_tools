@@ -1,6 +1,6 @@
 # -*- encoding: utf-8 -*-
-from sys import argv
-from src.pipeline_streaming import main
+from src.pipeline_crf import *
 
 if __name__ == '__main__':
-    main()
+    main('chunk')
+    # main('train')

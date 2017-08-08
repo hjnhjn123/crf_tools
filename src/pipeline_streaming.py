@@ -29,6 +29,9 @@ def streaming_pos_crf(in_f, crf, f_dics, feature_conf, hdf_key, window_size, col
     return crf_result, raw_df
 
 
+
+
+
 def streaming_pos_crf_multi(in_f, f_dics, feature_conf, hdf_key, window_size, col, model_dics):
     raw_df = pd.read_json(in_f, lines=True)
     raw_df['content'] = raw_df[col].to_dict()[0]['content']

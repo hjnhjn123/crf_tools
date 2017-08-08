@@ -40,6 +40,8 @@ def evaluate_ner_result(y_pred, y_test):
     """
     flattern_pred = [i for j in y_pred for i in j]
     flattern_test = [i for j in y_test for i in j]
+    # flattern_pred=y_pred
+    # flattern_test=y_test
     test_ners = [i for i in enumerate(flattern_test) if i[1] != 'O']
     pred_ners = [i for i in enumerate(flattern_pred) if i[1] != 'O']
     both_ners = [i for i in zip(flattern_pred, flattern_test) if i[1] != 'O']
@@ -48,11 +50,9 @@ def evaluate_ner_result(y_pred, y_test):
     evaluate_list = extract_entity(both_ners)
     test_entities = extract_entity(test_ners)
     pred_entities = extract_entity(pred_ners)
-
     true_positive_list = [ner_can for ner_can in evaluate_list if
                           len([(a, b) for a, b in ner_can if a == b]) == len(ner_can) and ner_can != [
                               ('##split', '##split')]]
-
     test_total = [ner_can for ner_can in test_entities if ner_can != [('##split', '##split')]]
     pred_total = [ner_can for ner_can in pred_entities if ner_can != [('##split', '##split')]]
 
@@ -69,6 +69,11 @@ def evaluate_ner_result(y_pred, y_test):
     output = pd.DataFrame(final_result).T.reset_index()
     output.columns = ['Label', 'Precision', 'Recall', 'F1_score', 'Support']
     return output, indexed_ner
+
+
+def evaluate_reslt(y_pred, y_test):
+    true_result=[1 if y_pred[i]==y_test[i] else 0 for i in  range(0,len(y_pred))]
+    print('the accuracy is:', true_result.count(1) / len(true_result))
 
 
 ##############################################################################

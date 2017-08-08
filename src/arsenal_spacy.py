@@ -97,7 +97,7 @@ def extract_ner_candidate(sents):
 
 def spacy_batch_processing(data, label, col, header, switch):
     """
-    :param switches: set switches for spacy_parser
+    :param switch: set switches for spacy_parser
     :param label: set label for spacy_parser
     :param col: set the needed column
     :param header: set the needed header
