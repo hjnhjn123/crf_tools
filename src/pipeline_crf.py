@@ -5,11 +5,12 @@ import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
     voting, load_multi_models, module_crf_train, module_crf_fit, module_prepare_folder, module_prepare_news_jsons, \
-    module_crf_cv
+    module_crf_cv, tag_convert, token_text, line_process, line_crf_fit
 from .arsenal_logging import basic_logging
 from .arsenal_stats import get_now
 from .arsenal_test import evaluate_ner_result
 from .settings import *
+from .arsenal_crf import crf_predict
 
 
 ##############################################################################
@@ -31,15 +32,51 @@ def pipeline_train(train_f, test_f, model_f, result_f, hdf_f, hdf_key, feature_c
     basic_logging('loading conf begins')
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
-    train_df, test_df = process_annotated(train_f, col_names), process_annotated(test_f, col_names)
+    train_df = tag_convert(train_f, mode='train')
+    test_df = tag_convert(test_f, mode='train')
+    # print(test_df)
+    # train_df, test_df = process_annotated(train_f, col_names), process_annotated(test_f, col_names)
     basic_logging('loading data ends')
-
     crf, _, _ = module_crf_train(train_df, f_dics, feature_conf, hdf_key, window_size)
-    _, _, _ = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
-
+    # test_df = pd.read_table(test_f)
+    y_pred, _, _, index_line = module_crf_fit(test_df, crf, f_dics, feature_conf, hdf_key, window_size, result_f)
+    y_pred = [i for j in y_pred for i in j]
+    print(index_line)
+    print(y_pred)
+    token_text(test_df, y_pred, index_line)
     if model_f:
         jl.dump(crf, model_f)
     return crf
+
+
+def pipline_predict(test_f, model_f, hdf_f, hdf_key, feature_conf, window_size):
+    basic_logging('loading conf begins')
+    model = jl.load(model_f)
+    f_dics = batch_loading(hdf_f, hdf_key)
+    basic_logging('loading conf ends')
+
+    test_line_df = pd.read_table(test_f)
+    TEST_DF = tag_convert(test_f, mode='train')
+    test_line_df.columns = ['TOKEN']
+    text_list = []
+    index = []
+    for line in test_line_df["TOKEN"].tolist():
+        index.append(len(line.replace(' ', '')))
+        line_tag, line_list = line_process(line, mode='train')
+        line_list = [i for j in line_list for i in j]
+        line_tag = [i for j in line_tag for i in j]
+        line_df = pd.DataFrame(list(zip(line_list, line_tag)))
+        line_df.columns = ["TOKEN", "tag"]
+        y_pred, _, _ = line_crf_fit(line_df, model, f_dics, feature_conf, hdf_key, window_size, '')
+        y_pred = pd.DataFrame([j for i in y_pred for j in i])
+        text_list.append(y_pred)
+        # print(y_pred)
+    text_df = pd.concat(text_list, axis=0)
+    token_text(TEST_DF, text_df, index)
+    print(index)
+    print(text_list)
+    basic_logging('converting results ends')
+    return text_df
 
 
 def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags, col_names):
@@ -49,7 +86,7 @@ def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_con
     :param test_f: test dataset in a 3-column csv (TOKEN, LABEL, POS)
     :param model_f: model file
     :param feature_conf: feature configurations
-    :param                                                                                                                                                                               hdf_f: feature HDF5 file
+    :param hdf_f: feature HDF5 file
     :param hdf_key: keys of feature HDF5 file
     """
     basic_logging('loading conf begins')
@@ -279,5 +316,7 @@ def main(argv):
                                                                 result_f=RESULT_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
                                                                 feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE,
                                                                 col_names=HEADER),
+        'chunk': lambda: pipline_predict(test_f=TEST_F, model_f=MODEL_F, hdf_f=HDF_F, hdf_key=HDF_KEY,
+                                         feature_conf=FEATURE_CONF, window_size=WINDOW_SIZE)
     }
     dic[argv]()
