@@ -39,7 +39,7 @@ def tag_convert(filename, mode):
     '''
     text_list = []
     tag_list = []
-    with open(filename) as file:
+    with open(filename,encoding='utf-8') as file:
         for line in file.readlines():
             if not line.strip():
                 continue

@@ -11,6 +11,7 @@ from .arsenal_stats import get_now
 from .arsenal_test import evaluate_ner_result
 from .settings import *
 from .arsenal_crf import crf_predict
+from itertools import *
 
 
 ##############################################################################
@@ -55,13 +56,16 @@ def pipline_predict(test_f, model_f, hdf_f, hdf_key, feature_conf, window_size):
     f_dics = batch_loading(hdf_f, hdf_key)
     basic_logging('loading conf ends')
 
-    test_line_df = pd.read_table(test_f)
+    test_line_df = pd.read_table(test_f,header=None)
     TEST_DF = tag_convert(test_f, mode='train')
     test_line_df.columns = ['TOKEN']
     text_list = []
+    # index[18, 27, 78, 395, 462, 525],y_pred:['B-w', 'L-w', 'B-w', 'L-w']
     index = []
-    for line in test_line_df["TOKEN"].tolist():
-        index.append(len(line.replace(' ', '')))
+    init_index=0
+    for i ,line in enumerate(test_line_df["TOKEN"].tolist()):
+        init_index+=len(line.replace(' ', ''))
+        index.append(init_index+i)
         line_tag, line_list = line_process(line, mode='train')
         line_list = [i for j in line_list for i in j]
         line_tag = [i for j in line_tag for i in j]
@@ -71,10 +75,10 @@ def pipline_predict(test_f, model_f, hdf_f, hdf_key, feature_conf, window_size):
         y_pred = pd.DataFrame([j for i in y_pred for j in i])
         text_list.append(y_pred)
         # print(y_pred)
-    text_df = pd.concat(text_list, axis=0)
+    text_df = pd.concat(text_list, axis=0)[0].tolist()
     token_text(TEST_DF, text_df, index)
-    print(index)
-    print(text_list)
+    # print(index)
+    # print(text_df[0].tolist())
     basic_logging('converting results ends')
     return text_df
 
