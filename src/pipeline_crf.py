@@ -5,13 +5,12 @@ import pandas as pd
 
 from .arsenal_crf import process_annotated, batch_add_features, batch_loading, feed_crf_trainer, df2crfsuite, \
     voting, load_multi_models, module_crf_train, module_crf_fit, module_prepare_folder, module_prepare_news_jsons, \
-    module_crf_cv, tag_convert, token_text, line_process, line_crf_fit
+    module_crf_cv, tag_convert, token_text, line_process, line_crf_fit,token_generate
 from .arsenal_logging import basic_logging
 from .arsenal_stats import get_now
 from .arsenal_test import evaluate_ner_result
 from .settings import *
 from .arsenal_crf import crf_predict
-from itertools import *
 
 
 ##############################################################################
@@ -57,30 +56,24 @@ def pipline_predict(test_f, model_f, hdf_f, hdf_key, feature_conf, window_size):
     basic_logging('loading conf ends')
 
     test_line_df = pd.read_table(test_f,header=None)
-    TEST_DF = tag_convert(test_f, mode='train')
+    # TEST_DF = tag_convert(test_f, mode='train')
+    # print(TEST_DF)
     test_line_df.columns = ['TOKEN']
     text_list = []
-    # index[18, 27, 78, 395, 462, 525],y_pred:['B-w', 'L-w', 'B-w', 'L-w']
-    index = []
-    init_index=0
     for i ,line in enumerate(test_line_df["TOKEN"].tolist()):
-        init_index+=len(line.replace(' ', ''))
-        index.append(init_index+i)
         line_tag, line_list = line_process(line, mode='train')
         line_list = [i for j in line_list for i in j]
         line_tag = [i for j in line_tag for i in j]
         line_df = pd.DataFrame(list(zip(line_list, line_tag)))
         line_df.columns = ["TOKEN", "tag"]
         y_pred, _, _ = line_crf_fit(line_df, model, f_dics, feature_conf, hdf_key, window_size, '')
-        y_pred = pd.DataFrame([j for i in y_pred for j in i])
-        text_list.append(y_pred)
-        # print(y_pred)
-    text_df = pd.concat(text_list, axis=0)[0].tolist()
-    token_text(TEST_DF, text_df, index)
-    # print(index)
-    # print(text_df[0].tolist())
+        y_pred = [j for i in y_pred for j in i]
+        line_tag_df=tuple(list(zip(line_list,y_pred)))
+        phrases=token_generate(line_tag_df)
+        text_list.append(' '.join(phrases))
+    pd.DataFrame(text_list).to_csv(PREDICT_FILE, header=False, index=False)
     basic_logging('converting results ends')
-    return text_df
+    return text_list
 
 
 def pipeline_train_mix(in_folder, model_f, result_f, hdf_f, hdf_key, feature_conf, window_size, ner_tags, col_names):
@@ -300,7 +293,7 @@ def pipeline_batch_annotate_multi_model(in_folder, out_f, model_fs, col, hdf_f, 
 ##############################################################################
 
 
-RESULT_F = '_'.join((RESULT_F, get_now(), '.csv'))
+RESULT_F = '_'.join((RESULT_F, 'mectric', '.csv'))
 
 
 def main(argv):

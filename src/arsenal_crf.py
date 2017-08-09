@@ -45,7 +45,8 @@ def tag_convert(filename, mode):
                 continue
             line_tag, line_list = line_process(line, mode)
             tag_list.append(line_tag)
-            # line_list.append(['##END'])
+            line_tag.append('O')
+            line_list.append(['##END'])
             text_list.append(line_list)
     text_list = [k for j in text_list for i in j for k in i]
     tag_list = [k for j in tag_list for i in j for k in i]
@@ -80,8 +81,6 @@ def line_process(line, mode):
             line_tag.append(['B-w'])
             line_tag.append(['I-w'] * (len(token) - 2))
             line_tag.append(['L-w'])
-    line_tag.append('O')
-    line_list.append(['##END'])
 
     return line_tag, line_list
 
@@ -446,9 +445,10 @@ def load_multi_models(model_fs):
 #line_crf_fit
 def line_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f):
     test = batch_add_features(df, f_dics)
-    # print(test)
+    test_sents=[test.values.tolist()]
     basic_logging('adding test features ends')
-    test_sents, index_line = df2crfsuite(test)
+    # test_sents, index_line = df2crfsuite(test)
+    #test_sent: [('根', 'B-w', '0', '0'), ('据', 'L-w', '0', '0'), ('权', 'B-w', '0', '0')]
     basic_logging('converting to test crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     X_a, X_b = tee(X_test, 2)
@@ -466,6 +466,7 @@ def module_crf_fit(df, crf, f_dics, feature_conf, hdf_key, window_size, result_f
     test = batch_add_features(df, f_dics)
     basic_logging('adding test features ends')
     test_sents, index_line = df2crfsuite(test)
+    print(test_sents)
     basic_logging('converting to test crfsuite ends')
     X_test, y_test = feed_crf_trainer(test_sents, feature_conf, hdf_key, window_size)
     X_a, X_b = tee(X_test, 2)
